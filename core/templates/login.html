@@ -1,102 +1,160 @@
-{% extends 'base.html' %}
 {% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Otiza Tours</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'otiza': {
+                            'green': '#10B981',
+                            'dark': '#065F46',
+                            'light': '#D1FAE5',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Poppins', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Poppins', sans-serif; }
+        input:focus, select:focus {
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+        }
 
-{% block title %}Login - Otiza Tours{% endblock %}
+        /* Animación Ken Burns para la imagen de fondo */
+        @keyframes kenburns {
+            0%   { transform: scale(1) translate(0, 0); }
+            50%  { transform: scale(1.1) translate(-1%, -1%); }
+            100% { transform: scale(1) translate(0, 0); }
+        }
+        .animate-kenburns {
+            animation: kenburns 20s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
 
-{% block content %}
-<body class="bg-gradient-to-br from-green-400 via-green-500 to-green-600 min-h-screen flex items-center justify-center p-4">
+    <div class="min-h-screen grid grid-cols-1 lg:grid-cols-2">
 
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-        <!-- Header con Logo -->
-        <div class="bg-gradient-to-r from-otiza-green to-otiza-dark p-8 text-center">
-            <div class="bg-white rounded-full w-24 h-24 mx-auto mb-4 flex items-center justify-center shadow-lg">
-                <!-- LOGO: Cambia esto por tu imagen real -->
-                <img src="{% static 'images/logo-otiza.png' %}" alt="Otiza Tours" class="w-20 h-20 object-contain" onerror="this.src='https://via.placeholder.com/80'">
-            </div>
-            <h1 class="text-2xl font-bold text-white">Otiza Tours</h1>
-            <p class="text-green-100 text-sm">Sistema de Gestión</p>
-        </div>
-
-        <!-- Formulario de Login -->
-        <div class="p-8">
-            <h2 class="text-2xl font-semibold text-gray-800 mb-6 text-center">Iniciar Sesión</h2>
-            
-            <!-- FORMULARIO DJANGO -->
-            <form method="POST" action="{% url 'core:login' %}">
-                {% csrf_token %}
-                
-                <!-- Usuario -->
-                <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-medium mb-2" for="username">Usuario</label>
-                    <div class="relative">
-                        <input 
-                            type="text" 
-                            id="username" 
-                            name="username"
-                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green focus:border-transparent"
-                            placeholder="Ingresa tu usuario"
-                            required
-                            value="{{ request.POST.username }}"
-                        >
-                        <svg class="absolute right-3 top-3 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                        </svg>
-                    </div>
+        <!-- LADO IZQUIERDO: FORMULARIO -->
+        <div class="flex flex-col justify-center items-center p-8 lg:p-12 bg-white relative z-10 shadow-xl lg:shadow-none">
+            <div class="w-full max-w-md">
+                <!-- Logo -->
+                <div class="mb-8 text-center">
+                    <img src="{% static 'images/logo-otiza.png' %}" alt="Otiza Tours" class="h-20 w-auto mx-auto mb-4 object-contain" onerror="this.src='https://via.placeholder.com/80'">
+                    <h2 class="text-3xl font-bold text-gray-800">Bienvenido</h2>
+                    <p class="text-gray-500 mt-2">Sistema de Gestión Otiza Tours</p>
                 </div>
 
-                <!-- Contraseña -->
-                <div class="mb-6">
-                    <label class="block text-gray-700 text-sm font-medium mb-2" for="password">Contraseña</label>
-                    <div class="relative">
-                        <input 
-                            type="password" 
-                            id="password" 
-                            name="password"
-                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green focus:border-transparent"
-                            placeholder="••••••••"
-                            required
-                        >
-                        <svg class="absolute right-3 top-3 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
-                        </svg>
-                    </div>
-                </div>
+                <!-- Formulario -->
+                <form method="POST" action="" class="space-y-6">
+                    {% csrf_token %}
 
-                <!-- Seleccionar Sede -->
-                <div class="mb-6">
-                    <label class="block text-gray-700 text-sm font-medium mb-2">Sede</label>
-                    <select name="sede" id="sede" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green">
-                        <option value="trujillo" {% if request.POST.sede == 'trujillo' %}selected{% endif %}>Trujillo</option>
-                        <option value="julcan" {% if request.POST.sede == 'julcan' %}selected{% endif %}>Julcán</option>
-                        <option value="mache" {% if request.POST.sede == 'mache' %}selected{% endif %}>Mache</option>
-                        <option value="central" {% if request.POST.sede == 'central' %}selected{% endif %}>Sede Central (Dueño)</option>
-                    </select>
-                </div>
-
-                <!-- Mensajes de error -->
-                {% if messages %}
-                    {% for message in messages %}
-                        <div class="mb-4 p-3 rounded-lg {% if message.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-blue-100 text-blue-700{% endif %}">
-                            {{ message }}
+                    <!-- Usuario -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Usuario</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                </svg>
+                            </div>
+                            <input type="text" name="username" class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-otiza-green transition duration-200" placeholder="Ingresa tu usuario" required value="{{ request.POST.username }}">
                         </div>
+                    </div>
+
+                    <!-- Contraseña -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                                </svg>
+                            </div>
+                            <input type="password" name="password" class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-otiza-green transition duration-200" placeholder="••••••••" required>
+                        </div>
+                    </div>
+
+                    <!-- Sede -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Seleccionar Sede</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                </svg>
+                            </div>
+                            <select name="sede" class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-otiza-green transition duration-200 appearance-none bg-white">
+                                <option value="trujillo" {% if request.POST.sede == 'trujillo' %}selected{% endif %}>📍 Agencia Trujillo</option>
+                                <option value="julcan" {% if request.POST.sede == 'julcan' %}selected{% endif %}>📍 Agencia Julcán</option>
+                                <option value="mache" {% if request.POST.sede == 'mache' %}selected{% endif %}>📍 Agencia Mache</option>
+                                <option value="central" {% if request.POST.sede == 'central' %}selected{% endif %}>🏢 Sede Central (Dueño)</option>
+                            </select>
+                            <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botón -->
+                    <button type="submit" class="w-full bg-otiza-green hover:bg-otiza-dark text-white font-bold py-3 px-4 rounded-lg transition duration-300 transform hover:-translate-y-1 shadow-lg hover:shadow-xl">
+                        Ingresar al Sistema
+                    </button>
+
+                    <!-- Mensajes de Error -->
+                    {% if messages %}
+                    {% for message in messages %}
+                    <div class="mt-4 p-3 rounded-lg bg-red-100 border border-red-200 text-red-700 text-sm text-center">
+                        {{ message }}
+                    </div>
                     {% endfor %}
-                {% endif %}
+                    {% endif %}
+                </form>
 
-                <!-- Botón Login -->
-                <button 
-                    type="submit"
-                    class="w-full bg-gradient-to-r from-otiza-green to-otiza-dark text-white font-semibold py-3 rounded-lg hover:from-otiza-dark hover:to-green-800 transition duration-300 shadow-lg"
-                >
-                    Ingresar al Sistema
-                </button>
-            </form>
-
-            <p class="mt-4 text-center text-sm text-gray-600">
-                © 2026 Otiza Tours S.A.C.<br>
-                <span class="text-otiza-green font-medium">Seguridad y Confianza</span>
-            </p>
+                <!-- Footer -->
+                <div class="mt-8 text-center border-t pt-6">
+                    <p class="text-sm text-gray-500">© 2026 Otiza Tours S.A.C.</p>
+                    <p class="text-xs text-otiza-green font-semibold mt-1 uppercase tracking-wide">Seguridad y Confianza</p>
+                </div>
+            </div>
         </div>
-    </div>
 
+        <!-- LADO DERECHO: IMAGEN -->
+        <div class="hidden lg:flex relative bg-otiza-dark overflow-hidden">
+            <img src="{% static 'images/fondo-login.png' %}" 
+                 alt="Viaja seguro con Otiza Tours" 
+                 class="absolute inset-0 w-full h-full object-cover animate-kenburns brightness-110 contrast-105">
+
+            <!-- Degradado más suave para que se vea más clara la imagen -->
+            <div class="absolute inset-0 bg-gradient-to-br from-otiza-green/20 to-otiza-dark/50"></div>
+
+            <div class="relative z-10 flex flex-col justify-center items-center w-full h-full text-white p-12 text-center gap-6">
+                <h2 class="w-full text-center text-4xl lg:text-5xl font-bold drop-shadow-lg">Conectando Destinos</h2>
+                <p class="w-full text-center text-xl lg:text-2xl font-light drop-shadow-md text-amber-300">
+                    Trujillo <span class="text-yellow-400">•</span> Julcán <span class="text-yellow-400">•</span> Mache
+                </p>
+                <div class="mx-auto bg-black/30 backdrop-blur-md rounded-xl p-6 border border-white/30 shadow-2xl max-w-sm text-center hover:bg-black/40 transition duration-300">
+                    <p class="text-lg font-semibold mb-2">Programa de Fidelización</p>
+                    <p class="text-sm opacity-90">Acumula 12 viajes y reclama tu <strong>Rasca y Gana</strong>.</p>
+                </div>
+                <p class="w-full text-center text-sm opacity-80 font-medium tracking-wide mt-6">Empresa de Transporte Otiza Tours S.A.C.</p>
+            </div>
+        </div>
+
+    </div>
 </body>
-{% endblock %}
+</html>
