@@ -1,0 +1,265 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - {{ sede.get_nombre_display }}{% endblock %}
+
+{% block content %}
+<!-- Navbar -->
+<nav class="bg-gradient-to-r from-otiza-green to-otiza-dark text-white shadow-lg">
+    <div class="container mx-auto px-6 py-4">
+        <div class="flex justify-between items-center">
+            <div class="flex items-center space-x-4">
+                <img src="{% static 'images/logo-otiza.png' %}" alt="Logo" class="w-10 h-10 rounded-full bg-white">
+                <div>
+                    <h1 class="text-xl font-bold">Otiza Tours</h1>
+                    <p class="text-sm text-green-200">Sede: <span class="font-semibold">{{ sede.get_nombre_display }}</span></p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-6">
+                <div class="text-right">
+                    <p class="font-semibold">{{ usuario.get_full_name|default:usuario.username }}</p>
+                    <p class="text-sm text-green-200">Cajero - Agencia</p>
+                </div>
+                <a href="{% url 'core:logout' %}" class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg transition">
+                    Cerrar Sesión
+                </a>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<div class="container mx-auto px-6 py-8">
+    
+    <!-- ==================== ALERTA DE FIDELIZACIÓN ==================== -->
+    {% if alerta_fidelizacion %}
+    <div class="mb-6 p-4 rounded-lg shadow-lg border-2 
+        {% if alerta_fidelizacion.tipo == 'success' %}
+            bg-green-50 border-green-500 animate-pulse
+        {% elif alerta_fidelizacion.tipo == 'warning' %}
+            bg-yellow-50 border-yellow-500
+        {% else %}
+            bg-blue-50 border-blue-300
+        {% endif %}">
+        
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-xl font-bold 
+                    {% if alerta_fidelizacion.tipo == 'success' %}text-green-800
+                    {% elif alerta_fidelizacion.tipo == 'warning' %}text-yellow-800
+                    {% else %}text-blue-800{% endif %}">
+                    {{ alerta_fidelizacion.titulo }}
+                </h3>
+                <p class="text-gray-700 mt-1">{{ alerta_fidelizacion.mensaje }}</p>
+                {% if alerta_fidelizacion.dni %}
+                <p class="text-sm text-gray-600 mt-1">DNI: {{ alerta_fidelizacion.dni }}</p>
+                {% endif %}
+            </div>
+            
+            {% if alerta_fidelizacion.tipo == 'success' %}
+            <div class="text-6xl"></div>
+            {% elif alerta_fidelizacion.tipo == 'warning' %}
+            <div class="text-6xl">⏰</div>
+            {% endif %}
+        </div>
+        
+        {% if alerta_fidelizacion.tipo == 'success' %}
+        <div class="mt-4 flex space-x-3">
+            <button onclick="imprimirComprobanteRascaYGana('{{ alerta_fidelizacion.dni }}')" 
+                    class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-semibold">
+                🖨️ Imprimir Comprobante
+            </button>
+            <button onclick="marcarComoEntregado('{{ alerta_fidelizacion.dni }}')" 
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold">
+                ✓ Marcar como Entregado
+            </button>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- ==================== BUSCADOR DE CLIENTES ==================== -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">🔍 Buscar Historial de Cliente</h3>
+        <form method="GET" class="flex gap-4">
+            <input type="text" name="dni_cliente" 
+                   placeholder="Ingrese DNI del cliente" 
+                   value="{{ cliente_busqueda }}"
+                   class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green">
+            <button type="submit" 
+                    class="bg-otiza-green hover:bg-otiza-dark text-white px-6 py-2 rounded-lg font-semibold">
+                Buscar
+            </button>
+        </form>
+    </div>
+
+    <!-- ==================== TARJETAS DE RESUMEN ==================== -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <!-- Ventas del Día -->
+        <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-green-500">
+            <p class="text-gray-500 text-sm">Ventas Hoy</p>
+            <p class="text-2xl font-bold text-green-600">{{ ventas_hoy }}</p>
+            <p class="text-sm text-gray-600 mt-1">S/ {{ monto_total_hoy|floatformat:2 }}</p>
+        </div>
+
+        <!-- Viajes Completados -->
+        <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500">
+            <p class="text-gray-500 text-sm">Viajes Completados</p>
+            <p class="text-2xl font-bold text-blue-600">{{ viajes_completados_hoy }}</p>
+        </div>
+
+        <!-- Próximos Viajes -->
+        <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-purple-500">
+            <p class="text-gray-500 text-sm">Próximos Viajes</p>
+            <p class="text-2xl font-bold text-purple-600">{{ proximos_viajes|length }}</p>
+        </div>
+
+        <!-- Asientos Disponibles -->
+        <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-yellow-500">
+            <p class="text-gray-500 text-sm">Asientos Disponibles</p>
+            <p class="text-2xl font-bold text-yellow-600">
+                {% with total=0 %}
+                {% for viaje in proximos_viajes %}
+                    {% if viaje.estado == 'Disponible' %}
+                        {% with total=total|add:viaje.asientos_disponibles %}{% endwith %}
+                    {% endif %}
+                {% endfor %}
+                {{ total }}
+                {% endwith %}
+            </p>
+        </div>
+    </div>
+
+    <!-- ==================== PRÓXIMOS VIAJES (CON ASIGNACIÓN DE COMBIS) ==================== -->
+    <div class="bg-white rounded-lg shadow-md overflow-hidden mb-8">
+        <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+            <h3 class="text-xl font-bold text-gray-800">🚌 Próximos Viajes - Asignación de Combis</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-100">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Hora</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Ruta</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Vehículo</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Asientos</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Estado</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Acción</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for viaje in proximos_viajes %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 font-semibold">{{ viaje.hora_salida }}</td>
+                        <td class="px-6 py-4">{{ viaje.ruta }}</td>
+                        <td class="px-6 py-4">
+                            <div class="text-sm">
+                                <p class="font-semibold">{{ viaje.vehiculo.placa }}</p>
+                                <p class="text-gray-500">{{ viaje.vehiculo.modelo }}</p>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex items-center">
+                                <div class="w-full bg-gray-200 rounded-full h-2.5 mr-2">
+                                    <div class="bg-otiza-green h-2.5 rounded-full" 
+                                         style="width: {{ viaje.asientos_disponibles|add:viaje.asientos_totales|divisibleby:viaje.asientos_totales|multiply:100 }}%"></div>
+                                </div>
+                                <span class="text-sm">{{ viaje.asientos_disponibles }}/{{ viaje.asientos_totales }}</span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="px-2 py-1 text-xs rounded-full 
+                                {% if viaje.estado == 'Disponible' %}bg-green-100 text-green-800
+                                {% elif viaje.estado == 'Completo' %}bg-red-100 text-red-800
+                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {{ viaje.estado }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            {% if viaje.estado == 'Disponible' %}
+                            <a href="{% url 'core:venta_create' viaje.id %}" 
+                               class="bg-otiza-green hover:bg-otiza-dark text-white px-4 py-2 rounded-lg text-sm font-semibold">
+                                Vender
+                            </a>
+                            {% else %}
+                            <span class="text-gray-400 text-sm">No disponible</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-4 text-center text-gray-500">No hay viajes programados</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ==================== VIAJES RECIENTES ==================== -->
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+            <h3 class="text-xl font-bold text-gray-800">📋 Viajes Recientes</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-100">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Fecha/Hora</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Ruta</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Vehículo</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Ocupación</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Ingreso</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Estado</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for viaje in viajes_recientes %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4">
+                            <div class="text-sm">
+                                <p>{{ viaje.fecha|date:"d/m/Y" }}</p>
+                                <p class="text-gray-500">{{ viaje.hora }}</p>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">{{ viaje.ruta_origen }} → {{ viaje.ruta_destino }}</td>
+                        <td class="px-6 py-4">
+                            <p class="font-semibold">{{ viaje.vehiculo.placa }}</p>
+                        </td>
+                        <td class="px-6 py-4">{{ viaje.asientos_ocupados }}/20</td>
+                        <td class="px-6 py-4 text-green-600 font-semibold">S/ {{ viaje.ingreso|floatformat:2 }}</td>
+                        <td class="px-6 py-4">
+                            <span class="px-2 py-1 text-xs rounded-full 
+                                {% if viaje.estado == 'Completado' %}bg-green-100 text-green-800
+                                {% elif viaje.estado == 'En Ruta' %}bg-blue-100 text-blue-800
+                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {{ viaje.estado }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-4 text-center text-gray-500">No hay viajes registrados</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_script %}
+<script>
+    function imprimirComprobanteRascaYGana(dni) {
+        alert(`Imprimiendo comprobante de Rasca y Gana para DNI: ${dni}\n\n(En producción: imprimir ticket térmico)`);
+    }
+
+    function marcarComoEntregado(dni) {
+        if (confirm('¿Confirmar que se entregó el Rasca y Gana al cliente?')) {
+            alert(`✅ Rasca y Gana marcado como entregado para DNI: ${dni}\n\nEl contador se reiniciará a 0.`);
+            // Aquí iría la llamada AJAX al backend
+        }
+    }
+</script>
+{% endblock %}
