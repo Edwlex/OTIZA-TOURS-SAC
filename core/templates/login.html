@@ -22,7 +22,7 @@
             <h2 class="text-2xl font-semibold text-gray-800 mb-6 text-center">Iniciar Sesión</h2>
             
             <!-- FORMULARIO DJANGO -->
-            <form method="POST" action="{% url 'login' %}">
+            <form method="POST" action="{% url 'core:login' %}">
                 {% csrf_token %}
                 
                 <!-- Usuario -->

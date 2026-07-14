@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -55,7 +56,7 @@ ROOT_URLCONF = 'otiza_backend.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'core' / 'templates'],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -75,8 +76,12 @@ WSGI_APPLICATION = 'otiza_backend.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'otiza_db',
+        'USER': 'otiza_user',
+        'PASSWORD': 'otiza_pass_2026',
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
 
@@ -103,9 +108,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'es-pe'  # ← Español Perú
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'America/Lima'  # ← Perú
 
 USE_I18N = True
 
@@ -124,3 +129,11 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 # ✅ Media files (para imágenes subidas)
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# ==================== CONFIGURACIÓN OTIZA TOURS ====================
+AUTH_USER_MODEL = 'core.Usuario'  # ← Usa nuestro modelo personalizado
+
+# DESPUÉS:
+LOGIN_URL = 'core:login'
+LOGIN_REDIRECT_URL = 'core:dashboard' 
+LOGOUT_REDIRECT_URL = 'core:login'

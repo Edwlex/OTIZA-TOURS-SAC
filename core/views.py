@@ -51,7 +51,7 @@ def login_view(request):
             login(request, user)
             # Guardar sede en sesión
             request.session['sede_usuario'] = sede
-            return redirect('dashboard')
+            return redirect('core:dashboard')
         else:
             messages.error(request, 'Usuario o contraseña incorrectos')
     
@@ -78,13 +78,14 @@ def dashboard_view(request):
         'viajes_completados': 5,  # Para estrellas
         'viajes_faltantes': 7,
         'progreso_estrellas': 42,
+        # DESPUÉS (agrega 'nombre'):
         'viajes': [
             {'fecha': '2026-07-14', 'ruta_origen': 'Trujillo', 'ruta_destino': 'Julcán', 
-             'vehiculo': {'placa': 'ABC-123', 'capacidad': 20}, 'asientos_ocupados': 18, 
-             'ingreso': 450.00, 'estado': 'Completado'},
+            'vehiculo': {'placa': 'ABC-123', 'nombre': 'Combi Trujillo-1', 'capacidad': 20},  # ← Agrega 'nombre'
+            'asientos_ocupados': 18, 'ingreso': 450.00, 'estado': 'Completado'},
             {'fecha': '2026-07-14', 'ruta_origen': 'Trujillo', 'ruta_destino': 'Mache', 
-             'vehiculo': {'placa': 'XYZ-789', 'capacidad': 20}, 'asientos_ocupados': 15, 
-             'ingreso': 375.00, 'estado': 'En Ruta'},
+            'vehiculo': {'placa': 'XYZ-789', 'nombre': 'Combi Mache-2', 'capacidad': 20},  # ← Agrega 'nombre'
+            'asientos_ocupados': 15, 'ingreso': 375.00, 'estado': 'En Ruta'},
         ]
     }
     
@@ -93,4 +94,4 @@ def dashboard_view(request):
 @login_required
 def logout_view(request):
     logout(request)
-    return redirect('login')
+    return redirect('core:login') 
