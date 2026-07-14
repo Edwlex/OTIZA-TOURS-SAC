@@ -1,0 +1,21 @@
+/* Estilos personalizados de Otiza Tours */
+body {
+    font-family: 'Poppins', sans-serif;
+}
+
+.star-filled {
+    color: #FBBF24;
+}
+
+.star-empty {
+    color: #D1D5DB;
+}
+
+/* Colores corporativos */
+.bg-otiza-green {
+    background-color: #10B981;
+}
+
+.text-otiza-green {
+    color: #10B981;
+}

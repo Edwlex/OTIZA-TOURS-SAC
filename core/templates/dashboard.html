@@ -1,0 +1,218 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - Otiza Tours{% endblock %}
+
+{% block content %}
+<!-- Navbar -->
+<nav class="bg-gradient-to-r from-otiza-green to-otiza-dark text-white shadow-lg">
+    <div class="container mx-auto px-6 py-4">
+        <div class="flex justify-between items-center">
+            <div class="flex items-center space-x-4">
+                <img src="{% static 'images/logo-otiza.png' %}" alt="Logo" class="w-10 h-10 rounded-full bg-white" onerror="this.src='https://via.placeholder.com/40'">
+                <div>
+                    <h1 class="text-xl font-bold">Otiza Tours</h1>
+                    <p class="text-sm text-green-200">Sede: <span class="font-semibold" id="sedeUsuario">{{ sede_usuario|title }}</span></p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-6">
+                <div class="text-right">
+                    <p class="font-semibold">{{ request.user.get_full_name|default:request.user.username }}</p>
+                    <p class="text-sm text-green-200">
+                        {% if es_cajero %}Cajero - Agencia {{ sede_usuario|title }}{% else %}Dueño - Sede Central{% endif %}
+                    </p>
+                </div>
+                <a href="{% url 'logout' %}" class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg transition">
+                    Cerrar Sesión
+                </a>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<div class="container mx-auto px-6 py-8">
+    
+    <!-- Filtros -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <h2 class="text-2xl font-bold text-gray-800" id="tituloDashboard">{{ titulo_dashboard }}</h2>
+            <div class="flex flex-wrap gap-4">
+                <select id="filtroRuta" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green">
+                    {% for ruta in rutas_disponibles %}
+                        <option value="{{ ruta.valor }}">{{ ruta.etiqueta }}</option>
+                    {% endfor %}
+                </select>
+                
+                <select id="filtroPeriodo" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green">
+                    <option value="dia">Por Día</option>
+                    <option value="semana">Por Semana</option>
+                    <option value="mes">Por Mes</option>
+                </select>
+                <input type="date" id="fechaInicio" class="px-4 py-2 border border-gray-300 rounded-lg">
+                <input type="date" id="fechaFin" class="px-4 py-2 border border-gray-300 rounded-lg">
+                <button onclick="aplicarFiltros()" class="bg-otiza-green hover:bg-otiza-dark text-white px-6 py-2 rounded-lg transition">
+                    Filtrar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tarjetas de Resumen -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <!-- Ingresos -->
+        <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-green-500">
+            <p class="text-gray-500 text-sm">Ingresos Totales</p>
+            <p class="text-2xl font-bold text-green-600" id="totalIngresos">S/ {{ ingresos|floatformat:2 }}</p>
+        </div>
+
+        <!-- Egresos -->
+        <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-red-500">
+            <p class="text-gray-500 text-sm">Egresos</p>
+            <p class="text-2xl font-bold text-red-600" id="totalEgresos">S/ {{ egresos|floatformat:2 }}</p>
+        </div>
+
+        <!-- Ganancia Neta -->
+        <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500">
+            <p class="text-gray-500 text-sm">Ganancia Neta</p>
+            <p class="text-2xl font-bold text-blue-600" id="gananciaNeta">S/ {{ ganancia_neta|floatformat:2 }}</p>
+        </div>
+
+        <!-- Total Viajes -->
+        <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-purple-500">
+            <p class="text-gray-500 text-sm">Viajes Realizados</p>
+            <p class="text-2xl font-bold text-purple-600" id="totalViajes">{{ viajes|length }}</p>
+        </div>
+    </div>
+
+    <!-- Gráficos y Fidelización -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+        
+        <!-- Gráfico -->
+        <div class="lg:col-span-2 bg-white rounded-lg shadow-md p-6">
+            <h3 class="text-xl font-bold text-gray-800 mb-4" id="tituloGrafico">{{ titulo_grafico }}</h3>
+            <canvas id="ventasChart" height="120"></canvas>
+        </div>
+
+        <!-- Sistema de Estrellas (SOLO cajeros) -->
+        {% if es_cajero %}
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">🌟 Programa de Fidelización</h3>
+            <p class="text-sm text-gray-600 mb-4">¡12 viajes = 1 Rasca y Gana!</p>
+            
+            <div class="grid grid-cols-4 gap-3 mb-4" id="contenedorEstrellas">
+                {% for i in "123456789012"|make_list %}
+                <div class="text-center">
+                    <svg class="w-10 h-10 mx-auto {% if forloop.counter <= viajes_completados|divisibleby:12|add:viajes_completados %}star-filled{% else %}star-empty{% endif %}" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                    </svg>
+                    <span class="text-xs text-gray-600">{{ forloop.counter }}</span>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="bg-yellow-50 border border-yellow-300 rounded-lg p-4">
+                <p class="text-sm text-yellow-800 font-medium">
+                    🎁 Te faltan <span class="font-bold">{{ viajes_faltantes }}</span> viajes para tu Rasca y Gana
+                </p>
+                <div class="mt-2 w-full bg-yellow-200 rounded-full h-2">
+                    <div class="bg-yellow-500 h-2 rounded-full" style="width: {{ progreso_estrellas }}%"></div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Tabla de Viajes -->
+    <div class="bg-white rounded-lg shadow-md overflow-hidden mb-8">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-xl font-bold text-gray-800">{{ titulo_tabla }}</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ruta</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vehículo</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pasajeros</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ingreso</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for viaje in viajes %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 text-sm">{{ viaje.fecha|date:"d/m/Y" }}</td>
+                        <td class="px-6 py-4 text-sm">{{ viaje.ruta_origen }} → {{ viaje.ruta_destino }}</td>
+                        <td class="px-6 py-4 text-sm">{{ viaje.vehiculo.placa|default:viaje.vehiculo.nombre }}</td>
+                        <td class="px-6 py-4 text-sm">{{ viaje.asientos_ocupados }}/{{ viaje.vehiculo.capacidad }}</td>
+                        <td class="px-6 py-4 text-sm text-green-600 font-semibold">S/ {{ viaje.ingreso|floatformat:2 }}</td>
+                        <td class="px-6 py-4">
+                            <span class="px-2 py-1 text-xs rounded-full {% if viaje.estado == 'Completado' %}bg-green-100 text-green-800{% else %}bg-blue-100 text-blue-800{% endif %}">
+                                {{ viaje.estado }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-4 text-center text-gray-500">No hay viajes registrados</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_script %}
+<script>
+    // Datos que vienen de Django a JavaScript
+    const datosDashboard = {
+        sedeUsuario: '{{ sede_usuario }}',
+        esCajero: {{ es_cajero|yesno:"true,false" }},
+        viajesCompletados: {{ viajes_completados|default:0 }},
+        ingresos: {{ ingresos|default:0 }},
+        egresos: {{ egresos|default:0 }},
+        rutas: {{ rutas_json|safe }}
+    };
+
+    // Inicializar gráfico
+    document.addEventListener('DOMContentLoaded', function() {
+        const ctx = document.getElementById('ventasChart');
+        if (ctx) {
+            new Chart(ctx.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: datosDashboard.rutas.map(r => r.etiqueta),
+                    datasets: [{
+                        label: 'Ventas (S/)',
+                        data: datosDashboard.rutas.map(() => Math.floor(Math.random() * 3000) + 1000),
+                        backgroundColor: [
+                            'rgba(34, 197, 94, 0.8)',
+                            'rgba(59, 130, 246, 0.8)',
+                            'rgba(168, 85, 247, 0.8)',
+                            'rgba(236, 72, 153, 0.8)',
+                            'rgba(251, 191, 36, 0.8)',
+                            'rgba(239, 68, 68, 0.8)'
+                        ].slice(0, datosDashboard.rutas.length),
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+    });
+
+    function aplicarFiltros() {
+        const periodo = document.getElementById('filtroPeriodo').value;
+        const ruta = document.getElementById('filtroRuta').value;
+        alert(`Filtrando: ${periodo} - ${ruta}\n\n(En producción esto recargará con datos reales)`);
+    }
+</script>
+{% endblock %}

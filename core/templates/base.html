@@ -1,0 +1,62 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Otiza Tours{% endblock %}</title>
+    
+    <!-- Tailwind CSS (CDN para MVP) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js para gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Configuración personalizada de Tailwind -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'otiza': {
+                            'green': '#10B981',
+                            'dark': '#065F46',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Poppins', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Estilos personalizados -->
+    <style>
+        body { font-family: 'Poppins', sans-serif; }
+        .star-filled { color: #FBBF24; }
+        .star-empty { color: #D1D5DB; }
+        {% block extra_style %}{% endblock %}
+    </style>
+</head>
+<body class="bg-gray-100">
+    
+    {% block content %}{% endblock %}
+    
+    <!-- Scripts globales -->
+    <script>
+        // Funciones globales que pueden usar todas las páginas
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('es-PE', {
+                style: 'currency',
+                currency: 'PEN'
+            }).format(amount);
+        }
+    </script>
+    
+    {% block extra_script %}{% endblock %}
+</body>
+</html>
