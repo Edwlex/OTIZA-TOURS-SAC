@@ -1,274 +1,123 @@
 {% extends 'base.html' %}
-{% load static %}
 
-{% block title %}Dashboard - {{ sede.get_nombre_display }}{% endblock %}
+{% block title %}Dashboard - Otiza Tours{% endblock %}
+
+{% block page_title %}Dashboard{% endblock %}
 
 {% block content %}
+<!-- Header -->
+<div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+        <h1 class="text-2xl font-bold text-slate-800">Dashboard</h1>
+        <p class="text-slate-500 mt-1">Resumen de operaciones - {{ sede.nombre|title }}</p>
+    </div>
+    <button class="bg-otiza-green hover:bg-otiza-dark text-white px-5 py-2.5 rounded-lg font-semibold transition shadow-sm flex items-center gap-2">
+        <i class="fas fa-print"></i>
+        <span>Imprimir Reporte</span>
+    </button>
+</div>
 
-<!-- ==================== HEADER DEL DASHBOARD ==================== -->
-<div class="mb-8">
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+<!-- Tarjetas de Resumen (Usa tus variables) -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+    <!-- Ventas Hoy -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex items-center justify-between">
         <div>
-            <h1 class="text-3xl font-bold text-gray-800">Dashboard</h1>
-            <p class="text-gray-600 mt-1">Resumen de ventas y operaciones - {{ sede.get_nombre_display }}</p>
+            <p class="text-slate-500 text-sm font-medium">Ventas Hoy</p>
+            <p class="text-2xl font-bold text-green-600 mt-1">{{ ventas_hoy }}</p>
+            <p class="text-xs text-green-600 mt-1">S/ {{ monto_total_hoy|floatformat:2 }}</p>
         </div>
-        <div class="mt-4 md:mt-0">
-            <button onclick="window.print()" class="bg-otiza-green hover:bg-otiza-dark text-white px-6 py-2 rounded-lg shadow transition">
-                <i class="fas fa-print mr-2"></i>Imprimir Reporte
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- ==================== ALERTA DE FIDELIZACIÓN ==================== -->
-{% if alerta_fidelizacion %}
-<div class="mb-6 p-6 rounded-xl shadow-lg border-2 animate-pulse
-    {% if alerta_fidelizacion.tipo == 'success' %}
-        bg-gradient-to-r from-green-50 to-green-100 border-green-500
-    {% elif alerta_fidelizacion.tipo == 'warning' %}
-        bg-gradient-to-r from-yellow-50 to-yellow-100 border-yellow-500
-    {% else %}
-        bg-gradient-to-r from-blue-50 to-blue-100 border-blue-300
-    {% endif %}">
-    
-    <div class="flex items-center justify-between">
-        <div class="flex items-center space-x-4">
-            <div class="w-16 h-16 rounded-full bg-white flex items-center justify-center text-4xl shadow">
-                {% if alerta_fidelizacion.tipo == 'success' %}🎉{% elif alerta_fidelizacion.tipo == 'warning' %}{% else %}📊{% endif %}
-            </div>
-            <div>
-                <h3 class="text-2xl font-bold 
-                    {% if alerta_fidelizacion.tipo == 'success' %}text-green-800
-                    {% elif alerta_fidelizacion.tipo == 'warning' %}text-yellow-800
-                    {% else %}text-blue-800{% endif %}">
-                    {{ alerta_fidelizacion.titulo }}
-                </h3>
-                <p class="text-gray-700 mt-1 text-lg">{{ alerta_fidelizacion.mensaje }}</p>
-                <p class="text-sm text-gray-600 mt-1">DNI: <span class="font-bold">{{ alerta_fidelizacion.dni }}</span></p>
-            </div>
-        </div>
-        
-        {% if alerta_fidelizacion.tipo == 'success' %}
-        <div class="flex space-x-3">
-            <button onclick="imprimirComprobante()" 
-                    class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold shadow-lg transition">
-                <i class="fas fa-print mr-2"></i>Imprimir
-            </button>
-            <button onclick="marcarEntregado()" 
-                    class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold shadow-lg transition">
-                <i class="fas fa-check mr-2"></i>Marcar Entregado
-            </button>
-        </div>
-        {% endif %}
-    </div>
-</div>
-{% endif %}
-
-<!-- ==================== BUSCADOR DE CLIENTES ==================== -->
-<div class="bg-white rounded-xl shadow-md p-6 mb-8">
-    <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
-        <i class="fas fa-search text-otiza-green mr-2"></i>
-        Buscar Historial de Cliente
-    </h3>
-    <form method="GET" action="{% url 'core:dashboard' %}" class="flex gap-4">
-        <input type="text" name="dni_cliente" 
-               placeholder="Ingrese DNI del cliente" 
-               value="{{ cliente_busqueda }}"
-               class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green focus:border-transparent">
-        <button type="submit" 
-                class="bg-otiza-green hover:bg-otiza-dark text-white px-8 py-3 rounded-lg font-semibold shadow transition">
-            <i class="fas fa-search mr-2"></i>Buscar
-        </button>
-    </form>
-</div>
-
-<!-- ==================== TARJETAS DE RESUMEN ==================== -->
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-    <!-- Ventas del Día -->
-    <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-green-500 hover:shadow-lg transition">
-        <div class="flex items-center justify-between">
-            <div>
-                <p class="text-gray-500 text-sm font-medium">Ventas Hoy</p>
-                <p class="text-3xl font-bold text-green-600 mt-1">{{ ventas_hoy }}</p>
-                <p class="text-sm text-gray-600 mt-1">S/ {{ monto_total_hoy|floatformat:2 }}</p>
-            </div>
-            <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                <i class="fas fa-dollar-sign text-green-600 text-xl"></i>
-            </div>
-        </div>
-        <div class="mt-4 flex items-center text-sm">
-            <span class="text-green-600 font-semibold">
-                <i class="fas fa-arrow-up mr-1"></i>12%
-            </span>
-            <span class="text-gray-500 ml-2">vs ayer</span>
+        <div class="bg-green-100 w-12 h-12 rounded-full flex items-center justify-center text-green-600 text-xl">
+            <i class="fas fa-dollar-sign"></i>
         </div>
     </div>
 
     <!-- Viajes Completados -->
-    <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-blue-500 hover:shadow-lg transition">
-        <div class="flex items-center justify-between">
-            <div>
-                <p class="text-gray-500 text-sm font-medium">Viajes Completados</p>
-                <p class="text-3xl font-bold text-blue-600 mt-1">{{ viajes_completados_hoy }}</p>
-                <p class="text-sm text-gray-600 mt-1">Total del día</p>
-            </div>
-            <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                <i class="fas fa-check-circle text-blue-600 text-xl"></i>
-            </div>
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex items-center justify-between">
+        <div>
+            <p class="text-slate-500 text-sm font-medium">Viajes Completados</p>
+            <p class="text-2xl font-bold text-blue-600 mt-1">{{ viajes_completados_hoy }}</p>
+            <p class="text-xs text-slate-500 mt-1">Total del día</p>
         </div>
-        <div class="mt-4 flex items-center text-sm">
-            <span class="text-blue-600 font-semibold">
-                <i class="fas fa-arrow-up mr-1"></i>8%
-            </span>
-            <span class="text-gray-500 ml-2">vs ayer</span>
-        </div>
-    </div>
-
-    <!-- Próximos Viajes -->
-    <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-purple-500 hover:shadow-lg transition">
-        <div class="flex items-center justify-between">
-            <div>
-                <p class="text-gray-500 text-sm font-medium">Próximos Viajes</p>
-                <p class="text-3xl font-bold text-purple-600 mt-1">{{ proximos_viajes|length }}</p>
-                <p class="text-sm text-gray-600 mt-1">Programados</p>
-            </div>
-            <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                <i class="fas fa-bus text-purple-600 text-xl"></i>
-            </div>
-        </div>
-        <div class="mt-4 flex items-center text-sm">
-            <span class="text-gray-500">Hoy</span>
+        <div class="bg-blue-100 w-12 h-12 rounded-full flex items-center justify-center text-blue-600 text-xl">
+            <i class="fas fa-check-circle"></i>
         </div>
     </div>
 
     <!-- Asientos Disponibles -->
-    <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-yellow-500 hover:shadow-lg transition">
-        <div class="flex items-center justify-between">
-            <div>
-                <p class="text-gray-500 text-sm font-medium">Asientos Disponibles</p>
-                <p class="text-3xl font-bold text-yellow-600 mt-1">
-                    {% widthratio asientos_disponibles_total 1 1 %}
-                </p>
-                <p class="text-sm text-gray-600 mt-1">De {{ asientos_totales_total }} totales</p>
-            </div>
-            <div class="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
-                <i class="fas fa-chair text-yellow-600 text-xl"></i>
-            </div>
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex items-center justify-between">
+        <div>
+            <p class="text-slate-500 text-sm font-medium">Asientos Disponibles</p>
+            <p class="text-2xl font-bold text-yellow-600 mt-1">{{ asientos_disponibles_total }}</p>
+            <p class="text-xs text-slate-500 mt-1">De {{ asientos_totales_total }} totales</p>
         </div>
-        <div class="mt-4">
-            <div class="w-full bg-gray-200 rounded-full h-2">
-                <div class="bg-yellow-500 h-2 rounded-full" style="width: {{ porcentaje_disponibilidad }}%"></div>
-            </div>
+        <div class="bg-yellow-100 w-12 h-12 rounded-full flex items-center justify-center text-yellow-600 text-xl">
+            <i class="fas fa-chair"></i>
         </div>
     </div>
+
+    <!-- Alerta Fidelización (Si aplica) -->
+    {% if alerta_fidelizacion %}
+    <div class="bg-yellow-50 rounded-xl shadow-sm border border-yellow-200 p-5 flex items-center justify-between animate-pulse">
+        <div>
+            <p class="text-yellow-800 text-sm font-bold">{{ alerta_fidelizacion.titulo }}</p>
+            <p class="text-xs text-yellow-700 mt-1">{{ alerta_fidelizacion.mensaje }}</p>
+        </div>
+        <i class="fas fa-gift text-yellow-500 text-2xl"></i>
+    </div>
+    {% else %}
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex items-center justify-between opacity-50">
+        <div>
+            <p class="text-slate-400 text-sm font-medium">Fidelización</p>
+            <p class="text-lg font-bold text-slate-400 mt-1">Sin alertas</p>
+        </div>
+        <i class="fas fa-star text-slate-300 text-2xl"></i>
+    </div>
+    {% endif %}
 </div>
 
-<!-- ==================== GRÁFICOS ==================== -->
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-    
-    <!-- Gráfico de Ventas por Ruta -->
-    <div class="bg-white rounded-xl shadow-md p-6">
-        <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
-            <i class="fas fa-chart-bar text-otiza-green mr-2"></i>
-            Ventas por Ruta - Hoy
-        </h3>
-        <div class="relative h-64">
-            <canvas id="ventasRutaChart"></canvas>
-        </div>
+<!-- Próximos Viajes - Tabla -->
+<div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+    <div class="p-6 border-b border-slate-200 flex justify-between items-center">
+        <h3 class="text-lg font-bold text-slate-800">Próximos Viajes - Asignación de Combis</h3>
+        <span class="text-sm text-slate-500">Hoy, {{ "now"|date:"d/m/Y" }}</span>
     </div>
-
-    <!-- Gráfico de Ocupación -->
-    <div class="bg-white rounded-xl shadow-md p-6">
-        <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
-            <i class="fas fa-chart-pie text-otiza-green mr-2"></i>
-            Tasa de Ocupación
-        </h3>
-        <div class="relative h-64">
-            <canvas id="ocupacionChart"></canvas>
-        </div>
-    </div>
-</div>
-
-<!-- Gráfico de Ventas Semanales -->
-<div class="bg-white rounded-xl shadow-md p-6 mb-8">
-    <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
-        <i class="fas fa-chart-line text-otiza-green mr-2"></i>
-        Ventas de la Semana
-    </h3>
-    <div class="relative h-80">
-        <canvas id="ventasSemanaChart"></canvas>
-    </div>
-</div>
-
-<!-- ==================== PRÓXIMOS VIAJES ==================== -->
-<div class="bg-white rounded-xl shadow-md overflow-hidden mb-8">
-    <div class="px-6 py-4 border-b bg-gradient-to-r from-gray-50 to-gray-100">
-        <div class="flex items-center justify-between">
-            <h3 class="text-xl font-bold text-gray-800 flex items-center">
-                <i class="fas fa-bus text-otiza-green mr-2"></i>
-                Próximos Viajes - Asignación de Combis
-            </h3>
-            <a href="{% url 'core:ventas_lista' %}" class="text-otiza-green hover:underline font-semibold text-sm">
-                Ver todos <i class="fas fa-arrow-right ml-1"></i>
-            </a>
-        </div>
-    </div>
-    
     <div class="overflow-x-auto">
         <table class="w-full">
-            <thead class="bg-gray-50">
+            <thead class="bg-slate-50">
                 <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Hora</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Ruta</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Vehículo</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Ocupación</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Estado</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Acción</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Hora</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Ruta</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Vehículo</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Ocupación</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Estado</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Acción</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-gray-200 bg-white">
+            <tbody class="divide-y divide-slate-200">
                 {% for viaje in proximos_viajes %}
-                <tr class="hover:bg-gray-50 transition">
-                    <td class="px-6 py-4 whitespace-nowrap font-semibold text-gray-900">{{ viaje.hora_salida }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-gray-700">{{ viaje.ruta }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm">
-                            <p class="font-semibold text-gray-900">{{ viaje.vehiculo.placa }}</p>
-                            <p class="text-gray-500">{{ viaje.vehiculo.modelo }}</p>
-                        </div>
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="px-6 py-4 text-sm font-bold text-slate-900">{{ viaje.hora_salida }}</td>
+                    <td class="px-6 py-4 text-sm text-slate-700">{{ viaje.ruta }}</td>
+                    <td class="px-6 py-4 text-sm text-slate-600">
+                        <span class="font-semibold">{{ viaje.vehiculo.placa }}</span>
+                        <br><span class="text-xs">{{ viaje.vehiculo.modelo }}</span>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="flex items-center">
-                            <div class="w-full bg-gray-200 rounded-full h-2.5 mr-3 max-w-xs">
-                                <div class="bg-otiza-green h-2.5 rounded-full" style="width: {{ viaje.porcentaje_ocupacion }}%"></div>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-2">
+                            <div class="w-24 bg-slate-200 rounded-full h-2">
+                                <div class="bg-green-500 h-2 rounded-full" style="width: {{ viaje.porcentaje_ocupacion }}%"></div>
                             </div>
-                            <span class="text-sm text-gray-700">{{ viaje.asientos_disponibles }}/{{ viaje.asientos_totales }}</span>
+                            <span class="text-sm text-slate-600">{{ viaje.asientos_disponibles }}/20</span>
                         </div>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <span class="px-3 py-1 text-xs font-semibold rounded-full 
-                            {% if viaje.estado == 'Disponible' %}bg-green-100 text-green-800
-                            {% elif viaje.estado == 'Completo' %}bg-red-100 text-red-800
-                            {% else %}bg-gray-100 text-gray-800{% endif %}">
-                            {{ viaje.estado }}
-                        </span>
+                    <td class="px-6 py-4">
+                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">{{ viaje.estado }}</span>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        {% if viaje.estado == 'Disponible' %}
-                        <a href="{% url 'core:venta_create' viaje.id %}" 
-                           class="bg-otiza-green hover:bg-otiza-dark text-white px-4 py-2 rounded-lg text-sm font-semibold transition shadow">
-                            <i class="fas fa-ticket-alt mr-1"></i>Vender
+                    <td class="px-6 py-4">
+                        <a href="{% url 'core:venta_create' viaje.id %}" class="bg-otiza-green hover:bg-otiza-dark text-white px-4 py-2 rounded-lg text-sm font-medium transition inline-flex items-center gap-2">
+                            <i class="fas fa-ticket-alt"></i>
+                            Vender
                         </a>
-                        {% else %}
-                        <span class="text-gray-400 text-sm">No disponible</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="6" class="px-6 py-8 text-center text-gray-500">
-                        <i class="fas fa-bus text-4xl text-gray-300 mb-2"></i>
-                        <p>No hay viajes programados</p>
                     </td>
                 </tr>
                 {% endfor %}
@@ -277,200 +126,40 @@
     </div>
 </div>
 
-<!-- ==================== VIAJES RECIENTES ==================== -->
-<div class="bg-white rounded-xl shadow-md overflow-hidden">
-    <div class="px-6 py-4 border-b bg-gradient-to-r from-gray-50 to-gray-100">
-        <h3 class="text-xl font-bold text-gray-800 flex items-center">
-            <i class="fas fa-history text-otiza-green mr-2"></i>
-            Viajes Recientes
-        </h3>
+<!-- Viajes Recientes -->
+<div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+    <div class="p-6 border-b border-slate-200">
+        <h3 class="text-lg font-bold text-slate-800">Viajes Recientes</h3>
     </div>
-    
     <div class="overflow-x-auto">
         <table class="w-full">
-            <thead class="bg-gray-50">
+            <thead class="bg-slate-50">
                 <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Fecha/Hora</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Ruta</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Vehículo</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Ocupación</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Ingreso</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Estado</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Fecha</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Ruta</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Vehículo</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Ingreso</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Estado</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-gray-200 bg-white">
+            <tbody class="divide-y divide-slate-200">
                 {% for viaje in viajes_recientes %}
-                <tr class="hover:bg-gray-50 transition">
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm">
-                            <p class="text-gray-900">{{ viaje.fecha|date:"d/m/Y" }}</p>
-                            <p class="text-gray-500">{{ viaje.hora }}</p>
-                        </div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-gray-700">{{ viaje.ruta_origen }} → {{ viaje.ruta_destino }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap font-semibold text-gray-900">{{ viaje.vehiculo.placa }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-gray-700">{{ viaje.asientos_ocupados }}/20</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-green-600 font-semibold">S/ {{ viaje.ingreso|floatformat:2 }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <span class="px-3 py-1 text-xs font-semibold rounded-full 
-                            {% if viaje.estado == 'Completado' %}bg-green-100 text-green-800
-                            {% elif viaje.estado == 'En Ruta' %}bg-blue-100 text-blue-800
-                            {% else %}bg-gray-100 text-gray-800{% endif %}">
-                            {{ viaje.estado }}
-                        </span>
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="px-6 py-4 text-sm text-slate-600">{{ viaje.fecha }} {{ viaje.hora }}</td>
+                    <td class="px-6 py-4 text-sm text-slate-700">{{ viaje.ruta_origen }} → {{ viaje.ruta_destino }}</td>
+                    <td class="px-6 py-4 text-sm font-semibold text-slate-900">{{ viaje.vehiculo.placa }}</td>
+                    <td class="px-6 py-4 text-sm font-bold text-green-600">S/ {{ viaje.ingreso|floatformat:2 }}</td>
+                    <td class="px-6 py-4">
+                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">{{ viaje.estado }}</span>
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="6" class="px-6 py-8 text-center text-gray-500">
-                        <i class="fas fa-history text-4xl text-gray-300 mb-2"></i>
-                        <p>No hay viajes registrados</p>
-                    </td>
+                    <td colspan="5" class="px-6 py-8 text-center text-slate-400">No hay viajes registrados aún</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
 </div>
-
-{% endblock %}
-
-{% block extra_js %}
-<script>
-// ==================== CONFIGURACIÓN DE GRÁFICOS ====================
-
-// Gráfico de Ventas por Ruta
-const ctxVentasRuta = document.getElementById('ventasRutaChart').getContext('2d');
-new Chart(ctxVentasRuta, {
-    type: 'bar',
-    data: {
-        labels: ['Trujillo → Julcán', 'Trujillo → Mache', 'Julcán → Mache'],
-        datasets: [{
-            label: 'Ventas (S/)',
-            data: [850, 420, 270],
-            backgroundColor: [
-                'rgba(16, 185, 129, 0.8)',
-                'rgba(59, 130, 246, 0.8)',
-                'rgba(168, 85, 247, 0.8)'
-            ],
-            borderColor: [
-                'rgba(16, 185, 129, 1)',
-                'rgba(59, 130, 246, 1)',
-                'rgba(168, 85, 247, 1)'
-            ],
-            borderWidth: 2,
-            borderRadius: 8
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: {
-                display: false
-            }
-        },
-        scales: {
-            y: {
-                beginAtZero: true,
-                grid: {
-                    color: 'rgba(0,0,0,0.05)'
-                }
-            },
-            x: {
-                grid: {
-                    display: false
-                }
-            }
-        }
-    }
-});
-
-// Gráfico de Ocupación
-const ctxOcupacion = document.getElementById('ocupacionChart').getContext('2d');
-new Chart(ctxOcupacion, {
-    type: 'doughnut',
-    data: {
-        labels: ['Ocupados', 'Disponibles'],
-        datasets: [{
-            data: [65, 35],
-            backgroundColor: [
-                'rgba(16, 185, 129, 0.8)',
-                'rgba(203, 213, 225, 0.8)'
-            ],
-            borderColor: [
-                'rgba(16, 185, 129, 1)',
-                'rgba(203, 213, 225, 1)'
-            ],
-            borderWidth: 2
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: {
-                position: 'bottom'
-            }
-        }
-    }
-});
-
-// Gráfico de Ventas Semanales
-const ctxVentasSemana = document.getElementById('ventasSemanaChart').getContext('2d');
-new Chart(ctxVentasSemana, {
-    type: 'line',
-    data: {
-        labels: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'],
-        datasets: [{
-            label: 'Ventas (S/)',
-            data: [1200, 1500, 1300, 1800, 2100, 1600, 1400],
-            borderColor: 'rgba(16, 185, 129, 1)',
-            backgroundColor: 'rgba(16, 185, 129, 0.1)',
-            borderWidth: 3,
-            fill: true,
-            tension: 0.4,
-            pointBackgroundColor: 'rgba(16, 185, 129, 1)',
-            pointBorderColor: '#fff',
-            pointBorderWidth: 2,
-            pointRadius: 6,
-            pointHoverRadius: 8
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: {
-                display: false
-            }
-        },
-        scales: {
-            y: {
-                beginAtZero: true,
-                grid: {
-                    color: 'rgba(0,0,0,0.05)'
-                }
-            },
-            x: {
-                grid: {
-                    display: false
-                }
-            }
-        }
-    }
-});
-
-// Funciones para alertas de fidelización
-function imprimirComprobante() {
-    alert('🖨️ Imprimiendo comprobante de Rasca y Gana...\n\n(En producción: imprimir ticket térmico)');
-}
-
-function marcarEntregado() {
-    if (confirm('¿Confirmar que se entregó el Rasca y Gana al cliente?')) {
-        alert('✅ Rasca y Gana marcado como entregado.\n\nEl contador se reiniciará a 0.');
-        // Aquí iría llamada AJAX al backend
-    }
-}
-</script>
 {% endblock %}

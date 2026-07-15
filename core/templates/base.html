@@ -1,5 +1,6 @@
+{% load static %}
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="h-full bg-slate-50">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,135 +8,55 @@
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Configuración de colores Otiza -->
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        'otiza-green': '#10B981',
-                        'otiza-dark': '#059669',
-                        'otiza-light': '#D1FAE5'
+                        otiza: {
+                            green: '#10B981',
+                            dark: '#065F46',
+                            light: '#D1FAE5'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif']
                     }
                 }
             }
         }
     </script>
     
-    <style>
-        /* Sidebar styles con scroll */
-        .sidebar {
-            transition: all 0.3s ease;
-            overflow-y: auto;
-            overflow-x: hidden;
-            max-height: 100vh;
-            scrollbar-width: thin;
-            scrollbar-color: rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.1);
-        }
-        
-        /* Scrollbar personalizada - Chrome/Safari/Edge */
-        .sidebar::-webkit-scrollbar {
-            width: 6px;
-        }
-        
-        .sidebar::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 3px;
-        }
-        
-        .sidebar::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 3px;
-            transition: background 0.3s;
-        }
-        
-        .sidebar::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.5);
-        }
-        
-        .sidebar-item {
-            transition: all 0.2s ease;
-        }
-        .sidebar-item:hover {
-            background: rgba(255,255,255,0.1);
-            transform: translateX(5px);
-        }
-        .sidebar-item.active {
-            background: rgba(255,255,255,0.2);
-            border-left: 4px solid white;
-        }
-        
-        /* Scrollbar personalizada para todo el sitio */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #10B981;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #059669;
-        }
-    </style>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    
+    <!-- CSS Personalizado -->
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
     
     {% block extra_css %}{% endblock %}
 </head>
-<body class="bg-gray-100 font-sans antialiased">
+<body class="h-full flex overflow-hidden">
 
-    <div class="flex h-screen overflow-hidden">
+    <!-- SIDEBAR -->
+    {% include 'includes/sidebar.html' %}
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
         
-        <!-- ==================== SIDEBAR ==================== -->
-        {% include 'includes/sidebar.html' %}
-        
-        <!-- ==================== CONTENIDO PRINCIPAL ==================== -->
-        <div class="flex-1 flex flex-col overflow-hidden">
-            
-            <!-- Navbar -->
-            {% include 'includes/navbar.html' %}
-            
-            <!-- Main Content -->
-            <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
-                {% include 'includes/messages.html' %}
-                
-                {% block content %}{% endblock %}
-            </main>
-            
-        </div>
+        <!-- NAVBAR -->
+        {% include 'includes/navbar.html' %}
+
+        <!-- MENSAJES -->
+        {% include 'includes/messages.html' %}
+
+        <!-- CONTENIDO DINÁMICO -->
+        <main class="flex-1 overflow-y-auto p-6 lg:p-8">
+            {% block content %}{% endblock %}
+        </main>
     </div>
 
-    <!-- Scripts -->
-    <script>
-        // Toggle sidebar en móvil
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            sidebar.classList.toggle('-translate-x-full');
-        }
-        
-        // Cerrar sidebar al hacer click fuera en móvil
-        document.addEventListener('click', function(event) {
-            const sidebar = document.getElementById('sidebar');
-            const toggleBtn = document.getElementById('sidebarToggle');
-            
-            if (window.innerWidth < 768 && 
-                !sidebar.contains(event.target) && 
-                !toggleBtn.contains(event.target) &&
-                !sidebar.classList.contains('-translate-x-full')) {
-                sidebar.classList.add('-translate-x-full');
-            }
-        });
-    </script>
-    
+    <!-- JavaScript -->
+    <script src="{% static 'js/base.js' %}"></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

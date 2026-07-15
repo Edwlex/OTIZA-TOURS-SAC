@@ -1,109 +1,193 @@
 {% extends 'base.html' %}
-{% load static %}
 
-{% block title %}Ticket - Otiza Tours{% endblock %}
+{% block title %}Reporte Diario - Otiza Tours{% endblock %}
+{% block page_title %}Reporte Diario{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-6 py-8 max-w-md">
-    <!-- Ticket Térmico -->
-    <div class="bg-white border-2 border-gray-300 rounded-lg p-6 font-mono text-sm" id="ticketContent">
-        <!-- Header -->
-        <div class="text-center border-b-2 border-dashed border-gray-400 pb-4 mb-4">
-            <h2 class="text-2xl font-bold">OTIZA TOURS S.A.C.</h2>
-            <p class="text-xs">RUC: 20123456789</p>
-            <p class="text-xs">Ticket N° {{ ticket.numero }}</p>
-            <p class="text-xs">{{ ticket.fecha_emision }}</p>
+<div class="space-y-6">
+    
+    <!-- Header con Fecha y Acciones -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-800">Reporte Diario</h1>
+            <p class="text-slate-500 mt-1">Resumen de ventas y operaciones del día</p>
         </div>
-
-        <!-- Info del Viaje -->
-        <div class="mb-4">
-            <p class="font-bold border-b border-gray-300 mb-2">INFORMACIÓN DEL VIAJE</p>
-            <div class="flex justify-between">
-                <span>Fecha:</span>
-                <span class="font-semibold">{{ ticket.viaje.fecha }}</span>
-            </div>
-            <div class="flex justify-between">
-                <span>Hora:</span>
-                <span class="font-semibold">{{ ticket.viaje.hora }}</span>
-            </div>
-            <div class="flex justify-between">
-                <span>Ruta:</span>
-                <span class="font-semibold">{{ ticket.viaje.ruta }}</span>
-            </div>
-            <div class="flex justify-between">
-                <span>Vehículo:</span>
-                <span class="font-semibold">{{ ticket.viaje.vehiculo }}</span>
-            </div>
-        </div>
-
-        <!-- Info del Cliente -->
-        <div class="mb-4">
-            <p class="font-bold border-b border-gray-300 mb-2">PASAJERO</p>
-            <div class="flex justify-between">
-                <span>DNI:</span>
-                <span class="font-semibold">{{ ticket.cliente.dni }}</span>
-            </div>
-            <div class="flex justify-between">
-                <span>Nombre:</span>
-                <span class="font-semibold">{{ ticket.cliente.nombre }}</span>
-            </div>
-            <div class="flex justify-between">
-                <span>Asiento:</span>
-                <span class="font-bold text-lg">{{ ticket.asiento }}</span>
-            </div>
-        </div>
-
-        <!-- Alerta de Premio -->
-        {% if ticket.es_premiado == 'True' %}
-        <div class="bg-yellow-100 border-2 border-yellow-500 rounded p-3 mb-4 text-center animate-pulse">
-            <p class="text-lg font-bold text-yellow-800"> ¡FELICIDADES!</p>
-            <p class="text-sm text-yellow-700">Ha completado 12 viajes</p>
-            <p class="text-sm font-bold text-yellow-800">ENTREGUE RASCA Y GANA</p>
-        </div>
-        {% endif %}
-
-        <!-- Total -->
-        <div class="border-t-2 border-dashed border-gray-400 pt-4 mt-4">
-            <div class="flex justify-between text-lg font-bold">
-                <span>TOTAL PAGADO:</span>
-                <span>S/ {{ ticket.monto|floatformat:2 }}</span>
-            </div>
-        </div>
-
-        <!-- Footer -->
-        <div class="text-center mt-6 text-xs text-gray-500">
-            <p>¡Gracias por preferirnos!</p>
-            <p>Otiza Tours - Seguridad y Confianza</p>
+        <div class="flex gap-3">
+            <button onclick="window.print()" class="bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-50 transition text-sm font-medium flex items-center gap-2">
+                <i class="fas fa-print"></i> Imprimir
+            </button>
+            <button class="bg-otiza-green hover:bg-otiza-dark text-white px-4 py-2 rounded-lg transition text-sm font-medium flex items-center gap-2">
+                <i class="fas fa-download"></i> Exportar PDF
+            </button>
         </div>
     </div>
 
-    <!-- Botones de Acción -->
-    <div class="mt-6 flex space-x-4">
-        <button onclick="window.print()" 
-                class="flex-1 bg-otiza-green hover:bg-otiza-dark text-white py-3 rounded-lg font-semibold">
-            🖨️ Imprimir Ticket
-        </button>
-        <a href="{% url 'core:dashboard' %}" 
-           class="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-3 rounded-lg font-semibold text-center">
-            ← Volver al Dashboard
-        </a>
+    <!-- Filtro de Fecha -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+        <div class="flex flex-wrap items-center gap-4">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-calendar text-slate-400"></i>
+                <input type="date" value="{{ fecha_actual|date:'Y-m-d' }}" 
+                       class="px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition">
+            </div>
+            <button class="bg-otiza-green hover:bg-otiza-dark text-white px-6 py-2 rounded-lg font-medium transition">
+                <i class="fas fa-search mr-2"></i>Filtrar
+            </button>
+            <div class="ml-auto flex gap-2">
+                <button class="px-3 py-1.5 text-sm rounded-lg border border-slate-300 hover:bg-slate-50 transition">Ayer</button>
+                <button class="px-3 py-1.5 text-sm rounded-lg bg-otiza-green text-white">Hoy</button>
+            </div>
+        </div>
     </div>
+
+    <!-- Tarjetas de Resumen -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-slate-500 font-medium">Total Ventas</p>
+                    <p class="text-2xl font-bold text-slate-800 mt-1">S/ {{ total_ventas|default:"1,540.00" }}</p>
+                    <p class="text-xs text-green-600 mt-1 flex items-center gap-1">
+                        <i class="fas fa-arrow-up"></i> 12% vs ayer
+                    </p>
+                </div>
+                <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-green-600">
+                    <i class="fas fa-dollar-sign text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-slate-500 font-medium">Viajes Realizados</p>
+                    <p class="text-2xl font-bold text-slate-800 mt-1">{{ total_viajes|default:"8" }}</p>
+                    <p class="text-xs text-blue-600 mt-1">Completados</p>
+                </div>
+                <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
+                    <i class="fas fa-bus text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-slate-500 font-medium">Pasajeros Transportados</p>
+                    <p class="text-2xl font-bold text-slate-800 mt-1">{{ total_pasajeros|default:"142" }}</p>
+                    <p class="text-xs text-purple-600 mt-1">Ocupación: 71%</p>
+                </div>
+                <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center text-purple-600">
+                    <i class="fas fa-users text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-slate-500 font-medium">Boletos Vendidos</p>
+                    <p class="text-2xl font-bold text-slate-800 mt-1">{{ total_boletos|default:"154" }}</p>
+                    <p class="text-xs text-yellow-600 mt-1">Promedio: S/ 10.00</p>
+                </div>
+                <div class="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600">
+                    <i class="fas fa-ticket-alt text-xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráfico de Ventas por Hora -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <h3 class="text-lg font-bold text-slate-800 mb-4">Ventas por Hora del Día</h3>
+        <canvas id="ventasPorHoraChart" height="100"></canvas>
+    </div>
+
+    <!-- Tabla de Ventas Detalladas -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="p-6 border-b border-slate-200 flex justify-between items-center">
+            <h3 class="text-lg font-bold text-slate-800">Detalle de Ventas del Día</h3>
+            <span class="text-sm text-slate-500">{{ ventas_detalle|length }} transacciones</span>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-slate-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Hora</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Ruta</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Vehículo</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Pasajeros</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Método de Pago</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Monto</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200">
+                    {% for venta in ventas_detalle %}
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="px-6 py-4 text-sm text-slate-700">{{ venta.hora|default:"08:30" }}</td>
+                        <td class="px-6 py-4 text-sm font-medium text-slate-900">{{ venta.ruta|default:"Trujillo → Julcán" }}</td>
+                        <td class="px-6 py-4 text-sm text-slate-600">{{ venta.vehiculo|default:"ABC-123" }}</td>
+                        <td class="px-6 py-4 text-sm text-slate-600">{{ venta.pasajeros|default:18 }}</td>
+                        <td class="px-6 py-4">
+                            <span class="px-2 py-1 rounded text-xs font-medium 
+                                {% if venta.metodo_pago == 'efectivo' %}bg-green-100 text-green-800
+                                {% elif venta.metodo_pago == 'yape' %}bg-purple-100 text-purple-800
+                                {% else %}bg-blue-100 text-blue-800{% endif %}">
+                                {{ venta.metodo_pago|default:"Efectivo"|title }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-sm font-bold text-slate-900">S/ {{ venta.monto|default:"450.00" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-8 text-center text-slate-500">
+                            <i class="fas fa-receipt text-4xl text-slate-300 mb-2"></i>
+                            <p>No hay ventas registradas para esta fecha</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="bg-slate-50 font-bold">
+                    <tr>
+                        <td colspan="5" class="px-6 py-4 text-right text-slate-700">TOTAL:</td>
+                        <td class="px-6 py-4 text-slate-900">S/ {{ total_ventas|default:"1,540.00" }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+
 </div>
+{% endblock %}
 
-<style>
-    @media print {
-        body * {
-            visibility: hidden;
-        }
-        #ticketContent, #ticketContent * {
-            visibility: visible;
-        }
-        #ticketContent {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Gráfico de Ventas por Hora
+new Chart(document.getElementById('ventasPorHoraChart'), {
+    type: 'line',
+    data: {
+        labels: ['06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00'],
+        datasets: [{
+            label: 'Ventas (S/)',
+            data: [250, 450, 380, 320, 290, 180, 120],
+            borderColor: '#10B981',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            tension: 0.4,
+            fill: true
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+            legend: { display: false }
+        },
+        scales: {
+            y: { beginAtZero: true }
         }
     }
-</style>
+});
+</script>
 {% endblock %}

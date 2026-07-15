@@ -199,3 +199,8 @@ def reporte_mensual(request):
 def incidencias_lista(request):
     """Lista de incidencias"""
     return render(request, 'incidencias/lista.html')
+
+# Agrega esto al final de core/views.py
+@login_required
+def buscar_cliente_view(request):
+    return render(request, 'clientes/buscar.html')

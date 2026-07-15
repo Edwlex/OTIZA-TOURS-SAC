@@ -1,0 +1,57 @@
+/* Sidebar styles con scroll */
+.sidebar {
+    transition: all 0.3s ease;
+    overflow-y: auto;
+    overflow-x: hidden;
+    max-height: 100vh;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.1);
+}
+
+/* Scrollbar personalizada - Chrome/Safari/Edge */
+.sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 3px;
+    transition: background 0.3s;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.sidebar-item {
+    transition: all 0.2s ease;
+}
+.sidebar-item:hover {
+    background: rgba(255,255,255,0.1);
+    transform: translateX(5px);
+}
+.sidebar-item.active {
+    background: rgba(255,255,255,0.2);
+    border-left: 4px solid white;
+}
+
+/* Scrollbar personalizada para todo el sitio */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+    background: #10B981;
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #059669;
+}

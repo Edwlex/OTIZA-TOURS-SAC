@@ -23,6 +23,7 @@ urlpatterns = [
     
     # Clientes
     path('clientes/historial/<str:dni>/', views.historial_cliente, name='cliente_historial'),
+     path('clientes/buscar/', views.buscar_cliente_view, name='buscar_cliente'),
     path('clientes/fidelizacion/', views.fidelizacion_cliente, name='fidelizacion'),
     
     # Reportes

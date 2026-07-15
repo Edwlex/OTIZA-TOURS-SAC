@@ -1,0 +1,242 @@
+{% extends 'base.html' %}
+
+{% block title %}Venta de Pasajes - Otiza Tours{% endblock %}
+{% block page_title %}Venta de Pasajes{% endblock %}
+
+{% block content %}
+<!-- Header con Acciones -->
+<div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+        <h1 class="text-2xl font-bold text-slate-800">Venta de Pasajes</h1>
+        <p class="text-slate-500 mt-1">Gestiona las ventas de boletos para tus viajes</p>
+    </div>
+    <div class="flex gap-3">
+        <button class="bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-50 transition text-sm font-medium flex items-center gap-2">
+            <i class="fas fa-filter"></i> Filtros
+        </button>
+        <button class="bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-50 transition text-sm font-medium flex items-center gap-2">
+            <i class="fas fa-download"></i> Exportar
+        </button>
+    </div>
+</div>
+
+<!-- Buscador y Filtros -->
+<div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6">
+    <div class="flex flex-col md:flex-row gap-4">
+        <!-- Buscador -->
+        <div class="flex-1 relative">
+            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+            <input type="text" placeholder="Buscar por ruta, placa o chofer..." 
+                   class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition">
+        </div>
+        
+        <!-- Filtro de Fecha -->
+        <div class="flex items-center gap-2">
+            <i class="fas fa-calendar text-slate-400"></i>
+            <input type="date" class="px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition">
+        </div>
+        
+        <!-- Filtro de Ruta -->
+        <select class="px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition bg-white">
+            <option value="">Todas las rutas</option>
+            <option value="trujillo-julcan">Trujillo → Julcán</option>
+            <option value="julcan-trujillo">Julcán → Trujillo</option>
+            <option value="trujillo-mache">Trujillo → Mache</option>
+            <option value="mache-trujillo">Mache → Trujillo</option>
+            <option value="julcan-mache">Julcán → Mache</option>
+            <option value="mache-julcan">Mache → Julcán</option>
+        </select>
+        
+        <!-- Botón Buscar -->
+        <button class="bg-otiza-green hover:bg-otiza-dark text-white px-6 py-2.5 rounded-lg font-medium transition flex items-center gap-2">
+            <i class="fas fa-search"></i> Buscar
+        </button>
+    </div>
+</div>
+
+<!-- Lista de Viajes Disponibles -->
+<div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+    <div class="p-6 border-b border-slate-200">
+        <h3 class="text-lg font-bold text-slate-800">Viajes Disponibles - Hoy</h3>
+        <p class="text-sm text-slate-500 mt-1">{{ viajes|length }} viajes programados</p>
+    </div>
+    
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead class="bg-slate-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Hora</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Ruta</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Vehículo</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Chofer</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Asientos</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Precio</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Estado</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Acción</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200">
+                
+                <!-- Viaje 1 -->
+                <tr class="hover:bg-slate-50 transition group">
+                    <td class="px-6 py-4">
+                        <span class="text-sm font-bold text-slate-900">08:00</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-map-marker-alt text-otiza-green text-xs"></i>
+                            <span class="text-sm text-slate-700">Trujillo → Julcán</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div>
+                            <p class="text-sm font-semibold text-slate-900">ABC-123</p>
+                            <p class="text-xs text-slate-500">Toyota Hiace</p>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">
+                                JP
+                            </div>
+                            <span class="text-sm text-slate-700">Juan Pérez</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-2">
+                            <div class="w-20 bg-slate-200 rounded-full h-2">
+                                <div class="bg-green-500 h-2 rounded-full" style="width: 60%"></div>
+                            </div>
+                            <span class="text-sm text-slate-600">12/20</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="text-sm font-bold text-slate-900">S/ 25.00</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">Disponible</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <a href="{% url 'core:venta_create' 1 %}" 
+                           class="bg-otiza-green hover:bg-otiza-dark text-white px-4 py-2 rounded-lg text-sm font-medium transition inline-flex items-center gap-2 group-hover:shadow-lg">
+                            <i class="fas fa-ticket-alt"></i> Vender
+                        </a>
+                    </td>
+                </tr>
+
+                <!-- Viaje 2 -->
+                <tr class="hover:bg-slate-50 transition group">
+                    <td class="px-6 py-4">
+                        <span class="text-sm font-bold text-slate-900">10:30</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-map-marker-alt text-otiza-green text-xs"></i>
+                            <span class="text-sm text-slate-700">Trujillo → Mache</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div>
+                            <p class="text-sm font-semibold text-slate-900">XYZ-789</p>
+                            <p class="text-xs text-slate-500">Nissan Urvan</p>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">
+                                ML
+                            </div>
+                            <span class="text-sm text-slate-700">María López</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-2">
+                            <div class="w-20 bg-slate-200 rounded-full h-2">
+                                <div class="bg-yellow-500 h-2 rounded-full" style="width: 85%"></div>
+                            </div>
+                            <span class="text-sm text-slate-600">3/20</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="text-sm font-bold text-slate-900">S/ 30.00</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">Pocos asientos</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <a href="{% url 'core:venta_create' 2 %}" 
+                           class="bg-otiza-green hover:bg-otiza-dark text-white px-4 py-2 rounded-lg text-sm font-medium transition inline-flex items-center gap-2 group-hover:shadow-lg">
+                            <i class="fas fa-ticket-alt"></i> Vender
+                        </a>
+                    </td>
+                </tr>
+
+                <!-- Viaje 3 (Agotado - Ejemplo) -->
+                <tr class="hover:bg-slate-50 transition opacity-60">
+                    <td class="px-6 py-4">
+                        <span class="text-sm font-bold text-slate-900">14:00</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-map-marker-alt text-slate-400 text-xs"></i>
+                            <span class="text-sm text-slate-500">Julcán → Trujillo</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div>
+                            <p class="text-sm font-semibold text-slate-500">DEF-456</p>
+                            <p class="text-xs text-slate-400">Toyota Coaster</p>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-400">
+                                RG
+                            </div>
+                            <span class="text-sm text-slate-500">Carlos Ruiz</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-2">
+                            <div class="w-20 bg-slate-200 rounded-full h-2">
+                                <div class="bg-red-500 h-2 rounded-full" style="width: 100%"></div>
+                            </div>
+                            <span class="text-sm text-slate-500">0/20</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="text-sm font-bold text-slate-400">S/ 25.00</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">Agotado</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <button disabled class="bg-slate-200 text-slate-400 px-4 py-2 rounded-lg text-sm font-medium cursor-not-allowed inline-flex items-center gap-2">
+                            <i class="fas fa-ticket-alt"></i> Agotado
+                        </button>
+                    </td>
+                </tr>
+
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Paginación (Visual) -->
+    <div class="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
+        <p class="text-sm text-slate-500">Mostrando 1-3 de 8 viajes</p>
+        <div class="flex gap-1">
+            <button class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition">Anterior</button>
+            <button class="px-3 py-1.5 bg-otiza-green text-white rounded-lg text-sm font-medium">1</button>
+            <button class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition">2</button>
+            <button class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition">Siguiente</button>
+        </div>
+    </div>
+</div>
+
+<!-- Botón Flotante para Nueva Venta Rápida (Móvil) -->
+<div class="fixed bottom-6 right-6 lg:hidden">
+    <button class="bg-otiza-green hover:bg-otiza-dark text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-xl transition">
+        <i class="fas fa-plus"></i>
+    </button>
+</div>
+{% endblock %}

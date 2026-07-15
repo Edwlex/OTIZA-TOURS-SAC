@@ -1,89 +1,223 @@
 {% extends 'base.html' %}
-{% load static %}
 
 {% block title %}Fidelización - Otiza Tours{% endblock %}
+{% block page_title %}Programa de Fidelización{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-6 py-8">
-    <div class="mb-6">
-        <a href="{% url 'core:dashboard' %}" class="text-otiza-green hover:underline">
-            ← Volver al Dashboard
-        </a>
-        <h1 class="text-3xl font-bold text-gray-800 mt-4">🌟 Programa de Fidelización</h1>
-        <p class="text-gray-600 mt-2">Clientes cercanos a completar 12 viajes</p>
+<div class="space-y-6">
+    
+    <!-- Header + Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-slate-500 font-medium">Clientes en Programa</p>
+                    <p class="text-2xl font-bold text-slate-800 mt-1">{{ stats.total_clientes|default:"142" }}</p>
+                </div>
+                <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
+                    <i class="fas fa-users text-xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-slate-500 font-medium">Premios Pendientes</p>
+                    <p class="text-2xl font-bold text-yellow-600 mt-1">{{ stats.pendientes|default:"8" }}</p>
+                </div>
+                <div class="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600">
+                    <i class="fas fa-gift text-xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-slate-500 font-medium">Premios Entregados (Mes)</p>
+                    <p class="text-2xl font-bold text-green-600 mt-1">{{ stats.entregados|default:"24" }}</p>
+                </div>
+                <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-green-600">
+                    <i class="fas fa-check-circle text-xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-slate-500 font-medium">Cerca de Ganar (≤2 viajes)</p>
+                    <p class="text-2xl font-bold text-purple-600 mt-1">{{ stats.cercanos|default:"15" }}</p>
+                </div>
+                <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center text-purple-600">
+                    <i class="fas fa-star text-xl"></i>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- Estadísticas -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-yellow-500">
-            <p class="text-gray-500 text-sm">Total Clientes Premiados</p>
-            <p class="text-3xl font-bold text-yellow-600">{{ total_clientes_premiados }}</p>
+    <!-- Filtros y Búsqueda -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col md:flex-row gap-4 items-center justify-between">
+        <div class="flex-1 w-full md:w-auto relative">
+            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+            <input type="text" placeholder="Buscar por DNI o nombre..." 
+                   class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition">
         </div>
-        <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-green-500">
-            <p class="text-gray-500 text-sm">Rascas y Gana Entregados</p>
-            <p class="text-3xl font-bold text-green-600">{{ total_clientes_premiados }}</p>
-        </div>
-        <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500">
-            <p class="text-gray-500 text-sm">Clientes Cercanos</p>
-            <p class="text-3xl font-bold text-blue-600">{{ clientes_cercanos|length }}</p>
+        
+        <div class="flex gap-3 w-full md:w-auto">
+            <select class="px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition bg-white text-sm">
+                <option value="todos">Todos los estados</option>
+                <option value="pendiente">Pendiente</option>
+                <option value="listo">Listo para canjear</option>
+                <option value="entregado">Entregado</option>
+            </select>
+            
+            <select class="px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition bg-white text-sm">
+                <option value="viajes">Ordenar por viajes</option>
+                <option value="nombre">Ordenar por nombre</option>
+                <option value="fecha">Ordenar por fecha</option>
+            </select>
         </div>
     </div>
 
-    <!-- Lista de Clientes Cercanos -->
-    <div class="bg-white rounded-lg shadow-md overflow-hidden">
-        <div class="px-6 py-4 border-b bg-gray-50">
-            <h3 class="text-xl font-bold">📋 Clientes Cercanos al Premio</h3>
+    <!-- Tabla de Fidelización -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="p-6 border-b border-slate-200 flex justify-between items-center">
+            <h3 class="text-lg font-bold text-slate-800">Estado de Fidelización</h3>
+            <span class="text-sm text-slate-500">{{ clientes_fidelizacion|length }} clientes registrados</span>
         </div>
-        <table class="w-full">
-            <thead class="bg-gray-100">
-                <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">DNI</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Nombre</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Viajes</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Faltan</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Progreso</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Acción</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y">
-                {% for cliente in clientes_cercanos %}
-                <tr class="hover:bg-gray-50">
-                    <td class="px-6 py-4 font-semibold">{{ cliente.dni }}</td>
-                    <td class="px-6 py-4">{{ cliente.nombre }}</td>
-                    <td class="px-6 py-4">{{ cliente.viajes }}/12</td>
-                    <td class="px-6 py-4">
-                        {% if cliente.faltan == 1 %}
-                        <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 font-bold">
-                            ¡{{ cliente.faltan }} viaje!
-                        </span>
-                        {% else %}
-                        <span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">
-                            {{ cliente.faltan }} viajes
-                        </span>
-                        {% endif %}
-                    </td>
-                    <td class="px-6 py-4">
-                        <div class="w-full bg-gray-200 rounded-full h-2">
-                            <div class="bg-otiza-green h-2 rounded-full" 
-                                 style="width: {{ cliente.viajes|add:0|divisibleby:12|multiply:100 }}%"></div>
-                        </div>
-                    </td>
-                    <td class="px-6 py-4">
-                        <a href="{% url 'core:cliente_historial' cliente.dni %}" 
-                           class="text-otiza-green hover:underline font-semibold">
-                            Ver Historial
-                        </a>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="6" class="px-6 py-4 text-center text-gray-500">
-                        No hay clientes cercanos en este momento
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-slate-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Cliente</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Viajes</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Progreso</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Estado</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Último Viaje</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider text-right">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200">
+                    
+                    {% for cliente in clientes_fidelizacion|default:clientes_cercanos %}
+                    <tr class="hover:bg-slate-50 transition group">
+                        <td class="px-6 py-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-sm font-bold text-slate-600">
+                                    {{ cliente.nombre|first|default:'C' }}
+                                </div>
+                                <div>
+                                    <p class="text-sm font-semibold text-slate-900">{{ cliente.nombre|default:"Cliente Demo" }}</p>
+                                    <p class="text-xs text-slate-500">DNI: {{ cliente.dni|default:"00000000" }}</p>
+                                </div>
+                            </div>
+                        </td>
+                        
+                        <td class="px-6 py-4">
+                            <span class="text-sm font-bold text-slate-800">{{ cliente.viajes_actuales|default:0 }}/12</span>
+                            <span class="text-xs text-slate-500 block">Faltan: {{ cliente.viajes_restantes|default:12 }}</span>
+                        </td>
+                        
+                        <td class="px-6 py-4 w-48">
+                            <div class="flex items-center gap-2">
+                                <div class="flex-1 bg-slate-200 rounded-full h-2">
+                                    <div class="bg-otiza-green h-2 rounded-full transition-all duration-300" 
+                                         style="width: {{ cliente.progreso_porcentaje|default:0 }}%"></div>
+                                </div>
+                                <span class="text-xs font-medium text-slate-600">{{ cliente.progreso_porcentaje|default:0 }}%</span>
+                            </div>
+                        </td>
+                        
+                        <td class="px-6 py-4">
+                            {% if cliente.viajes_actuales|default:0 >= 12 %}
+                                <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800 border border-yellow-200">
+                                    <i class="fas fa-gift mr-1"></i> Listo para canjear
+                                </span>
+                            {% elif cliente.viajes_restantes|default:12 <= 2 %}
+                                <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-800 border border-purple-200">
+                                    <i class="fas fa-star mr-1"></i> Cerca
+                                </span>
+                            {% else %}
+                                <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">
+                                    En curso
+                                </span>
+                            {% endif %}
+                        </td>
+                        
+                        <td class="px-6 py-4 text-sm text-slate-600">
+                            {{ cliente.ultimo_viaje|default:"Hace 5 días" }}
+                        </td>
+                        
+                        <td class="px-6 py-4 text-right">
+                            <div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <a href="{% url 'core:cliente_historial' cliente.dni|default:'00000000' %}" 
+                                   class="text-slate-400 hover:text-blue-600 p-2 rounded-lg hover:bg-blue-50 transition" title="Ver historial">
+                                    <i class="fas fa-history"></i>
+                                </a>
+                                
+                                {% if cliente.viajes_actuales|default:0 >= 12 and cliente.estado != 'entregado' %}
+                                <button onclick="entregarPremio('{{ cliente.dni }}')" 
+                                        class="text-yellow-600 hover:text-yellow-800 p-2 rounded-lg hover:bg-yellow-50 transition" title="Entregar Rasca y Gana">
+                                    <i class="fas fa-hand-holding-heart"></i>
+                                </button>
+                                {% endif %}
+                                
+                                {% if cliente.viajes_actuales|default:0 >= 12 and cliente.estado == 'entregado' %}
+                                <button onclick="reiniciarCiclo('{{ cliente.dni }}')" 
+                                        class="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-50 transition" title="Reiniciar ciclo">
+                                    <i class="fas fa-redo"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-12 text-center">
+                            <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <i class="fas fa-users text-2xl text-slate-400"></i>
+                            </div>
+                            <p class="text-slate-500 font-medium">No hay clientes registrados en el programa</p>
+                            <p class="text-sm text-slate-400 mt-1">Los clientes se agregan automáticamente al comprar su primer pasaje</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Paginación -->
+        <div class="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
+            <p class="text-sm text-slate-500">Mostrando 1-10 de {{ clientes_fidelizacion|length|default:0 }} clientes</p>
+            <div class="flex gap-1">
+                <button class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition">Anterior</button>
+                <button class="px-3 py-1.5 bg-otiza-green text-white rounded-lg text-sm font-medium">1</button>
+                <button class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition">2</button>
+                <button class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition">Siguiente</button>
+            </div>
+        </div>
     </div>
+
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function entregarPremio(dni) {
+    if(confirm(`¿Confirmar entrega de Rasca y Gana al cliente DNI ${dni}?`)) {
+        // Aquí iría la llamada AJAX o redirección a una vista de confirmación
+        alert(`✅ Premio entregado a ${dni}. El ciclo se reiniciará automáticamente.`);
+    }
+}
+
+function reiniciarCiclo(dni) {
+    if(confirm(`¿Reiniciar el contador de viajes para DNI ${dni}?`)) {
+        alert(`🔄 Ciclo reiniciado para ${dni}. Comienza de 0/12.`);
+    }
+}
+</script>
 {% endblock %}

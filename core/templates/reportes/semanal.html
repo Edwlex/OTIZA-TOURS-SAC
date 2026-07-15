@@ -1,0 +1,196 @@
+{% extends 'base.html' %}
+
+{% block title %}Reporte Semanal - Otiza Tours{% endblock %}
+{% block page_title %}Reporte Semanal{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-800">Reporte Semanal</h1>
+            <p class="text-slate-500 mt-1">Resumen de la semana del {{ semana_inicio }} al {{ semana_fin }}</p>
+        </div>
+        <div class="flex gap-3">
+            <button onclick="window.print()" class="bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-50 transition text-sm font-medium flex items-center gap-2">
+                <i class="fas fa-print"></i> Imprimir
+            </button>
+            <button class="bg-otiza-green hover:bg-otiza-dark text-white px-4 py-2 rounded-lg transition text-sm font-medium flex items-center gap-2">
+                <i class="fas fa-download"></i> Exportar PDF
+            </button>
+        </div>
+    </div>
+
+    <!-- Filtro de Semana -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+        <div class="flex flex-wrap items-center gap-4">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-calendar-week text-slate-400"></i>
+                <select class="px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition">
+                    <option>Semana Actual</option>
+                    <option>Semana Anterior</option>
+                    <option>Hace 2 semanas</option>
+                    <option>Hace 3 semanas</option>
+                </select>
+            </div>
+            <button class="bg-otiza-green hover:bg-otiza-dark text-white px-6 py-2 rounded-lg font-medium transition">
+                <i class="fas fa-search mr-2"></i>Actualizar
+            </button>
+        </div>
+    </div>
+
+    <!-- Tarjetas de Resumen -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-slate-500 font-medium">Total Semanal</p>
+                    <p class="text-2xl font-bold text-slate-800 mt-1">S/ {{ total_semanal|default:"10,780.00" }}</p>
+                    <p class="text-xs text-green-600 mt-1 flex items-center gap-1">
+                        <i class="fas fa-arrow-up"></i> 8% vs semana anterior
+                    </p>
+                </div>
+                <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-green-600">
+                    <i class="fas fa-dollar-sign text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-slate-500 font-medium">Viajes Totales</p>
+                    <p class="text-2xl font-bold text-slate-800 mt-1">{{ viajes_semanales|default:"56" }}</p>
+                    <p class="text-xs text-slate-500 mt-1">Promedio: 8/día</p>
+                </div>
+                <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
+                    <i class="fas fa-bus text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-slate-500 font-medium">Pasajeros Totales</p>
+                    <p class="text-2xl font-bold text-slate-800 mt-1">{{ pasajeros_semanales|default:"994" }}</p>
+                    <p class="text-xs text-purple-600 mt-1">Ocupación: 73%</p>
+                </div>
+                <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center text-purple-600">
+                    <i class="fas fa-users text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-slate-500 font-medium">Día Más Rentable</p>
+                    <p class="text-lg font-bold text-slate-800 mt-1">{{ dia_rentable|default:"Viernes" }}</p>
+                    <p class="text-xs text-yellow-600 mt-1">S/ {{ monto_dia_rentable|default:"2,100" }}</p>
+                </div>
+                <div class="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600">
+                    <i class="fas fa-trophy text-xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráfico Comparativo por Día -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <h3 class="text-lg font-bold text-slate-800 mb-4">Ventas por Día de la Semana</h3>
+        <canvas id="ventasSemanalesChart" height="100"></canvas>
+    </div>
+
+    <!-- Top Rutas -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="p-6 border-b border-slate-200">
+                <h3 class="text-lg font-bold text-slate-800">Top 5 Rutas Más Vendidas</h3>
+            </div>
+            <div class="p-6 space-y-4">
+                <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                    <div class="flex items-center gap-3">
+                        <span class="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center text-sm font-bold">1</span>
+                        <span class="font-medium text-slate-700">Trujillo → Julcán</span>
+                    </div>
+                    <span class="font-bold text-slate-900">S/ 3,240</span>
+                </div>
+                <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                    <div class="flex items-center gap-3">
+                        <span class="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">2</span>
+                        <span class="font-medium text-slate-700">Julcán → Trujillo</span>
+                    </div>
+                    <span class="font-bold text-slate-900">S/ 2,890</span>
+                </div>
+                <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                    <div class="flex items-center gap-3">
+                        <span class="w-8 h-8 bg-purple-500 text-white rounded-full flex items-center justify-center text-sm font-bold">3</span>
+                        <span class="font-medium text-slate-700">Trujillo → Mache</span>
+                    </div>
+                    <span class="font-bold text-slate-900">S/ 2,450</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="p-6 border-b border-slate-200">
+                <h3 class="text-lg font-bold text-slate-800">Métodos de Pago</h3>
+            </div>
+            <div class="p-6">
+                <canvas id="metodosPagoChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Gráfico de Ventas Semanales
+new Chart(document.getElementById('ventasSemanalesChart'), {
+    type: 'bar',
+    data: {
+        labels: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'],
+        datasets: [{
+            label: 'Ventas (S/)',
+            data: [1240, 1580, 1320, 1680, 2100, 1760, 1100],
+            backgroundColor: '#10B981',
+            borderRadius: 8
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+            legend: { display: false }
+        },
+        scales: {
+            y: { beginAtZero: true }
+        }
+    }
+});
+
+// Gráfico de Métodos de Pago
+new Chart(document.getElementById('metodosPagoChart'), {
+    type: 'doughnut',
+    data: {
+        labels: ['Efectivo', 'Yape', 'Plin', 'Transferencia'],
+        datasets: [{
+            data: [65, 20, 10, 5],
+            backgroundColor: ['#10B981', '#9333EA', '#06B6D4', '#3B82F6']
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+            legend: { position: 'bottom' }
+        }
+    }
+});
+</script>
+{% endblock %}

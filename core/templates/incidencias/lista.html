@@ -1,0 +1,331 @@
+{% extends 'base.html' %}
+
+{% block title %}Incidencias - Otiza Tours{% endblock %}
+{% block page_title %}Gestión de Incidencias{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    
+    <!-- Header + Acciones -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-800">Incidencias</h1>
+            <p class="text-slate-500 mt-1">Registra y da seguimiento a eventos operativos</p>
+        </div>
+        <button onclick="toggleModal('modalIncidencia')" class="bg-otiza-green hover:bg-otiza-dark text-white px-5 py-2.5 rounded-lg font-medium transition shadow-sm flex items-center gap-2">
+            <i class="fas fa-plus-circle"></i> Reportar Incidencia
+        </button>
+    </div>
+
+    <!-- Tarjetas de Resumen -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-slate-500 font-medium">Pendientes</p>
+                    <p class="text-2xl font-bold text-yellow-600 mt-1">{{ pendientes|default:"4" }}</p>
+                </div>
+                <div class="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center text-yellow-600">
+                    <i class="fas fa-clock"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-slate-500 font-medium">En Proceso</p>
+                    <p class="text-2xl font-bold text-blue-600 mt-1">{{ en_proceso|default:"2" }}</p>
+                </div>
+                <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600">
+                    <i class="fas fa-spinner"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-slate-500 font-medium">Resueltas (Mes)</p>
+                    <p class="text-2xl font-bold text-green-600 mt-1">{{ resueltas|default:"12" }}</p>
+                </div>
+                <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center text-green-600">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-slate-500 font-medium">Críticas / Alertas</p>
+                    <p class="text-2xl font-bold text-red-600 mt-1">{{ criticas|default:"0" }}</p>
+                </div>
+                <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center text-red-600">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-wrap gap-4 items-center">
+        <div class="flex-1 min-w-[200px]">
+            <input type="text" placeholder="Buscar por ID, descripción o vehículo..." class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition">
+        </div>
+        
+        <select class="px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition bg-white text-sm">
+            <option value="">Todos los estados</option>
+            <option value="pendiente">Pendiente</option>
+            <option value="proceso">En Proceso</option>
+            <option value="resuelta">Resuelta</option>
+        </select>
+        
+        <select class="px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition bg-white text-sm">
+            <option value="">Todas las sedes</option>
+            <option value="trujillo">Trujillo</option>
+            <option value="julcan">Julcán</option>
+            <option value="mache">Mache</option>
+        </select>
+        
+        <button class="bg-slate-800 hover:bg-slate-900 text-white px-5 py-2 rounded-lg text-sm font-medium transition">
+            <i class="fas fa-filter mr-2"></i>Filtrar
+        </button>
+    </div>
+
+    <!-- Tabla de Incidencias -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="p-6 border-b border-slate-200 flex justify-between items-center">
+            <h3 class="text-lg font-bold text-slate-800">Listado de Incidencias</h3>
+            <span class="text-sm text-slate-500">{{ incidencias|length|default:"6" }} registros</span>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-slate-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">ID</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Fecha / Hora</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Tipo</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Descripción</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Sede / Vehículo</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Prioridad</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Estado</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase text-right">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200">
+                    
+                    <!-- Fila 1 -->
+                    <tr class="hover:bg-slate-50 transition group">
+                        <td class="px-6 py-4 text-sm font-mono text-slate-600">#INC-0042</td>
+                        <td class="px-6 py-4 text-sm text-slate-700">15/07/2026 09:15</td>
+                        <td class="px-6 py-4">
+                            <span class="px-2 py-1 rounded bg-orange-100 text-orange-700 text-xs font-medium">Mecánica</span>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-slate-700 max-w-xs truncate" title="Falla en sistema de aire acondicionado del vehículo">Falla en sistema de aire acondicionado...</td>
+                        <td class="px-6 py-4 text-sm text-slate-600">Trujillo / ABC-123</td>
+                        <td class="px-6 py-4">
+                            <span class="flex items-center gap-1.5 text-xs font-semibold text-red-600">
+                                <span class="w-2 h-2 rounded-full bg-red-500"></span> Alta
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">Pendiente</span>
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            <div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button onclick="toggleModal('modalDetalle')" class="text-slate-400 hover:text-blue-600 p-1.5 rounded hover:bg-blue-50 transition" title="Ver detalle">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="text-slate-400 hover:text-green-600 p-1.5 rounded hover:bg-green-50 transition" title="Cambiar estado">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- Fila 2 -->
+                    <tr class="hover:bg-slate-50 transition group">
+                        <td class="px-6 py-4 text-sm font-mono text-slate-600">#INC-0041</td>
+                        <td class="px-6 py-4 text-sm text-slate-700">14/07/2026 16:40</td>
+                        <td class="px-6 py-4">
+                            <span class="px-2 py-1 rounded bg-blue-100 text-blue-700 text-xs font-medium">Retraso</span>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-slate-700 max-w-xs truncate" title="Retraso por congestión vehicular en Av. España">Retraso por congestión vehicular...</td>
+                        <td class="px-6 py-4 text-sm text-slate-600">Mache / XYZ-789</td>
+                        <td class="px-6 py-4">
+                            <span class="flex items-center gap-1.5 text-xs font-semibold text-yellow-600">
+                                <span class="w-2 h-2 rounded-full bg-yellow-500"></span> Media
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">En Proceso</span>
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            <div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button onclick="toggleModal('modalDetalle')" class="text-slate-400 hover:text-blue-600 p-1.5 rounded hover:bg-blue-50 transition">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="text-slate-400 hover:text-green-600 p-1.5 rounded hover:bg-green-50 transition">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- Fila 3 (Resuelta) -->
+                    <tr class="hover:bg-slate-50 transition group opacity-75">
+                        <td class="px-6 py-4 text-sm font-mono text-slate-600">#INC-0040</td>
+                        <td class="px-6 py-4 text-sm text-slate-700">13/07/2026 11:20</td>
+                        <td class="px-6 py-4">
+                            <span class="px-2 py-1 rounded bg-purple-100 text-purple-700 text-xs font-medium">Queja</span>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-slate-700 max-w-xs truncate">Cliente reportó pérdida de equipaje menor</td>
+                        <td class="px-6 py-4 text-sm text-slate-600">Julcán / DEF-456</td>
+                        <td class="px-6 py-4">
+                            <span class="flex items-center gap-1.5 text-xs font-semibold text-slate-600">
+                                <span class="w-2 h-2 rounded-full bg-slate-400"></span> Baja
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">Resuelta</span>
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            <div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button onclick="toggleModal('modalDetalle')" class="text-slate-400 hover:text-blue-600 p-1.5 rounded hover:bg-blue-50 transition">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Paginación -->
+        <div class="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
+            <p class="text-sm text-slate-500">Mostrando 1-3 de 6 incidencias</p>
+            <div class="flex gap-1">
+                <button class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition">Anterior</button>
+                <button class="px-3 py-1.5 bg-otiza-green text-white rounded-lg text-sm font-medium">1</button>
+                <button class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition">2</button>
+                <button class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition">Siguiente</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Reportar Nueva Incidencia -->
+<div id="modalIncidencia" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="toggleModal('modalIncidencia')"></div>
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 animate-fade-in">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-xl font-bold text-slate-800">Reportar Incidencia</h3>
+            <button onclick="toggleModal('modalIncidencia')" class="text-slate-400 hover:text-slate-600 transition">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        
+        <form class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Tipo de Incidencia</label>
+                    <select class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition">
+                        <option>Mecánica</option>
+                        <option>Retraso</option>
+                        <option>Queja de pasajero</option>
+                        <option>Accidente</option>
+                        <option>Clima / Vía</option>
+                        <option>Otro</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Prioridad</label>
+                    <select class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition">
+                        <option>Baja</option>
+                        <option selected>Media</option>
+                        <option>Alta</option>
+                        <option>Crítica</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Sede / Vehículo</label>
+                <select class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition">
+                    <option>Trujillo - ABC-123</option>
+                    <option>Trujillo - XYZ-789</option>
+                    <option>Julcán - DEF-456</option>
+                    <option>Mache - GHI-012</option>
+                </select>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Descripción detallada</label>
+                <textarea rows="3" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition resize-none" placeholder="Describe lo sucedido..."></textarea>
+            </div>
+            
+            <div class="pt-2 flex gap-3">
+                <button type="button" onclick="toggleModal('modalIncidencia')" class="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg text-slate-700 font-medium hover:bg-slate-50 transition">Cancelar</button>
+                <button type="submit" class="flex-1 px-4 py-2.5 bg-otiza-green hover:bg-otiza-dark text-white rounded-lg font-medium transition shadow-sm">Registrar Incidencia</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: Detalle Rápido -->
+<div id="modalDetalle" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="toggleModal('modalDetalle')"></div>
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+        <div class="flex justify-between items-start mb-4">
+            <div>
+                <h3 class="text-lg font-bold text-slate-800">#INC-0042</h3>
+                <p class="text-sm text-slate-500">Reportado el 15/07/2026 09:15</p>
+            </div>
+            <button onclick="toggleModal('modalDetalle')" class="text-slate-400 hover:text-slate-600">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="space-y-3 text-sm">
+            <div class="flex justify-between border-b pb-2">
+                <span class="text-slate-500">Tipo:</span>
+                <span class="font-medium text-orange-700 bg-orange-100 px-2 py-0.5 rounded">Mecánica</span>
+            </div>
+            <div class="flex justify-between border-b pb-2">
+                <span class="text-slate-500">Vehículo:</span>
+                <span class="font-medium">ABC-123 (Trujillo)</span>
+            </div>
+            <div class="flex justify-between border-b pb-2">
+                <span class="text-slate-500">Prioridad:</span>
+                <span class="font-bold text-red-600"> Alta</span>
+            </div>
+            <div class="bg-slate-50 p-3 rounded-lg">
+                <span class="text-slate-500 block mb-1">Descripción:</span>
+                <p class="text-slate-800">Falla en sistema de aire acondicionado. Pasajeros reportan calor excesivo. Se solicita revisión inmediata antes del siguiente viaje.</p>
+            </div>
+        </div>
+        <div class="mt-5 flex gap-3">
+            <button class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium transition">Marcar en Proceso</button>
+            <button class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-medium transition">Marcar Resuelta</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function toggleModal(modalId) {
+        const modal = document.getElementById(modalId);
+        modal.classList.toggle('hidden');
+    }
+    
+    // Cerrar modales con tecla ESC
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            document.querySelectorAll('.fixed.z-50').forEach(modal => modal.classList.add('hidden'));
+        }
+    });
+</script>
+{% endblock %}
