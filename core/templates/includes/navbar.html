@@ -1,0 +1,42 @@
+<!-- Navbar -->
+<header class="bg-white shadow-md z-40">
+    <div class="flex items-center justify-between px-6 py-4">
+        
+        <!-- Toggle Sidebar (Móvil) -->
+        <button id="sidebarToggle" onclick="toggleSidebar()" class="md:hidden text-gray-600 hover:text-otiza-green focus:outline-none">
+            <i class="fas fa-bars text-2xl"></i>
+        </button>
+
+        <!-- Búsqueda Rápida -->
+        <div class="hidden md:flex flex-1 max-w-xl ml-4">
+            <div class="relative w-full">
+                <input type="text" 
+                       placeholder="Buscar venta, cliente o viaje..." 
+                       class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green">
+                <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+            </div>
+        </div>
+
+        <!-- Acciones -->
+        <div class="flex items-center space-x-4">
+            
+            <!-- Notificaciones -->
+            <button class="relative p-2 text-gray-600 hover:text-otiza-green transition">
+                <i class="fas fa-bell text-xl"></i>
+                <span class="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">3</span>
+            </button>
+
+            <!-- Usuario -->
+            <div class="flex items-center space-x-3 border-l pl-4">
+                <div class="text-right hidden md:block">
+                    <p class="text-sm font-semibold text-gray-800">{{ usuario.get_full_name|default:usuario.username }}</p>
+                    <p class="text-xs text-gray-500">Cajero</p>
+                </div>
+                <div class="w-10 h-10 bg-gradient-to-br from-otiza-green to-otiza-dark rounded-full flex items-center justify-center text-white font-bold">
+                    {{ usuario.first_name|default:usuario.username|slice:":1"|upper }}
+                </div>
+            </div>
+
+        </div>
+    </div>
+</header>

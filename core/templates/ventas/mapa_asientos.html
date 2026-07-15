@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Mapa de Asientos - Otiza Tours{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-6 py-8">
+    <div class="mb-6">
+        <a href="{% url 'core:venta_create' viaje.id %}" class="text-otiza-green hover:underline">
+            ← Volver
+        </a>
+        <h1 class="text-3xl font-bold text-gray-800 mt-4">💺 Selección de Asientos</h1>
+        <p class="text-gray-600">{{ viaje.ruta }} - {{ viaje.fecha }} {{ viaje.hora_salida }}</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Mapa de Asientos -->
+        <div class="lg:col-span-2 bg-white rounded-lg shadow-md p-6">
+            <h3 class="text-xl font-bold mb-4 text-center">Vehículo {{ viaje.vehiculo.placa }}</h3>
+            
+            <!-- Leyenda -->
+            <div class="flex justify-center space-x-6 mb-6">
+                <div class="flex items-center">
+                    <div class="w-6 h-6 bg-green-500 rounded mr-2"></div>
+                    <span class="text-sm">Disponible</span>
+                </div>
+                <div class="flex items-center">
+                    <div class="w-6 h-6 bg-red-500 rounded mr-2"></div>
+                    <span class="text-sm">Ocupado</span>
+                </div>
+                <div class="flex items-center">
+                    <div class="w-6 h-6 bg-yellow-500 rounded mr-2"></div>
+                    <span class="text-sm">Reservado</span>
+                </div>
+            </div>
+
+            <!-- Grid de Asientos -->
+            <div class="grid grid-cols-4 gap-3 max-w-md mx-auto">
+                {% for asiento in asientos %}
+                <button 
+                    type="button"
+                    data-asiento="{{ asiento.numero }}"
+                    data-precio="{{ asiento.precio }}"
+                    class="asiento-btn h-12 rounded-lg font-bold text-white transition
+                        {% if asiento.estado == 'disponible' %}
+                            bg-green-500 hover:bg-green-600
+                        {% elif asiento.estado == 'ocupado' %}
+                            bg-red-500 cursor-not-allowed
+                        {% else %}
+                            bg-yellow-500 cursor-not-allowed
+                        {% endif %}"
+                    {% if asiento.estado != 'disponible' %}disabled{% endif %}>
+                    {{ asiento.numero }}
+                </button>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Formulario de Datos del Cliente -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h3 class="text-xl font-bold mb-4">📝 Datos del Pasajero</h3>
+            
+            <form method="POST" action="{% url 'core:procesar_venta' %}" id="formVenta">
+                {% csrf_token %}
+                <input type="hidden" name="viaje_id" value="{{ viaje.id }}">
+                <input type="hidden" name="asiento_numero" id="asientoSeleccionado" value="">
+                
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-medium mb-2">DNI *</label>
+                    <input type="text" name="dni_cliente" required
+                           class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-otiza-green">
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-medium mb-2">Nombre Completo *</label>
+                    <input type="text" name="nombre_cliente" required
+                           class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-otiza-green">
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-medium mb-2">Teléfono</label>
+                    <input type="text" name="telefono_cliente"
+                           class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-otiza-green">
+                </div>
+                
+                <div class="border-t pt-4 mt-4">
+                    <p class="text-sm text-gray-600">Asiento seleccionado:</p>
+                    <p class="text-2xl font-bold text-otiza-green" id="asientoDisplay">-</p>
+                    <p class="text-lg font-semibold">S/ <span id="precioDisplay">0.00</span></p>
+                </div>
+                
+                <button type="submit" 
+                        id="btnVender"
+                        disabled
+                        class="w-full bg-otiza-green hover:bg-otiza-dark text-white py-3 rounded-lg font-semibold mt-4 disabled:bg-gray-300 disabled:cursor-not-allowed">
+                    Confirmar Venta
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Selección de asientos
+    document.querySelectorAll('.asiento-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const asiento = this.dataset.asiento;
+            const precio = this.dataset.precio;
+            
+            // Actualizar inputs ocultos
+            document.getElementById('asientoSeleccionado').value = asiento;
+            
+            // Actualizar display
+            document.getElementById('asientoDisplay').textContent = asiento;
+            document.getElementById('precioDisplay').textContent = precio;
+            
+            // Habilitar botón
+            document.getElementById('btnVender').disabled = false;
+            
+            // Marcar visualmente
+            document.querySelectorAll('.asiento-btn').forEach(b => b.classList.remove('ring-4', 'ring-blue-400'));
+            this.classList.add('ring-4', 'ring-blue-400');
+        });
+    });
+</script>
+{% endblock %}

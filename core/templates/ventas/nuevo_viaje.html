@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Nueva Venta - Otiza Tours{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-6 py-8 max-w-2xl">
+    <div class="mb-6">
+        <a href="{% url 'core:dashboard' %}" class="text-otiza-green hover:underline">
+            ← Volver al Dashboard
+        </a>
+        <h1 class="text-3xl font-bold text-gray-800 mt-4">🎫 Nueva Venta de Pasaje</h1>
+    </div>
+
+    <!-- Info del Viaje -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h3 class="text-xl font-bold mb-4">🚌 Información del Viaje</h3>
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <p class="text-gray-500 text-sm">Fecha</p>
+                <p class="font-semibold">{{ viaje.fecha }}</p>
+            </div>
+            <div>
+                <p class="text-gray-500 text-sm">Hora de Salida</p>
+                <p class="font-semibold">{{ viaje.hora_salida }}</p>
+            </div>
+            <div>
+                <p class="text-gray-500 text-sm">Ruta</p>
+                <p class="font-semibold">{{ viaje.ruta }}</p>
+            </div>
+            <div>
+                <p class="text-gray-500 text-sm">Vehículo</p>
+                <p class="font-semibold">{{ viaje.vehiculo.placa }}</p>
+            </div>
+            <div>
+                <p class="text-gray-500 text-sm">Precio Base</p>
+                <p class="font-semibold text-otiza-green">S/ {{ viaje.precio_base|floatformat:2 }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botón Continuar -->
+    <div class="flex justify-end">
+        <a href="{% url 'core:mapa_asientos' viaje.id %}" 
+           class="bg-otiza-green hover:bg-otiza-dark text-white px-8 py-3 rounded-lg font-semibold text-lg">
+            Seleccionar Asiento →
+        </a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% if messages %}
+<div class="fixed top-4 right-4 z-50 space-y-2">
+    {% for message in messages %}
+    <div class="px-6 py-3 rounded-lg shadow-lg transform transition-all duration-300 
+        {% if message.tags == 'success' %}
+            bg-green-500 text-white
+        {% elif message.tags == 'error' %}
+            bg-red-500 text-white
+        {% elif message.tags == 'warning' %}
+            bg-yellow-500 text-white
+        {% else %}
+            bg-blue-500 text-white
+        {% endif %}">
+        <div class="flex items-center space-x-2">
+            {% if message.tags == 'success' %}
+            <i class="fas fa-check-circle"></i>
+            {% elif message.tags == 'error' %}
+            <i class="fas fa-exclamation-circle"></i>
+            {% elif message.tags == 'warning' %}
+            <i class="fas fa-exclamation-triangle"></i>
+            {% else %}
+            <i class="fas fa-info-circle"></i>
+            {% endif %}
+            <span>{{ message }}</span>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+// Auto-cerrar mensajes después de 5 segundos
+setTimeout(function() {
+    document.querySelectorAll('.fixed.top-4.right-4 > div').forEach(function(el) {
+        el.style.opacity = '0';
+        el.style.transform = 'translateX(400px)';
+        setTimeout(function() { el.remove(); }, 300);
+    });
+}, 5000);
+</script>
+{% endif %}

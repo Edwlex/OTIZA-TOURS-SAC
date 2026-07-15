@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Ticket - Otiza Tours{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-6 py-8 max-w-md">
+    <!-- Ticket Térmico -->
+    <div class="bg-white border-2 border-gray-300 rounded-lg p-6 font-mono text-sm" id="ticketContent">
+        <!-- Header -->
+        <div class="text-center border-b-2 border-dashed border-gray-400 pb-4 mb-4">
+            <h2 class="text-2xl font-bold">OTIZA TOURS S.A.C.</h2>
+            <p class="text-xs">RUC: 20123456789</p>
+            <p class="text-xs">Ticket N° {{ ticket.numero }}</p>
+            <p class="text-xs">{{ ticket.fecha_emision }}</p>
+        </div>
+
+        <!-- Info del Viaje -->
+        <div class="mb-4">
+            <p class="font-bold border-b border-gray-300 mb-2">INFORMACIÓN DEL VIAJE</p>
+            <div class="flex justify-between">
+                <span>Fecha:</span>
+                <span class="font-semibold">{{ ticket.viaje.fecha }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span>Hora:</span>
+                <span class="font-semibold">{{ ticket.viaje.hora }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span>Ruta:</span>
+                <span class="font-semibold">{{ ticket.viaje.ruta }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span>Vehículo:</span>
+                <span class="font-semibold">{{ ticket.viaje.vehiculo }}</span>
+            </div>
+        </div>
+
+        <!-- Info del Cliente -->
+        <div class="mb-4">
+            <p class="font-bold border-b border-gray-300 mb-2">PASAJERO</p>
+            <div class="flex justify-between">
+                <span>DNI:</span>
+                <span class="font-semibold">{{ ticket.cliente.dni }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span>Nombre:</span>
+                <span class="font-semibold">{{ ticket.cliente.nombre }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span>Asiento:</span>
+                <span class="font-bold text-lg">{{ ticket.asiento }}</span>
+            </div>
+        </div>
+
+        <!-- Alerta de Premio -->
+        {% if ticket.es_premiado == 'True' %}
+        <div class="bg-yellow-100 border-2 border-yellow-500 rounded p-3 mb-4 text-center animate-pulse">
+            <p class="text-lg font-bold text-yellow-800"> ¡FELICIDADES!</p>
+            <p class="text-sm text-yellow-700">Ha completado 12 viajes</p>
+            <p class="text-sm font-bold text-yellow-800">ENTREGUE RASCA Y GANA</p>
+        </div>
+        {% endif %}
+
+        <!-- Total -->
+        <div class="border-t-2 border-dashed border-gray-400 pt-4 mt-4">
+            <div class="flex justify-between text-lg font-bold">
+                <span>TOTAL PAGADO:</span>
+                <span>S/ {{ ticket.monto|floatformat:2 }}</span>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="text-center mt-6 text-xs text-gray-500">
+            <p>¡Gracias por preferirnos!</p>
+            <p>Otiza Tours - Seguridad y Confianza</p>
+        </div>
+    </div>
+
+    <!-- Botones de Acción -->
+    <div class="mt-6 flex space-x-4">
+        <button onclick="window.print()" 
+                class="flex-1 bg-otiza-green hover:bg-otiza-dark text-white py-3 rounded-lg font-semibold">
+            🖨️ Imprimir Ticket
+        </button>
+        <a href="{% url 'core:dashboard' %}" 
+           class="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-3 rounded-lg font-semibold text-center">
+            ← Volver al Dashboard
+        </a>
+    </div>
+</div>
+
+<style>
+    @media print {
+        body * {
+            visibility: hidden;
+        }
+        #ticketContent, #ticketContent * {
+            visibility: visible;
+        }
+        #ticketContent {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}
