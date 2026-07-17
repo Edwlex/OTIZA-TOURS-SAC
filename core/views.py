@@ -124,31 +124,78 @@ def dashboard_cajero(request, usuario, sede):
 @login_required
 def dashboard_admin_simple(request, usuario, sede):
     """
-    Dashboard MINIMALISTA para el dueño (Sede Central)
-    Solo muestra: totales consolidados + resumen por sede + incidencias pendientes
+    Dashboard COMPLETO con filtros, KPIs, gráficos, tops y tabla detallada
     """
-    # Datos hardcodeados (después serán queries reales a BD)
+    hoy = timezone.now().date()
+    
+    # Obtener filtros
+    periodo = request.GET.get('periodo', 'hoy')
+    sede_filtro = request.GET.get('sede', '')
+    fecha_desde = request.GET.get('fecha_desde', '')
+    fecha_hasta = request.GET.get('fecha_hasta', '')
+    
     contexto = {
         'usuario': usuario,
         'sede': sede,
         'es_admin': True,
+        'fecha': hoy,
+        'periodo': periodo,
+        'sede_filtro': sede_filtro,
+        'fecha_desde': fecha_desde,
+        'fecha_hasta': fecha_hasta,
         
-        # 🔹 KPIs Consolidados del Día
-        'recaudacion_total': 4580.00,
+        # KPIs del Día
+        'ingresos_totales': 4580.00,
         'total_ventas': 45,
+        'total_pasajeros': 1247,
         'total_viajes': 12,
+        'ocupacion_promedio': 78,
         
-        # 🔹 Resumen Simple por Sede (sin código, solo nombre)
+        # Gráfico de Tendencia
+        'dias_semana': ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Hoy'],
+        'ventas_por_dia': [8500, 9200, 10100, 9800, 11200, 13500, 4580],
+        
+        # Ingresos por Sede
+        'sedes': ['Trujillo', 'Julcán', 'Mache'],
+        'ingresos_por_sede': [2540, 1320, 720],
+        
+        # Resumen por Sede
         'resumen_por_sede': [
             {'nombre': 'Trujillo', 'ventas': 25, 'monto': 2540.00, 'porcentaje': 55},
             {'nombre': 'Julcán', 'ventas': 12, 'monto': 1320.00, 'porcentaje': 29},
             {'nombre': 'Mache', 'ventas': 8, 'monto': 720.00, 'porcentaje': 16},
         ],
         
-        # 🔹 Incidencias Pendientes (solo las no resueltas)
+        # Top 3 Rutas
+        'top_rutas': [
+            {'ruta': 'Trujillo → Julcán', 'ventas': 8, 'ingresos': 2400.00},
+            {'ruta': 'Trujillo → Mache', 'ventas': 6, 'ingresos': 1800.00},
+            {'ruta': 'Julcán → Trujillo', 'ventas': 5, 'ingresos': 1250.00},
+        ],
+        
+        # Vehículos Activos
+        'vehiculos_activos': [
+            {'placa': 'ABC-123', 'chofer': 'Juan Pérez', 'estado': 'En ruta'},
+            {'placa': 'XYZ-789', 'chofer': 'María López', 'estado': 'En terminal'},
+            {'placa': 'DEF-456', 'chofer': 'Carlos Ruiz', 'estado': 'En ruta'},
+        ],
+
+        # Detalle de Ventas (TABLA COMPLETA)
+        'detalle_ventas': [
+            {'fecha': '2026-07-17', 'hora': '08:00', 'sede': 'Trujillo', 'ruta': 'Trujillo → Julcán', 
+             'vehiculo': 'ABC-123', 'chofer': 'Juan Pérez', 'pasajeros': 18, 'ingreso': 450.00},
+            {'fecha': '2026-07-17', 'hora': '10:30', 'sede': 'Trujillo', 'ruta': 'Trujillo → Mache', 
+             'vehiculo': 'XYZ-789', 'chofer': 'María López', 'pasajeros': 12, 'ingreso': 360.00},
+            {'fecha': '2026-07-17', 'hora': '14:00', 'sede': 'Julcán', 'ruta': 'Julcán → Trujillo', 
+             'vehiculo': 'DEF-456', 'chofer': 'Carlos Ruiz', 'pasajeros': 15, 'ingreso': 375.00},
+            {'fecha': '2026-07-17', 'hora': '16:30', 'sede': 'Mache', 'ruta': 'Mache → Trujillo', 
+             'vehiculo': 'GHI-321', 'chofer': 'Luis Martínez', 'pasajeros': 10, 'ingreso': 300.00},
+        ],
+        
+        # Incidencias
         'incidencias_pendientes': [
-            {'sede': 'Trujillo', 'descripcion': 'Retraso en salida 08:00', 'fecha': '2026-07-16'},
-            {'sede': 'Mache', 'descripcion': 'Cliente sin cambio', 'fecha': '2026-07-16'},
+            {'sede': 'Trujillo', 'descripcion': 'Retraso en salida 08:00', 'fecha': hoy},
+            {'sede': 'Mache', 'descripcion': 'Cliente sin cambio', 'fecha': hoy},
         ],
     }
     
@@ -158,8 +205,54 @@ def dashboard_admin_simple(request, usuario, sede):
 # ==================== VENTAS (CRÍTICAS PARA MVP) ====================
 @login_required
 def ventas_lista(request):
-    """Lista de ventas del día"""
+    """Lista de ventas - Adaptable para admin y cajero"""
+    usuario = request.user
+    sede = usuario.sede
+    
+    # Si es admin (sede central), muestra vista de admin
+    if sede.nombre == 'central':
+        return ventas_lista_admin(request, usuario, sede)
+    else:
+        # Si es cajero, muestra vista de cajero
+        return ventas_lista_cajero(request, usuario, sede)
+
+
+def ventas_lista_admin(request, usuario, sede):
+    """Lista de ventas para ADMIN (vista consolidada)"""
+    contexto = {
+        'usuario': usuario,
+        'sede': sede,
+        'es_admin': True,
+        
+        # Datos de ejemplo (después de BD)
+        'ventas': [
+            {'id': 1, 'fecha': '2026-07-17', 'hora': '08:00', 'sede': 'Trujillo', 
+             'ruta': 'Trujillo → Julcán', 'vehiculo': 'ABC-123', 'chofer': 'Juan Pérez', 
+             'pasajeros': 18, 'ingreso': 450.00, 'estado': 'Completado'},
+            {'id': 2, 'fecha': '2026-07-17', 'hora': '10:30', 'sede': 'Trujillo', 
+             'ruta': 'Trujillo → Mache', 'vehiculo': 'XYZ-789', 'chofer': 'María López', 
+             'pasajeros': 12, 'ingreso': 360.00, 'estado': 'Completado'},
+            {'id': 3, 'fecha': '2026-07-17', 'hora': '14:00', 'sede': 'Julcán', 
+             'ruta': 'Julcán → Trujillo', 'vehiculo': 'DEF-456', 'chofer': 'Carlos Ruiz', 
+             'pasajeros': 15, 'ingreso': 375.00, 'estado': 'Completado'},
+            {'id': 4, 'fecha': '2026-07-17', 'hora': '16:30', 'sede': 'Mache', 
+             'ruta': 'Mache → Trujillo', 'vehiculo': 'GHI-321', 'chofer': 'Luis Martínez', 
+             'pasajeros': 10, 'ingreso': 300.00, 'estado': 'Completado'},
+        ],
+        
+        'total_ventas': 45,
+        'total_ingresos': 4580.00,
+    }
+    
+    return render(request, 'admin/ventas_lista.html', contexto)
+
+
+def ventas_lista_cajero(request, usuario, sede):
+    """Lista de ventas para CAJERO (vista por sede)"""
+    # Tu código actual de ventas_lista va aquí
+    # O redirige a tu template actual de ventas
     return render(request, 'ventas/lista.html')
+
 
 @login_required
 def nueva_venta(request, viaje_id):
@@ -239,79 +332,117 @@ def reporte_mensual(request):
     return render(request, 'reportes/mensual.html')
 
 
-# ==================== INCIDENCIAS (SIMPLE) ====================
 @login_required
 def incidencias_lista(request):
-    """Lista de incidencias para cajero/admin"""
-    contexto = {
-        'usuario': request.user,
-        'sede': request.user.sede,
-        'es_admin': request.user.sede.nombre == 'central',
-        'incidencias': []  # Después vendrá de BD
-    }
-    return render(request, 'incidencias/lista.html', contexto)
+    """Lista de incidencias - Adaptable para admin y cajero"""
+    usuario = request.user
+    sede = usuario.sede
+    
+    # Si es admin (sede central), muestra vista de admin
+    if sede.nombre == 'central':
+        return incidencias_lista_admin(request, usuario, sede)
+    else:
+        # Si es cajero, muestra vista de cajero (solo su sede)
+        return incidencias_lista_cajero(request, usuario, sede)
 
 
-@login_required
-def reporte_consolidado(request):
-    """Vista del reporte consolidado admin con análisis completo"""
+def incidencias_lista_admin(request, usuario, sede):
+    """Lista de incidencias para ADMIN (todas las sedes)"""
     
-    # Obtener período seleccionado (default: hoy)
-    periodo = request.GET.get('periodo', 'hoy')
+    # Obtener filtros
+    estado_filtro = request.GET.get('estado', '')
+    sede_filtro = request.GET.get('sede', '')
     
-    # Datos hardcodeados de ejemplo (después vendrán de BD)
     contexto = {
-        'usuario': request.user,
-        'sede': request.user.sede,
+        'usuario': usuario,
+        'sede': sede,
         'es_admin': True,
-        'periodo': periodo,
+        'estado_filtro': estado_filtro,
+        'sede_filtro': sede_filtro,
         
-        # 🔹 KPIs Consolidados
-        'ingresos_totales': 15840.00,
-        'total_viajes': 48,
-        'total_pasajeros': 1247,
-        'ocupacion_promedio': 78,
+        # KPIs
+        'total_incidencias': 12,
+        'pendientes': 5,
+        'en_proceso': 3,
+        'resueltas': 4,
         
-        # 🔹 Comparación vs período anterior
-        'ingresos_variacion': 12.5,
-        'viajes_variacion': 8.3,
-        'pasajeros_variacion': 15.2,
-        'ocupacion_variacion': 5.1,
-        
-        # 🔹 Datos para Gráfico de Tendencia (últimos 7 días)
-        'dias_semana': ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
-        'ventas_por_dia': [8500, 9200, 10100, 9800, 11200, 13500, 15840],
-        
-        # 🔹 Ingresos por Sede (para gráfico de barras)
-        'sedes': ['Trujillo', 'Julcán', 'Mache'],
-        'ingresos_por_sede': [8540, 4320, 2980],
-        
-        # 🔹 Top 5 Rutas Más Rentables
-        'top_rutas': [
-            {'ruta': 'Trujillo → Julcán', 'ventas': 156, 'ingresos': 4680.00},
-            {'ruta': 'Trujillo → Mache', 'ventas': 124, 'ingresos': 3720.00},
-            {'ruta': 'Julcán → Trujillo', 'ventas': 98, 'ingresos': 2940.00},
-            {'ruta': 'Mache → Trujillo', 'ventas': 87, 'ingresos': 2610.00},
-            {'ruta': 'Julcán → Mache', 'ventas': 45, 'ingresos': 1350.00},
-            {'ruta': 'Mache → Julcán', 'ventas': 60, 'ingresos': 1000.00},
-        ],
-        
-        # 🔹 Top Vehículos (por ingresos)
-        'top_vehiculos': [
-            {'placa': 'ABC-123', 'modelo': 'Toyota Hiace', 'ingresos': 4580.00, 'viajes': 18},
-            {'placa': 'XYZ-789', 'modelo': 'Nissan Urvan', 'ingresos': 3920.00, 'viajes': 15},
-            {'placa': 'DEF-456', 'modelo': 'Toyota Coaster', 'ingresos': 3150.00, 'viajes': 12},
-        ],
-        
-        # 🔹 Top Choferes (por ventas)
-        'top_choferes': [
-            {'nombre': 'Juan Pérez', 'ventas': 45, 'ingresos': 3200.00},
-            {'nombre': 'María López', 'ventas': 38, 'ingresos': 2800.00},
-            {'nombre': 'Carlos Ruiz', 'ventas': 32, 'ingresos': 2100.00},
+        # Incidencias (datos de ejemplo)
+        'incidencias': [
+            {
+                'id': 1,
+                'fecha': '2026-07-17',
+                'hora': '08:15',
+                'sede': 'Trujillo',
+                'tipo': 'Retraso',
+                'descripcion': 'Retraso en salida 08:00 - Vehículo ABC-123',
+                'prioridad': 'Alta',
+                'estado': 'Pendiente',
+                'reportado_por': 'Juan Pérez',
+                'fecha_resolucion': None
+            },
+            {
+                'id': 2,
+                'fecha': '2026-07-17',
+                'hora': '09:30',
+                'sede': 'Mache',
+                'tipo': 'Cliente',
+                'descripcion': 'Cliente sin cambio - No pudo pagar pasaje',
+                'prioridad': 'Media',
+                'estado': 'En Proceso',
+                'reportado_por': 'Carlos Ruiz',
+                'fecha_resolucion': None
+            },
+            {
+                'id': 3,
+                'fecha': '2026-07-16',
+                'hora': '14:20',
+                'sede': 'Julcán',
+                'tipo': 'Vehículo',
+                'descripcion': 'Falla mecánica menor - Vehículo XYZ-789',
+                'prioridad': 'Alta',
+                'estado': 'Resuelta',
+                'reportado_por': 'María López',
+                'fecha_resolucion': '2026-07-16 16:00'
+            },
+            {
+                'id': 4,
+                'fecha': '2026-07-17',
+                'hora': '10:00',
+                'sede': 'Trujillo',
+                'tipo': 'Personal',
+                'descripcion': 'Chofer llegó tarde - Vehículo DEF-456',
+                'prioridad': 'Baja',
+                'estado': 'Pendiente',
+                'reportado_por': 'Supervisor',
+                'fecha_resolucion': None
+            },
+            {
+                'id': 5,
+                'fecha': '2026-07-17',
+                'hora': '11:45',
+                'sede': 'Trujillo',
+                'tipo': 'Sistema',
+                'descripcion': 'Error en sistema de ventas - Cajero 2',
+                'prioridad': 'Alta',
+                'estado': 'En Proceso',
+                'reportado_por': 'Ana García',
+                'fecha_resolucion': None
+            },
         ],
     }
     
-    return render(request, 'core/reporte_consolidado.html', contexto)
+    return render(request, 'admin/incidencias_lista.html', contexto)
+
+
+def incidencias_lista_cajero(request, usuario, sede):
+    """Lista de incidencias para CAJERO (solo su sede)"""
+    contexto = {
+        'usuario': usuario,
+        'sede': sede,
+        'es_admin': False,
+        'incidencias': [],  # Tus incidencias de la sede
+    }
+    return render(request, 'incidencias/lista.html')  # O tu template actual
 
 # ==================== ADMIN - VISTAS ESPECÍFICAS ====================
 
@@ -336,27 +467,6 @@ def fidelizacion_admin(request):
     
     return render(request, 'admin/fidelizacion.html', contexto)
 
-
-@login_required
-def reporte_diario_admin(request):
-    """Reporte diario consolidado para Admin (ve todas las sedes)"""
-    hoy = timezone.now().date()
-    
-    contexto = {
-        'usuario': request.user,
-        'sede': request.user.sede,
-        'es_admin': True,
-        'fecha': hoy,
-        'total_ventas': 45,
-        'recaudacion_total': 4580.00,
-        'desglose_por_sede': [
-            {'sede': 'Trujillo', 'ventas': 25, 'monto': 2540.00},
-            {'sede': 'Julcán', 'ventas': 12, 'monto': 1320.00},
-            {'sede': 'Mache', 'ventas': 8, 'monto': 720.00},
-        ]
-    }
-    
-    return render(request, 'admin/reporte_diario.html', contexto)
 
 # ==================== ADMIN - GESTIÓN DE VEHÍCULOS ====================
 @login_required
