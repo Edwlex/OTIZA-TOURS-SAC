@@ -37,14 +37,22 @@
 </head>
 <body class="h-full flex overflow-hidden">
 
-    <!-- SIDEBAR -->
-    {% include 'includes/sidebar.html' %}
+    <!-- SIDEBAR CONDICIONAL (Admin vs Cajero) -->
+    {% if es_admin %}
+        {% include 'includes/sidebar_admin.html' %}
+    {% else %}
+        {% include 'includes/sidebar.html' %}
+    {% endif %}
 
     <!-- CONTENIDO PRINCIPAL -->
     <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
         
-        <!-- NAVBAR -->
-        {% include 'includes/navbar.html' %}
+        <!-- NAVBAR CONDICIONAL (Admin vs Cajero) -->
+        {% if es_admin %}
+            {% include 'includes/navbar_admin.html' %}
+        {% else %}
+            {% include 'includes/navbar.html' %}
+        {% endif %}
 
         <!-- MENSAJES -->
         {% include 'includes/messages.html' %}
@@ -59,4 +67,4 @@
     <script src="{% static 'js/base.js' %}"></script>
     {% block extra_js %}{% endblock %}
 </body>
-</html>
+</html> 

@@ -1,0 +1,129 @@
+{% extends 'admin/base_admin.html' %}
+{% load static %}
+
+{% block title %}Fidelización Admin - Otiza Tours{% endblock %}
+
+{% block page_title %}
+<h2 class="text-lg font-bold text-gray-800">Fidelización - Panel Admin</h2>
+<p class="text-xs text-gray-500">Gestión Global de Clientes</p>
+{% endblock %}
+
+{% block content %}
+<!-- KPIs -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+    <div class="kpi-card bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl p-6 text-white shadow-lg">
+        <div class="flex items-center justify-between mb-4">
+            <div class="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                <i class="fas fa-users text-2xl"></i>
+            </div>
+        </div>
+        <p class="text-sm opacity-90">Clientes en Programa</p>
+        <p class="text-3xl font-bold mt-1">{{ total_clientes }}</p>
+    </div>
+
+    <div class="kpi-card bg-gradient-to-br from-yellow-500 to-orange-600 rounded-xl p-6 text-white shadow-lg">
+        <div class="flex items-center justify-between mb-4">
+            <div class="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                <i class="fas fa-gift text-2xl"></i>
+            </div>
+        </div>
+        <p class="text-sm opacity-90">Premios Pendientes</p>
+        <p class="text-3xl font-bold mt-1">{{ premios_pendientes }}</p>
+    </div>
+
+    <div class="kpi-card bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl p-6 text-white shadow-lg">
+        <div class="flex items-center justify-between mb-4">
+            <div class="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                <i class="fas fa-check-circle text-2xl"></i>
+            </div>
+        </div>
+        <p class="text-sm opacity-90">Premios Entregados (Mes)</p>
+        <p class="text-3xl font-bold mt-1">{{ premios_entregados_mes }}</p>
+    </div>
+
+    <div class="kpi-card bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl p-6 text-white shadow-lg">
+        <div class="flex items-center justify-between mb-4">
+            <div class="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                <i class="fas fa-star text-2xl"></i>
+            </div>
+        </div>
+        <p class="text-sm opacity-90">Cerca de Ganar (≤2 viajes)</p>
+        <p class="text-3xl font-bold mt-1">{{ clientes_cercanos|length }}</p>
+    </div>
+</div>
+
+<!-- Tabla de Clientes -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-200">
+    <div class="p-6 border-b border-gray-200">
+        <h3 class="text-lg font-bold text-gray-800">
+            <i class="fas fa-star text-yellow-500 mr-2"></i>
+            Estado de Fidelización
+        </h3>
+        <p class="text-sm text-gray-500 mt-1">Clientes cercanos a completar 12 viajes</p>
+    </div>
+
+    <div class="overflow-x-auto">
+        <table class="table-admin w-full">
+            <thead class="bg-gray-50 border-b border-gray-200">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Cliente</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Sede</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Viajes</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Progreso</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Estado</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Acciones</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for cliente in clientes_cercanos %}
+                <tr class="hover:bg-gray-50 transition">
+                    <td class="px-6 py-4">
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold mr-3">
+                                {{ cliente.nombre|slice:":1"|upper }}
+                            </div>
+                            <div>
+                                <p class="font-semibold text-gray-800">{{ cliente.nombre }}</p>
+                                <p class="text-xs text-gray-500">DNI: {{ cliente.dni }}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-800">{{ cliente.sede }}</td>
+                    <td class="px-6 py-4">
+                        <span class="font-semibold text-gray-800">{{ cliente.viajes }}/12</span>
+                        <p class="text-xs text-gray-500">Faltan: {{ cliente.faltan }}</p>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-indigo-600 h-2 rounded-full" style="width: {{ cliente.viajes|floatformat:0 }}%"></div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">{{ cliente.viajes|floatformat:0 }}%</p>
+                    </td>
+                    <td class="px-6 py-4">
+                        {% if cliente.faltan == 0 %}
+                            <span class="px-3 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">¡Ganador!</span>
+                        {% elif cliente.faltan == 1 %}
+                            <span class="px-3 py-1 bg-yellow-100 text-yellow-700 text-xs font-semibold rounded-full">Casi lo logra</span>
+                        {% else %}
+                            <span class="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">En curso</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4">
+                        <a href="{% url 'core:cliente_historial' cliente.dni %}" class="text-indigo-600 hover:text-indigo-800 font-medium text-sm">
+                            Ver Historial <i class="fas fa-arrow-right ml-1"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="px-6 py-8 text-center text-gray-500">
+                        <i class="fas fa-inbox text-4xl mb-2 text-gray-300"></i>
+                        <p>No hay clientes cercanos al premio en este momento</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

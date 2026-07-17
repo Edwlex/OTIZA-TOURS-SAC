@@ -1,0 +1,262 @@
+{% extends 'admin/base_admin.html' %}
+{% load static %}
+
+{% block title %}Reporte Consolidado - Otiza Tours{% endblock %}
+
+{% block page_title %}
+<h2 class="text-lg font-bold text-gray-800">Reporte Consolidado</h2>
+<p class="text-xs text-gray-500">Análisis ejecutivo - Todas las sedes</p>
+{% endblock %}
+
+{% block content %}
+<!-- Tabs de Período -->
+<div class="mb-6">
+    <p class="text-sm font-semibold text-gray-700 mb-3">Período:</p>
+    <div class="flex space-x-2">
+        <button onclick="cambiarPeriodo('hoy')" id="tab-hoy" class="tab-activo px-6 py-2 rounded-lg font-semibold transition">
+            <i class="fas fa-calendar-day mr-2"></i>Hoy
+        </button>
+        <button onclick="cambiarPeriodo('semana')" id="tab-semana" class="tab-inactivo px-6 py-2 rounded-lg font-semibold transition">
+            <i class="fas fa-calendar-week mr-2"></i>Esta Semana
+        </button>
+        <button onclick="cambiarPeriodo('mes')" id="tab-mes" class="tab-inactivo px-6 py-2 rounded-lg font-semibold transition">
+            <i class="fas fa-calendar-alt mr-2"></i>Este Mes
+        </button>
+        <button onclick="cambiarPeriodo('anio')" id="tab-anio" class="tab-inactivo px-6 py-2 rounded-lg font-semibold transition">
+            <i class="fas fa-calendar mr-2"></i>Este Año
+        </button>
+    </div>
+</div>
+
+<!-- KPIs con Comparación -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+    <!-- Ingresos Totales -->
+    <div class="kpi-card bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl p-6 text-white shadow-lg">
+        <div class="flex items-center justify-between mb-2">
+            <div class="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                <i class="fas fa-dollar-sign text-2xl"></i>
+            </div>
+            <span class="text-xs font-semibold bg-white/20 px-2 py-1 rounded">
+                +{{ ingresos_variacion }}% <i class="fas fa-arrow-up"></i>
+            </span>
+        </div>
+        <p class="text-sm opacity-90">Ingresos Totales</p>
+        <p class="text-3xl font-bold mt-1">S/ {{ ingresos_totales|floatformat:0 }}</p>
+        <p class="text-xs opacity-75 mt-2">vs período anterior</p>
+    </div>
+
+    <!-- Viajes Realizados -->
+    <div class="kpi-card bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl p-6 text-white shadow-lg">
+        <div class="flex items-center justify-between mb-2">
+            <div class="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                <i class="fas fa-bus text-2xl"></i>
+            </div>
+            <span class="text-xs font-semibold bg-white/20 px-2 py-1 rounded">
+                +{{ viajes_variacion }}% <i class="fas fa-arrow-up"></i>
+            </span>
+        </div>
+        <p class="text-sm opacity-90">Viajes Realizados</p>
+        <p class="text-3xl font-bold mt-1">{{ total_viajes }}</p>
+        <p class="text-xs opacity-75 mt-2">vs período anterior</p>
+    </div>
+
+    <!-- Pasajeros Transportados -->
+    <div class="kpi-card bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl p-6 text-white shadow-lg">
+        <div class="flex items-center justify-between mb-2">
+            <div class="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                <i class="fas fa-users text-2xl"></i>
+            </div>
+            <span class="text-xs font-semibold bg-white/20 px-2 py-1 rounded">
+                +{{ pasajeros_variacion }}% <i class="fas fa-arrow-up"></i>
+            </span>
+        </div>
+        <p class="text-sm opacity-90">Pasajeros Transportados</p>
+        <p class="text-3xl font-bold mt-1">{{ total_pasajeros }}</p>
+        <p class="text-xs opacity-75 mt-2">vs período anterior</p>
+    </div>
+
+    <!-- Ocupación Promedio -->
+    <div class="kpi-card bg-gradient-to-br from-orange-500 to-red-600 rounded-xl p-6 text-white shadow-lg">
+        <div class="flex items-center justify-between mb-2">
+            <div class="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                <i class="fas fa-percentage text-2xl"></i>
+            </div>
+            <span class="text-xs font-semibold bg-white/20 px-2 py-1 rounded">
+                +{{ ocupacion_variacion }}% <i class="fas fa-arrow-up"></i>
+            </span>
+        </div>
+        <p class="text-sm opacity-90">Ocupación Promedio</p>
+        <p class="text-3xl font-bold mt-1">{{ ocupacion_promedio }}%</p>
+        <p class="text-xs opacity-75 mt-2">vs período anterior</p>
+    </div>
+</div>
+
+<!-- Gráficos -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <!-- Gráfico de Tendencia -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">
+            <i class="fas fa-chart-line text-indigo-600 mr-2"></i>
+            Tendencia de Ventas
+        </h3>
+        <div class="chart-container">
+            <canvas id="tendenciaChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Gráfico por Sede -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">
+            <i class="fas fa-chart-bar text-indigo-600 mr-2"></i>
+            Ingresos por Sede
+        </h3>
+        <div class="chart-container">
+            <canvas id="sedeChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Top Rutas -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+    <h3 class="text-lg font-bold text-gray-800 mb-4">
+        <i class="fas fa-trophy text-yellow-500 mr-2"></i>
+        Top 5 Rutas Más Rentables
+    </h3>
+    <div class="space-y-3">
+        {% for ruta in top_rutas %}
+        <div class="flex items-center justify-between p-3 {% if forloop.counter == 1 %}bg-yellow-50 border-l-4 border-yellow-500{% else %}bg-gray-50{% endif %} rounded-lg">
+            <div class="flex items-center space-x-4">
+                <div class="w-10 h-10 {% if forloop.counter == 1 %}bg-yellow-500{% elif forloop.counter == 2 %}bg-gray-400{% elif forloop.counter == 3 %}bg-orange-600{% else %}bg-indigo-500{% endif %} rounded-full flex items-center justify-center text-white font-bold">
+                    {{ forloop.counter }}
+                </div>
+                <div>
+                    <p class="font-semibold text-gray-800">{{ ruta.ruta }}</p>
+                    <p class="text-xs text-gray-500">{{ ruta.ventas }} viajes</p>
+                </div>
+            </div>
+            <span class="font-bold text-green-600">S/ {{ ruta.ingresos|floatformat:0 }}</span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Top Vehículos y Choferes -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Top Vehículos -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">
+            <i class="fas fa-bus text-indigo-600 mr-2"></i>
+            Top Vehículos
+        </h3>
+        <div class="space-y-3">
+            {% for vehiculo in top_vehiculos %}
+            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-bus text-indigo-600"></i>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-800">{{ vehiculo.placa }}</p>
+                        <p class="text-xs text-gray-500">{{ vehiculo.modelo }} • {{ vehiculo.viajes }} viajes</p>
+                    </div>
+                </div>
+                <span class="font-bold text-green-600">S/ {{ vehiculo.ingresos|floatformat:0 }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Top Choferes -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">
+            <i class="fas fa-user-tie text-indigo-600 mr-2"></i>
+            Top Choferes
+        </h3>
+        <div class="space-y-3">
+            {% for chofer in top_choferes %}
+            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold">
+                        {{ chofer.nombre|slice:":1"|upper }}
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-800">{{ chofer.nombre }}</p>
+                        <p class="text-xs text-gray-500">{{ chofer.ventas }} ventas</p>
+                    </div>
+                </div>
+                <span class="font-bold text-green-600">S/ {{ chofer.ingresos|floatformat:0 }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Configuración de colores
+const colors = {
+    primary: '#4f46e5',
+    secondary: '#06b6d4',
+    success: '#10b981',
+    warning: '#f59e0b',
+    danger: '#ef4444',
+    purple: '#8b5cf6'
+};
+
+// Gráfico de Tendencia
+const ctxTendencia = document.getElementById('tendenciaChart').getContext('2d');
+new Chart(ctxTendencia, {
+    type: 'line',
+    data: {
+        labels: {{ dias_semana|safe }},
+        datasets: [{
+            label: 'Ventas (S/)',
+            data: {{ ventas_por_dia|safe }},
+            borderColor: colors.primary,
+            backgroundColor: 'rgba(79, 70, 229, 0.1)',
+            tension: 0.4,
+            fill: true
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } }
+    }
+});
+
+// Gráfico por Sede
+const ctxSede = document.getElementById('sedeChart').getContext('2d');
+new Chart(ctxSede, {
+    type: 'bar',
+    data: {
+        labels: {{ sedes|safe }},
+        datasets: [{
+            label: 'Ingresos (S/)',
+            data: {{ ingresos_por_sede|safe }},
+            backgroundColor: [colors.primary, colors.secondary, colors.success],
+            borderRadius: 8
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } }
+    }
+});
+
+function cambiarPeriodo(periodo) {
+    document.querySelectorAll('[id^="tab-"]').forEach(tab => {
+        tab.classList.remove('tab-activo');
+        tab.classList.add('tab-inactivo');
+    });
+    
+    const tabActivo = document.getElementById('tab-' + periodo);
+    tabActivo.classList.remove('tab-inactivo');
+    tabActivo.classList.add('tab-activo');
+    
+    window.location.href = '?periodo=' + periodo;
+}
+</script>
+{% endblock %}

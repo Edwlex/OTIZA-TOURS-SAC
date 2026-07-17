@@ -1,0 +1,105 @@
+{% extends 'admin/base_admin.html' %}
+{% load static %}
+
+{% block title %}Gestión de Rutas - Otiza Tours{% endblock %}
+
+{% block page_title %}
+<h2 class="text-lg font-bold text-gray-800">Gestión de Rutas</h2>
+<p class="text-xs text-gray-500">Administra las rutas disponibles</p>
+{% endblock %}
+
+{% block content %}
+<!-- KPIs -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    <div class="kpi-card bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl p-6 text-white">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm opacity-90">Total Rutas</p>
+                <p class="text-3xl font-bold mt-1">{{ total_rutas }}</p>
+            </div>
+            <div class="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                <i class="fas fa-route text-2xl"></i>
+            </div>
+        </div>
+    </div>
+    
+    <div class="kpi-card bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl p-6 text-white">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm opacity-90">Rutas Activas</p>
+                <p class="text-3xl font-bold mt-1">{{ rutas|length }}</p>
+            </div>
+            <div class="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                <i class="fas fa-check-circle text-2xl"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabla de Rutas -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-200">
+    <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+        <h3 class="text-lg font-bold text-gray-800">Lista de Rutas</h3>
+        <a href="{% url 'core:ruta_nuevo' %}" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
+            <i class="fas fa-plus mr-2"></i>Nueva Ruta
+        </a>
+    </div>
+    
+    <div class="overflow-x-auto">
+        <table class="table-admin w-full">
+            <thead class="bg-gray-50 border-b border-gray-200">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Origen</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Destino</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Distancia</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Duración</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Precio Base</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Acciones</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for ruta in rutas %}
+                <tr class="hover:bg-gray-50 transition">
+                    <td class="px-6 py-4">
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 mr-3">
+                                <i class="fas fa-map-marker-alt"></i>
+                            </div>
+                            <span class="font-semibold text-gray-800">{{ ruta.origen }}</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-600 mr-3">
+                                <i class="fas fa-flag-checkered"></i>
+                            </div>
+                            <span class="font-semibold text-gray-800">{{ ruta.destino }}</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 text-gray-700">{{ ruta.distancia }}</td>
+                    <td class="px-6 py-4 text-gray-700">{{ ruta.duracion }}</td>
+                    <td class="px-6 py-4">
+                        <span class="font-bold text-green-600">S/ {{ ruta.precio_base|floatformat:2 }}</span>
+                    </td>
+                    <td class="px-6 py-4 space-x-2">
+                        <a href="{% url 'core:ruta_editar' ruta.id %}" class="text-yellow-600 hover:text-yellow-800 transition" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <a href="{% url 'core:ruta_eliminar' ruta.id %}" class="text-red-600 hover:text-red-800 transition" title="Eliminar" onclick="return confirm('¿Estás seguro de eliminar esta ruta?')">
+                            <i class="fas fa-trash"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="px-6 py-8 text-center text-gray-500">
+                        <i class="fas fa-inbox text-4xl mb-2 text-gray-300"></i>
+                        <p>No hay rutas registradas</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

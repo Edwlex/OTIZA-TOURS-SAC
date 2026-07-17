@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Panel Admin - Otiza Tours{% endblock %}</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- CSS Personalizado del Admin -->
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/admin.css' %}">
+    
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-gray-50">
+
+<!-- WRAPPER PRINCIPAL -->
+<div class="flex h-screen overflow-hidden">
+    
+    <!-- ==================== SIDEBAR ==================== -->
+    <!-- CORRECCIÓN: md:static para que en desktop no sea fixed, y md:translate-x-0 para que sea visible -->
+    <aside id="sidebar" class="sidebar-admin fixed inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-indigo-900 via-purple-900 to-green-900 text-white shadow-2xl transform -translate-x-full md:translate-x-0 md:static transition-transform duration-300">
+        
+        <!-- Logo -->
+        <div class="sidebar-logo flex items-center justify-center h-20 border-b border-white/20 bg-black/20 flex-shrink-0">
+            <div class="flex items-center space-x-3 px-4 w-full">
+                <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center flex-shrink-0">
+                    <i class="fas fa-crown text-yellow-600 text-xl"></i>
+                </div>
+                <div class="overflow-hidden">
+                    <h1 class="text-lg font-bold text-white truncate">Otiza Tours</h1>
+                    <p class="text-xs text-green-200 truncate">Panel Admin</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Menú de Navegación (CON SCROLL) -->
+        <nav class="sidebar-nav flex-1 overflow-y-auto py-4 px-3 space-y-1">
+            
+            <!-- Dashboard -->
+            <a href="{% url 'core:dashboard' %}" class="sidebar-item flex items-center space-x-3 px-4 py-3 rounded-lg {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                <i class="fas fa-chart-line w-5"></i>
+                <span class="font-medium">Dashboard General</span>
+            </a>
+
+            <!-- Operaciones -->
+            <div class="pt-4 pb-2">
+                <p class="px-4 text-xs font-semibold text-purple-200 uppercase tracking-wider">Operaciones</p>
+            </div>
+            
+            <a href="{% url 'core:ventas_lista' %}" class="sidebar-item flex items-center space-x-3 px-4 py-3 rounded-lg {% if request.resolver_match.url_name == 'ventas_lista' %}active{% endif %}">
+                <i class="fas fa-ticket-alt w-5"></i>
+                <span class="font-medium">Lista de Ventas</span>
+            </a>
+            
+            <a href="{% url 'core:asignacion_viajes' %}" class="sidebar-item flex items-center space-x-3 px-4 py-3 rounded-lg {% if request.resolver_match.url_name == 'asignacion_viajes' %}active{% endif %}">
+                <i class="fas fa-calendar-plus w-5"></i>
+                <span class="font-medium">Asignación de Viajes</span>
+            </a>
+
+            <!-- Gestión del Sistema -->
+            <div class="pt-4 pb-2">
+                <p class="px-4 text-xs font-semibold text-purple-200 uppercase tracking-wider">Gestión del Sistema</p>
+            </div>
+            
+            <a href="{% url 'core:vehiculos_lista' %}" class="sidebar-item flex items-center space-x-3 px-4 py-3 rounded-lg {% if request.resolver_match.url_name == 'vehiculos_lista' %}active{% endif %}">
+                <i class="fas fa-bus w-5"></i>
+                <span class="font-medium">Vehículos</span>
+            </a>
+            
+            <a href="{% url 'core:choferes_lista' %}" class="sidebar-item flex items-center space-x-3 px-4 py-3 rounded-lg {% if request.resolver_match.url_name == 'choferes_lista' %}active{% endif %}">
+                <i class="fas fa-user-tie w-5"></i>
+                <span class="font-medium">Choferes</span>
+            </a>
+            
+            <a href="{% url 'core:rutas_lista' %}" class="sidebar-item flex items-center space-x-3 px-4 py-3 rounded-lg {% if request.resolver_match.url_name == 'rutas_lista' %}active{% endif %}">
+                <i class="fas fa-route w-5"></i>
+                <span class="font-medium">Rutas</span>
+            </a>
+            
+            <a href="{% url 'core:usuarios_lista' %}" class="sidebar-item flex items-center space-x-3 px-4 py-3 rounded-lg {% if request.resolver_match.url_name == 'usuarios_lista' %}active{% endif %}">
+                <i class="fas fa-users-cog w-5"></i>
+                <span class="font-medium">Usuarios/Cajeros</span>
+            </a>
+
+            <!-- Reportes -->
+            <div class="pt-4 pb-2">
+                <p class="px-4 text-xs font-semibold text-purple-200 uppercase tracking-wider">Reportes</p>
+            </div>
+            
+            <a href="{% url 'core:reporte_consolidado' %}" class="sidebar-item flex items-center space-x-3 px-4 py-3 rounded-lg {% if request.resolver_match.url_name == 'reporte_consolidado' %}active{% endif %}">
+                <i class="fas fa-chart-bar w-5"></i>
+                <span class="font-medium">Reporte Consolidado</span>
+            </a>
+            
+            <a href="{% url 'core:reporte_diario_admin' %}" class="sidebar-item flex items-center space-x-3 px-4 py-3 rounded-lg {% if request.resolver_match.url_name == 'reporte_diario_admin' %}active{% endif %}">
+                <i class="fas fa-calendar-day w-5"></i>
+                <span class="font-medium">Reporte Diario Admin</span>
+            </a>
+
+            <!-- Clientes -->
+            <div class="pt-4 pb-2">
+                <p class="px-4 text-xs font-semibold text-purple-200 uppercase tracking-wider">Clientes</p>
+            </div>
+            
+            <a href="{% url 'core:fidelizacion_admin' %}" class="sidebar-item flex items-center space-x-3 px-4 py-3 rounded-lg {% if request.resolver_match.url_name == 'fidelizacion_admin' %}active{% endif %}">
+                <i class="fas fa-gift w-5"></i>
+                <span class="font-medium">Fidelización Admin</span>
+            </a>
+
+            <!-- Sistema -->
+            <div class="pt-4 pb-2">
+                <p class="px-4 text-xs font-semibold text-purple-200 uppercase tracking-wider">Sistema</p>
+            </div>
+            
+            <a href="{% url 'core:incidencias_lista' %}" class="sidebar-item flex items-center space-x-3 px-4 py-3 rounded-lg {% if request.resolver_match.url_name == 'incidencias_lista' %}active{% endif %}">
+                <i class="fas fa-exclamation-triangle w-5"></i>
+                <span class="font-medium">Incidencias</span>
+            </a>
+            
+            <a href="{% url 'core:configuracion' %}" class="sidebar-item flex items-center space-x-3 px-4 py-3 rounded-lg {% if request.resolver_match.url_name == 'configuracion' %}active{% endif %}">
+                <i class="fas fa-cog w-5"></i>
+                <span class="font-medium">Configuración</span>
+            </a>
+
+        </nav>
+
+        <!-- Footer Sidebar -->
+        <div class="sidebar-footer p-4 border-t border-white/20 bg-black/20 flex-shrink-0">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-yellow-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+                    <i class="fas fa-crown text-yellow-500"></i>
+                </div>
+                <div class="flex-1 overflow-hidden">
+                    <p class="text-sm font-semibold text-white truncate">Sede Central</p>
+                    <p class="text-xs text-purple-200 truncate">Acceso Total</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Overlay para móvil (cierra sidebar al hacer click fuera) -->
+    <div id="sidebarOverlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 z-40 hidden md:hidden"></div>
+
+    <!-- ==================== CONTENIDO PRINCIPAL ==================== -->
+    <!-- CORRECCIÓN CLAVE: md:ml-64 empuja el contenido a la derecha en desktop para que no quede debajo del sidebar -->
+    <div class="flex-1 flex flex-col overflow-hidden transition-all duration-300">
+        
+        <!-- Navbar Superior -->
+        <header class="bg-white shadow-sm border-b border-gray-200 z-30 flex-shrink-0">
+            <div class="flex items-center justify-between px-6 py-3">
+                <div class="flex items-center space-x-4">
+                    <!-- Botón toggle solo visible en móvil -->
+                    <button onclick="toggleSidebar()" class="md:hidden text-gray-600 hover:text-indigo-600 focus:outline-none">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                    <div>
+                        {% block page_title %}
+                        <h2 class="text-lg font-bold text-gray-800">Panel de Administración</h2>
+                        <p class="text-xs text-gray-500">Gestión Global - Otiza Tours S.A.C.</p>
+                        {% endblock %}
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-4">
+                    {% block header_actions %}
+                    <button onclick="window.print()" class="hidden md:flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition">
+                        <i class="fas fa-print"></i>
+                        <span class="text-sm font-medium">Imprimir</span>
+                    </button>
+                    {% endblock %}
+                    
+                    <!-- Perfil de Usuario -->
+                    <div class="flex items-center space-x-3 border-l pl-4">
+                        <div class="text-right hidden md:block">
+                            <p class="text-sm font-semibold text-gray-800 truncate max-w-[150px]">{{ usuario.get_full_name|default:usuario.username }}</p>
+                            <p class="text-xs text-indigo-600 font-medium">Administrador</p>
+                        </div>
+                        <div class="w-10 h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-full flex items-center justify-center text-white font-bold shadow-md flex-shrink-0">
+                            {{ usuario.first_name|default:usuario.username|slice:":1"|upper }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content (ESTE ES EL QUE HACE SCROLL DE LA PÁGINA) -->
+        <main class="flex-1 overflow-y-auto bg-gray-50 p-6">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</div>
+
+<script>
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    
+    // Alternar clase para mostrar/ocultar en móvil
+    sidebar.classList.toggle('-translate-x-full');
+    
+    // Mostrar/ocultar overlay
+    if (sidebar.classList.contains('-translate-x-full')) {
+        overlay.classList.add('hidden');
+    } else {
+        overlay.classList.remove('hidden');
+    }
+}
+</script>
+
+{% block extra_scripts %}{% endblock %}
+
+</body>
+</html>
