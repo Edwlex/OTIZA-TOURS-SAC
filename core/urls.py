@@ -5,7 +5,7 @@ from . import views
 app_name = 'core'
 
 urlpatterns = [
-    # 🔹 Redirect raíz a login
+    #  Redirect raíz a login
     path('', RedirectView.as_view(url='/login/', permanent=False)),
     
     # ==================== AUTH ====================
@@ -32,14 +32,10 @@ urlpatterns = [
     path('reportes/semanal/', views.reporte_semanal, name='reporte_semanal'),
     path('reportes/mensual/', views.reporte_mensual, name='reporte_mensual'),
     
-    # ==================== ADMIN - REPORTE CONSOLIDADO ====================
-    path('admin/reporte-consolidado/', views.reporte_consolidado, name='reporte_consolidado'),
-
-    # ==================== ADMIN - VISTAS ESPECÍFICAS ====================
+    
+    # ==================== ADMIN - FIDELIZACIÓN ====================
     path('panel-admin/fidelizacion/', views.fidelizacion_admin, name='fidelizacion_admin'),
-    path('panel-admin/reporte-diario/', views.reporte_diario_admin, name='reporte_diario_admin'),
-    path('panel-admin/reporte-consolidado/', views.reporte_consolidado, name='reporte_consolidado'),
-
+    
     # ==================== ADMIN - GESTIÓN DEL SISTEMA ====================
     path('panel-admin/vehiculos/', views.vehiculos_lista, name='vehiculos_lista'),
     path('panel-admin/vehiculos/nuevo/', views.vehiculo_nuevo, name='vehiculo_nuevo'),
@@ -63,8 +59,6 @@ urlpatterns = [
     path('panel-admin/usuarios/', views.usuarios_lista, name='usuarios_lista'),
     path('panel-admin/configuracion/', views.configuracion, name='configuracion'),
     
-    # ==================== INCIDENCIAS (SIMPLE) ====================
+    # ==================== INCIDENCIAS ====================
     path('incidencias/', views.incidencias_lista, name='incidencias_lista'),
-
-    
 ]

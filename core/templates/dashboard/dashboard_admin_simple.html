@@ -1,113 +1,367 @@
 {% extends 'admin/base_admin.html' %}
 {% load static %}
 
-{% block title %}Panel del Dueño - Otiza Tours{% endblock %}
+{% block title %}Dashboard General - Otiza Tours{% endblock %}
 
 {% block page_title %}
-<h2 class="text-lg font-bold text-gray-800">👑 Panel del Dueño</h2>
-<p class="text-xs text-gray-500">Resumen consolidado - {{ fecha|date:"d/m/Y" }}</p>
+<h2 class="text-lg font-bold text-gray-800">👑 Dashboard General</h2>
+<p class="text-xs text-gray-500">Centro de control - {{ fecha|date:"d/m/Y" }}</p>
 {% endblock %}
 
 {% block content %}
 
-<!-- ==================== KPIs ESENCIALES ==================== -->
-<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+<!-- ==================== 1. FILTROS DE BÚSQUEDA ==================== -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+    <h3 class="text-lg font-bold text-gray-800 mb-4">
+        <i class="fas fa-filter text-indigo-600 mr-2"></i>
+        Filtros de Búsqueda
+    </h3>
     
-    <!-- Recaudación Total -->
-    <div class="kpi-card bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-6 text-white shadow-lg">
-        <p class="text-green-100 text-sm">Recaudación Hoy</p>
-        <p class="text-3xl font-bold mt-2">S/ {{ recaudacion_total|floatformat:2 }}</p>
+    <form method="get" action="{% url 'core:dashboard' %}">
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+            
+            <!-- Período -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-calendar text-gray-400 mr-1"></i>
+                    Período
+                </label>
+                <select name="periodo" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                    <option value="hoy" {% if periodo == 'hoy' %}selected{% endif %}>Hoy</option>
+                    <option value="semana" {% if periodo == 'semana' %}selected{% endif %}>Esta Semana</option>
+                    <option value="mes" {% if periodo == 'mes' %}selected{% endif %}>Este Mes</option>
+                    <option value="anio" {% if periodo == 'anio' %}selected{% endif %}>Este Año</option>
+                </select>
+            </div>
+            
+            <!-- Sede -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-building text-gray-400 mr-1"></i>
+                    Sede
+                </label>
+                <select name="sede" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                    <option value="">Todas las sedes</option>
+                    <option value="Trujillo" {% if sede_filtro == 'Trujillo' %}selected{% endif %}>Trujillo</option>
+                    <option value="Julcán" {% if sede_filtro == 'Julcán' %}selected{% endif %}>Julcán</option>
+                    <option value="Mache" {% if sede_filtro == 'Mache' %}selected{% endif %}>Mache</option>
+                </select>
+            </div>
+            
+            <!-- Fecha Desde -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-calendar-alt text-gray-400 mr-1"></i>
+                    Fecha Desde
+                </label>
+                <input type="date" name="fecha_desde" value="{{ fecha_desde }}" 
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+            </div>
+            
+            <!-- Fecha Hasta -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-calendar-check text-gray-400 mr-1"></i>
+                    Fecha Hasta
+                </label>
+                <input type="date" name="fecha_hasta" value="{{ fecha_hasta }}" 
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+            </div>
+            
+            <!-- Botones -->
+            <div class="flex items-end space-x-2">
+                <button type="submit" class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-semibold">
+                    <i class="fas fa-search mr-2"></i>Aplicar
+                </button>
+                <a href="{% url 'core:dashboard' %}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition" title="Limpiar">
+                    <i class="fas fa-times"></i>
+                </a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- ==================== 2. KPIs ==================== -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div class="kpi-card bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl p-6 text-white shadow-lg">
+        <div class="flex items-center justify-between mb-2">
+            <div class="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                <i class="fas fa-dollar-sign text-2xl"></i>
+            </div>
+            <span class="text-xs font-semibold bg-white/20 px-2 py-1 rounded">+12.5% <i class="fas fa-arrow-up"></i></span>
+        </div>
+        <p class="text-sm opacity-90">Ingresos Totales</p>
+        <p class="text-3xl font-bold mt-1">S/ {{ ingresos_totales|floatformat:2 }}</p>
     </div>
 
-    <!-- Total Ventas -->
-    <div class="kpi-card bg-white rounded-xl p-6 shadow-sm border-l-4 border-blue-500">
-        <p class="text-gray-500 text-sm">Total Ventas</p>
-        <p class="text-3xl font-bold text-blue-600 mt-2">{{ total_ventas }} pasajes</p>
+    <div class="kpi-card bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl p-6 text-white shadow-lg">
+        <div class="flex items-center justify-between mb-2">
+            <div class="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                <i class="fas fa-bus text-2xl"></i>
+            </div>
+            <span class="text-xs font-semibold bg-white/20 px-2 py-1 rounded">+8.3% <i class="fas fa-arrow-up"></i></span>
+        </div>
+        <p class="text-sm opacity-90">Viajes Realizados</p>
+        <p class="text-3xl font-bold mt-1">{{ total_viajes }}</p>
     </div>
 
-    <!-- Total Viajes -->
-    <div class="kpi-card bg-white rounded-xl p-6 shadow-sm border-l-4 border-purple-500">
-        <p class="text-gray-500 text-sm">Viajes Completados</p>
-        <p class="text-3xl font-bold text-purple-600 mt-2">{{ total_viajes }}</p>
+    <div class="kpi-card bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl p-6 text-white shadow-lg">
+        <div class="flex items-center justify-between mb-2">
+            <div class="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                <i class="fas fa-users text-2xl"></i>
+            </div>
+            <span class="text-xs font-semibold bg-white/20 px-2 py-1 rounded">+15.2% <i class="fas fa-arrow-up"></i></span>
+        </div>
+        <p class="text-sm opacity-90">Pasajeros Transportados</p>
+        <p class="text-3xl font-bold mt-1">{{ total_pasajeros }}</p>
+    </div>
+
+    <div class="kpi-card bg-gradient-to-br from-orange-500 to-red-600 rounded-xl p-6 text-white shadow-lg">
+        <div class="flex items-center justify-between mb-2">
+            <div class="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                <i class="fas fa-percentage text-2xl"></i>
+            </div>
+            <span class="text-xs font-semibold bg-white/20 px-2 py-1 rounded">+5.1% <i class="fas fa-arrow-up"></i></span>
+        </div>
+        <p class="text-sm opacity-90">Ocupación Promedio</p>
+        <p class="text-3xl font-bold mt-1">{{ ocupacion_promedio }}%</p>
     </div>
 </div>
 
-<!-- ==================== RESUMEN POR SEDE ==================== -->
-<div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
-    <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
-        <h3 class="text-lg font-bold text-gray-800">📍 Resumen por Sede</h3>
+<!-- ==================== 3. GRÁFICOS ==================== -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">
+            <i class="fas fa-chart-line text-indigo-600 mr-2"></i>
+            Tendencia de Ventas
+        </h3>
+        <div class="chart-container" style="height: 250px;">
+            <canvas id="dashTendenciaChart"></canvas>
+        </div>
     </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">
+            <i class="fas fa-chart-bar text-indigo-600 mr-2"></i>
+            Ingresos por Sede
+        </h3>
+        <div class="chart-container" style="height: 250px;">
+            <canvas id="dashSedeChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== 4. TOP RUTAS Y VEHÍCULOS ==================== -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">
+            <i class="fas fa-trophy text-yellow-500 mr-2"></i>
+            Top 3 Rutas del Día
+        </h3>
+        <div class="space-y-3">
+            {% for ruta in top_rutas %}
+            <div class="flex items-center justify-between p-3 {% if forloop.counter == 1 %}bg-yellow-50 border-l-4 border-yellow-500{% else %}bg-gray-50{% endif %} rounded-lg">
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 {% if forloop.counter == 1 %}bg-yellow-500{% elif forloop.counter == 2 %}bg-gray-400{% else %}bg-orange-600{% endif %} rounded-full flex items-center justify-center text-white font-bold text-sm">
+                        {{ forloop.counter }}
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-800 text-sm">{{ ruta.ruta }}</p>
+                        <p class="text-xs text-gray-500">{{ ruta.ventas }} ventas</p>
+                    </div>
+                </div>
+                <span class="font-bold text-green-600 text-sm">S/ {{ ruta.ingresos|floatformat:0 }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">
+            <i class="fas fa-bus text-indigo-600 mr-2"></i>
+            Vehículos Activos Hoy
+        </h3>
+        <div class="space-y-3">
+            {% for vehiculo in vehiculos_activos %}
+            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-bus text-indigo-600"></i>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-800 text-sm">{{ vehiculo.placa }}</p>
+                        <p class="text-xs text-gray-500">Chofer: {{ vehiculo.chofer }}</p>
+                    </div>
+                </div>
+                <span class="px-2 py-1 rounded-full text-xs font-semibold {% if vehiculo.estado == 'En ruta' %}bg-green-100 text-green-700{% else %}bg-blue-100 text-blue-700{% endif %}">
+                    {{ vehiculo.estado }}
+                </span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- ==================== 5. TABLA DETALLE DE VENTAS ==================== -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+    <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-bold text-gray-800">
+            <i class="fas fa-list text-indigo-600 mr-2"></i>
+            Detalle de Ventas
+        </h3>
+        <div class="flex gap-2">
+            <button onclick="window.print()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition">
+                <i class="fas fa-print mr-2"></i>Imprimir
+            </button>
+        </div>
+    </div>
+    
     <div class="overflow-x-auto">
-        <table class="table-admin w-full text-sm">
+        <table class="table-admin w-full">
             <thead class="bg-gray-50">
                 <tr>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Fecha</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Hora</th>
                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Sede</th>
-                    <th class="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Ventas</th>
-                    <th class="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Monto</th>
-                    <th class="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase">%</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Ruta</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Vehículo</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Chofer</th>
+                    <th class="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Pasajeros</th>
+                    <th class="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Ingreso</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
-                {% for sede in resumen_por_sede %}
+                {% for venta in detalle_ventas %}
                 <tr class="hover:bg-gray-50 transition">
-                    <td class="px-6 py-4 font-semibold text-gray-800">{{ sede.nombre }}</td>
-                    <td class="px-6 py-4 text-right">{{ sede.ventas }}</td>
-                    <td class="px-6 py-4 text-right text-green-600 font-bold">S/ {{ sede.monto|floatformat:2 }}</td>
-                    <td class="px-6 py-4 text-right text-gray-600">{{ sede.porcentaje }}%</td>
+                    <td class="px-6 py-4 text-sm text-gray-700">{{ venta.fecha }}</td>
+                    <td class="px-6 py-4 text-sm font-semibold text-gray-800">{{ venta.hora }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-700">{{ venta.sede }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-700">{{ venta.ruta }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-700">{{ venta.vehiculo }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-700">{{ venta.chofer }}</td>
+                    <td class="px-6 py-4 text-sm text-right font-semibold text-blue-600">{{ venta.pasajeros }}</td>
+                    <td class="px-6 py-4 text-sm text-right font-bold text-green-600">S/ {{ venta.ingreso|floatformat:2 }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="px-6 py-8 text-center text-gray-500">
+                        <i class="fas fa-inbox text-4xl mb-2 text-gray-300"></i>
+                        <p>No hay ventas en el período seleccionado</p>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
             <tfoot class="bg-gray-50 font-bold">
                 <tr>
-                    <td class="px-6 py-4">TOTAL</td>
+                    <td colspan="6" class="px-6 py-4 text-right">TOTAL:</td>
                     <td class="px-6 py-4 text-right text-blue-600">{{ total_ventas }}</td>
-                    <td class="px-6 py-4 text-right text-green-600">S/ {{ recaudacion_total|floatformat:2 }}</td>
-                    <td class="px-6 py-4 text-right">100%</td>
+                    <td class="px-6 py-4 text-right text-green-600">S/ {{ ingresos_totales|floatformat:2 }}</td>
                 </tr>
             </tfoot>
         </table>
     </div>
 </div>
 
-<!-- ==================== INCIDENCIAS PENDIENTES ==================== -->
-<div class="bg-white rounded-xl shadow-sm border border-gray-200">
-    <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl flex items-center justify-between">
-        <h3 class="text-lg font-bold text-gray-800">⚠️ Incidencias Pendientes</h3>
+<!-- ==================== 6. INCIDENCIAS ==================== -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+    <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-bold text-gray-800">
+            <i class="fas fa-exclamation-triangle text-red-500 mr-2"></i>
+            Incidencias Pendientes
+        </h3>
         <span class="bg-red-100 text-red-800 text-xs font-bold px-3 py-1 rounded-full">
             {{ incidencias_pendientes|length }}
         </span>
     </div>
-    <div class="p-6">
+    <div class="space-y-3">
         {% for incidencia in incidencias_pendientes %}
-        <div class="mb-3 p-4 bg-red-50 border-l-4 border-red-500 rounded-r-lg">
+        <div class="p-4 bg-red-50 border-l-4 border-red-500 rounded-r-lg">
             <p class="font-semibold text-red-800 text-sm">{{ incidencia.sede }}: {{ incidencia.descripcion }}</p>
-            <p class="text-xs text-red-600 mt-1">{{ incidencia.fecha }}</p>
+            <p class="text-xs text-red-600 mt-1">{{ incidencia.fecha|date:"d/m/Y" }}</p>
         </div>
         {% empty %}
-        <div class="text-center text-gray-500 py-8">
-            <i class="fas fa-check-circle text-4xl text-green-500 mb-2"></i>
+        <div class="text-center text-gray-500 py-6">
+            <i class="fas fa-check-circle text-3xl text-green-500 mb-2"></i>
             <p class="text-sm font-medium">Todo en orden ✅</p>
         </div>
         {% endfor %}
     </div>
 </div>
 
-<!-- ==================== ACCIONES RÁPIDAS ==================== -->
-<div class="mt-6 flex space-x-4">
-    <a href="{% url 'core:reporte_consolidado' %}" 
-       class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-semibold text-center shadow transition">
-        📊 Ver Reporte Consolidado
-    </a>
-    <a href="{% url 'core:logout' %}" 
-       class="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-3 rounded-lg font-semibold text-center shadow transition">
-        🚪 Cerrar Sesión
-    </a>
-</div>
-
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-    console.log('Dashboard admin minimalista cargado correctamente');
+const colors = {
+    primary: '#4f46e5',
+    secondary: '#06b6d4',
+    success: '#10b981',
+    gradient1: 'rgba(79, 70, 229, 0.1)',
+    gradient2: 'rgba(79, 70, 229, 0.3)'
+};
+
+// Gráfico de Tendencia
+const ctxTendencia = document.getElementById('dashTendenciaChart').getContext('2d');
+const gradTendencia = ctxTendencia.createLinearGradient(0, 0, 0, 250);
+gradTendencia.addColorStop(0, colors.gradient2);
+gradTendencia.addColorStop(1, 'rgba(79, 70, 229, 0.01)');
+
+new Chart(ctxTendencia, {
+    type: 'line',
+    data: {
+        labels: {{ dias_semana|safe }},
+        datasets: [{
+            label: 'Ventas (S/)',
+            data: {{ ventas_por_dia|safe }},
+            borderColor: colors.primary,
+            backgroundColor: gradTendencia,
+            tension: 0.4,
+            fill: true,
+            pointBackgroundColor: colors.primary,
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2,
+            pointRadius: 5,
+            pointHoverRadius: 7
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+            y: { beginAtZero: false, grid: { color: '#f3f4f6' } },
+            x: { grid: { display: false } }
+        }
+    }
+});
+
+// Gráfico por Sede
+const ctxSede = document.getElementById('dashSedeChart').getContext('2d');
+new Chart(ctxSede, {
+    type: 'bar',
+    data: {
+        labels: {{ sedes|safe }},
+        datasets: [{
+            label: 'Ingresos (S/)',
+            data: {{ ingresos_por_sede|safe }},
+            backgroundColor: [
+                'rgba(79, 70, 229, 0.8)',
+                'rgba(6, 182, 212, 0.8)',
+                'rgba(16, 185, 129, 0.8)'
+            ],
+            borderRadius: 6,
+            borderSkipped: false,
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+            y: { beginAtZero: true, grid: { color: '#f3f4f6' } },
+            x: { grid: { display: false } }
+        }
+    }
+});
 </script>
 {% endblock %}
