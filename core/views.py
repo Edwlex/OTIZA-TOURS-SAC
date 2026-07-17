@@ -163,14 +163,18 @@ def ventas_lista(request):
 
 @login_required
 def nueva_venta(request, viaje_id):
-    """Paso 1: Selección de viaje para nueva venta"""
+    """Paso 1: Mapa de asientos (Ahora muestra mapa_asientos.html)"""
     viaje = {
-        'id': viaje_id, 'hora_salida': '08:00',
-        'ruta': 'Trujillo → Julcán', 'fecha': '2026-07-15',
+        'id': viaje_id, 
+        'hora_salida': '08:00',
+        'ruta': 'Trujillo → Julcán', 
+        'fecha': '2026-07-15',
         'vehiculo': {'placa': 'ABC-123', 'modelo': 'Toyota Hiace'},
-        'precio_base': 25.00
+        'precio_base': 25.00,
+        'chofer': 'Juan Pérez'  # Agregué esto para que no falle el header
     }
-    return render(request, 'ventas/nuevo_viaje.html', {'viaje': viaje})
+    # CAMBIA ESTA LÍNEA: Ahora apunta al archivo correcto
+    return render(request, 'ventas/mapa_asientos.html', {'viaje': viaje})
 
 @login_required
 def mapa_asientos(request, viaje_id):
@@ -207,11 +211,13 @@ def fidelizacion_cliente(request):
 
 @login_required
 def buscar_cliente_view(request):
-    """Búsqueda rápida de cliente por DNI desde el dashboard"""
-    dni = request.GET.get('dni', '')
-    if dni:
-        return redirect('core:cliente_historial', dni=dni)
-    return redirect('core:dashboard')
+    """Vista para la página de buscar cliente"""
+    contexto = {
+        # Pasamos el DNI si viene en la URL para que el input lo recuerde
+        'cliente_busqueda': request.GET.get('dni_cliente', ''),
+    }
+    # Renderizamos la plantilla que creaste
+    return render(request, 'clientes/buscar.html', contexto)
 
 
 # ==================== REPORTES BÁSICOS (CAJERO) ====================
@@ -542,3 +548,26 @@ def configuracion(request):
     }
     
     return render(request, 'admin/configuracion.html', contexto)
+
+@login_required
+def notificaciones_lista(request):
+    """Lista de notificaciones"""
+    contexto = {
+        'notificaciones': [],  # Aquí iría tu queryset
+        'no_leidas_count': 3,
+    }
+    return render(request, 'notificaciones/lista.html', contexto)
+
+@login_required
+def mi_perfil(request):
+    """Vista de mi perfil de usuario"""
+    if request.method == 'POST':
+        # Aquí tu compañero agregará la lógica para actualizar datos
+        messages.success(request, 'Perfil actualizado correctamente')
+        return redirect('core:mi_perfil')
+    
+    contexto = {
+        'usuario': request.user,
+        'sede': request.user.sede,
+    }
+    return render(request, 'cuenta/mi_perfil.html', contexto)

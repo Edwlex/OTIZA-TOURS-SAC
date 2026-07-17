@@ -1,11 +1,12 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="es" class="h-full bg-slate-50">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Otiza Tours{% endblock %}</title>
-    
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -26,39 +27,40 @@
             }
         }
     </script>
-    
+
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    
+
     <!-- CSS Personalizado -->
     <link rel="stylesheet" href="{% static 'css/base.css' %}">
-    
+
     {% block extra_css %}{% endblock %}
 </head>
+
 <body class="h-full flex overflow-hidden">
 
     <!-- SIDEBAR CONDICIONAL (Admin vs Cajero) -->
     {% if es_admin %}
-        {% include 'includes/sidebar_admin.html' %}
+    {% include 'includes/sidebar_admin.html' %}
     {% else %}
-        {% include 'includes/sidebar.html' %}
+    {% include 'includes/sidebar.html' %}
     {% endif %}
 
     <!-- CONTENIDO PRINCIPAL -->
     <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
-        
+
         <!-- NAVBAR CONDICIONAL (Admin vs Cajero) -->
         {% if es_admin %}
-            {% include 'includes/navbar_admin.html' %}
+        {% include 'includes/navbar_admin.html' %}
         {% else %}
-            {% include 'includes/navbar.html' %}
+        {% include 'includes/navbar.html' %}
         {% endif %}
 
         <!-- MENSAJES -->
         {% include 'includes/messages.html' %}
 
         <!-- CONTENIDO DINÁMICO -->
-        <main class="flex-1 overflow-y-auto p-6 lg:p-8">
+        <main class="flex-1 overflow-y-auto p-6 lg:p-8 -mt-8">
             {% block content %}{% endblock %}
         </main>
     </div>
@@ -67,4 +69,5 @@
     <script src="{% static 'js/base.js' %}"></script>
     {% block extra_js %}{% endblock %}
 </body>
-</html> 
+
+</html>

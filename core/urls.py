@@ -25,6 +25,7 @@ urlpatterns = [
     path('clientes/historial/<str:dni>/', views.historial_cliente, name='cliente_historial'),
     path('clientes/fidelizacion/', views.fidelizacion_cliente, name='fidelizacion'),
     path('clientes/buscar/', views.buscar_cliente_view, name='buscar_cliente'),
+    path('mi-perfil/', views.mi_perfil, name='mi_perfil'),
     
     # ==================== REPORTES BÁSICOS (CAJERO) ====================
     path('reportes/diario/', views.reporte_diario, name='reporte_diario'),
@@ -44,6 +45,9 @@ urlpatterns = [
     path('panel-admin/vehiculos/nuevo/', views.vehiculo_nuevo, name='vehiculo_nuevo'),
     path('panel-admin/vehiculos/editar/<int:id>/', views.vehiculo_editar, name='vehiculo_editar'),
     path('panel-admin/vehiculos/eliminar/<int:id>/', views.vehiculo_eliminar, name='vehiculo_eliminar'),
+
+    # Agrega esta línea en urlpatterns
+    path('notificaciones/', views.notificaciones_lista, name='notificaciones_lista'),
 
     path('panel-admin/choferes/', views.choferes_lista, name='choferes_lista'),
     path('panel-admin/choferes/nuevo/', views.chofer_nuevo, name='chofer_nuevo'),

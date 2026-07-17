@@ -1,7 +1,6 @@
 {% extends 'base.html' %}
 
 {% block title %}Dashboard - Otiza Tours{% endblock %}
-{% block page_title %}Dashboard{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -52,9 +51,9 @@
 {% endblock %}
 
 {% block content %}
-<div class="space-y-6">
+<div class="flex flex-col h-full">
     
-    <!-- HEADER CON BIENVENIDA PERSONALIZADA -->
+    <!-- HEADER CON BIENVENIDA Y BOTONES -->
     <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
             <h1 class="text-3xl font-bold text-slate-800">
@@ -62,14 +61,7 @@
             </h1>
             <p class="text-slate-500 mt-1">Resumen operativo de {{ sede.nombre|default:"Trujillo" }} - {{ fecha_actual|date:"d/m/Y" }}</p>
         </div>
-        <div class="flex gap-3">
-            <button onclick="window.print()" class="bg-white border-2 border-slate-200 text-slate-700 px-5 py-2.5 rounded-xl hover:border-otiza-green hover:text-otiza-green transition font-medium flex items-center gap-2 shadow-sm">
-                <i class="fas fa-print"></i> Imprimir
-            </button>
-            <button class="gradient-primary text-white px-5 py-2.5 rounded-xl hover:shadow-lg transition font-medium flex items-center gap-2 shadow-md">
-                <i class="fas fa-plus-circle"></i> Nueva Venta
-            </button>
-        </div>
+        
     </div>
 
     <!-- TARJETAS PRINCIPALES CON GRADIENTES -->
@@ -233,8 +225,7 @@
                     <div>
                         <a href="{% url 'core:mapa_asientos' viaje.id %}" 
                            class="inline-flex items-center gap-2 px-6 py-3 gradient-primary text-white rounded-xl font-semibold hover:shadow-lg transition transform hover:scale-105">
-                            <i class="fas fa-ticket-alt"></i>
-                            Vender
+                            <i class="fas fa-ticket-alt"></i> Vender
                         </a>
                     </div>
                 </div>
@@ -247,99 +238,6 @@
                 <p class="text-slate-500 font-medium">No hay viajes programados para hoy</p>
             </div>
             {% endfor %}
-        </div>
-    </div>
-
-    <!-- VIAJES RECIENTES + ESTADÍSTICAS RÁPIDAS -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
-        <!-- Viajes Recientes -->
-        <div class="glass-card rounded-2xl shadow-lg overflow-hidden">
-            <div class="p-6 border-b border-slate-200">
-                <h3 class="text-lg font-bold text-slate-800">Viajes Recientes</h3>
-                <p class="text-sm text-slate-500 mt-1">Últimos viajes completados</p>
-            </div>
-            <div class="divide-y divide-slate-100">
-                {% for viaje in viajes_recientes %}
-                <div class="p-4 hover:bg-slate-50 transition flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center text-green-600">
-                            <i class="fas fa-check"></i>
-                        </div>
-                        <div>
-                            <p class="font-semibold text-slate-800 text-sm">{{ viaje.ruta_origen }} → {{ viaje.ruta_destino }}</p>
-                            <p class="text-xs text-slate-500">{{ viaje.fecha }} • {{ viaje.vehiculo.placa }}</p>
-                        </div>
-                    </div>
-                    <div class="text-right">
-                        <p class="font-bold text-green-600">S/ {{ viaje.ingreso|floatformat:2 }}</p>
-                        <p class="text-xs text-slate-400">{{ viaje.asientos_ocupados }} pasajeros</p>
-                    </div>
-                </div>
-                {% empty %}
-                <div class="p-8 text-center text-slate-400">
-                    <i class="fas fa-history text-2xl mb-2"></i>
-                    <p class="text-sm">Sin viajes recientes</p>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-
-        <!-- Stats Rápidas -->
-        <div class="space-y-4">
-            <!-- Chofer Destacado -->
-            <div class="glass-card rounded-2xl p-6 shadow-lg">
-                <h4 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                    <i class="fas fa-trophy text-yellow-500"></i> Chofer del Día
-                </h4>
-                <div class="flex items-center gap-4">
-                    <div class="w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-lg">
-                        JP
-                    </div>
-                    <div>
-                        <p class="font-bold text-slate-800">Juan Pérez</p>
-                        <p class="text-sm text-slate-500">8 viajes completados</p>
-                        <p class="text-xs text-green-600 font-medium mt-1">100% puntualidad</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Métrica de Satisfacción -->
-            <div class="glass-card rounded-2xl p-6 shadow-lg">
-                <h4 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                    <i class="fas fa-smile text-blue-500"></i> Satisfacción del Cliente
-                </h4>
-                <div class="flex items-end gap-2 mb-2">
-                    <span class="text-4xl font-bold text-slate-800">4.8</span>
-                    <span class="text-sm text-slate-500 mb-1">/ 5.0</span>
-                </div>
-                <div class="flex gap-1 mb-2">
-                    <i class="fas fa-star text-yellow-400"></i>
-                    <i class="fas fa-star text-yellow-400"></i>
-                    <i class="fas fa-star text-yellow-400"></i>
-                    <i class="fas fa-star text-yellow-400"></i>
-                    <i class="fas fa-star-half-alt text-yellow-400"></i>
-                </div>
-                <p class="text-xs text-slate-500">Basado en 124 valoraciones este mes</p>
-            </div>
-
-            <!-- Próximo Premio -->
-            <div class="glass-card rounded-2xl p-6 shadow-lg {% if clientes_cercanos_premio %}border-2 border-yellow-400{% endif %}">
-                <h4 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                    <i class="fas fa-gift text-purple-500"></i> Próximo Rasca y Gana
-                </h4>
-                {% if clientes_cercanos_premio %}
-                <div class="bg-gradient-to-r from-purple-50 to-yellow-50 rounded-xl p-4 border border-purple-200">
-                    <p class="text-sm font-semibold text-purple-800">{{ clientes_cercanos_premio.nombre }}</p>
-                    <p class="text-xs text-purple-600 mt-1">Le falta {{ clientes_cercanos_premio.faltan }} viaje(s)</p>
-                    <div class="w-full bg-purple-200 rounded-full h-2 mt-2">
-                        <div class="bg-purple-500 h-2 rounded-full" style="width: {{ clientes_cercanos_premio.progreso }}%"></div>
-                    </div>
-                </div>
-                {% else %}
-                <p class="text-sm text-slate-500">No hay clientes cerca de ganar</p>
-                {% endif %}
-            </div>
         </div>
     </div>
 
@@ -395,10 +293,10 @@ new Chart(document.getElementById('ocupacionRutaChart'), {
         datasets: [{
             data: [75, 40, 60, 55],
             backgroundColor: [
-                'linear-gradient(135deg, #10B981, #059669)',
-                'linear-gradient(135deg, #3B82F6, #2563EB)',
-                'linear-gradient(135deg, #F59E0B, #D97706)',
-                'linear-gradient(135deg, #8B5CF6, #7C3AED)'
+                '#10B981',
+                '#3B82F6',
+                '#F59E0B',
+                '#8B5CF6'
             ],
             borderWidth: 0
         }]
