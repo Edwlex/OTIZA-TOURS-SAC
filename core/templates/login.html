@@ -113,10 +113,10 @@
                                 </svg>
                             </div>
                             <select name="sede" class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-otiza-green transition duration-200 appearance-none bg-white">
-                                <option value="trujillo" {% if request.POST.sede == 'trujillo' %}selected{% endif %}>📍 Agencia Trujillo</option>
-                                <option value="julcan" {% if request.POST.sede == 'julcan' %}selected{% endif %}>📍 Agencia Julcán</option>
-                                <option value="mache" {% if request.POST.sede == 'mache' %}selected{% endif %}>📍 Agencia Mache</option>
-                                <option value="central" {% if request.POST.sede == 'central' %}selected{% endif %}>🏢 Sede Central (Dueño)</option>
+                                <option value="Sede Trujillo" {% if request.POST.sede == 'Sede Trujillo' %}selected{% endif %}>📍 Agencia Trujillo</option>
+                                <option value="Sede Julcán" {% if request.POST.sede == 'Sede Julcán' %}selected{% endif %}>📍 Agencia Julcán</option>
+                                <option value="Sede Mache" {% if request.POST.sede == 'Sede Mache' %}selected{% endif %}>📍 Agencia Mache</option>
+                                <option value="Oficina Central" {% if request.POST.sede == 'Oficina Central' %}selected{% endif %}> Sede Central (Dueño)</option>
                             </select>
                             <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
                                 <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

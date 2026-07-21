@@ -10,10 +10,10 @@ class Command(BaseCommand):
         
         # Crear sedes
         sedes = {
-            'trujillo': 'Av. España 123, Trujillo',
-            'julcan': 'Jr. Lima 456, Julcán',
-            'mache': 'Calle Principal 789, Mache',
-            'central': 'Oficina Central'
+            'Sede Trujillo': 'Prol. Unión N.° 1477, Trujillo',
+            'Sede Julcán': 'Cal. La Cultura S/N, Julcán',
+            'Sede Mache': 'Cal. Las Maravillas N.° 102, Mache',
+            'Oficina Central': 'Sede Administrativa Principal - Trujillo'
         }
         
         for nombre, direccion in sedes.items():
@@ -26,31 +26,31 @@ class Command(BaseCommand):
         # Crear usuarios
         usuarios = [
             {
-                'username': 'admin',
-                'password': 'admin123',
+                'username': 'admin_general',
+                'password': 'OtizaAdmin#2026',
                 'email': 'admin@otizatours.com',
-                'sede': 'central',
+                'sede': 'Oficina Central',
                 'es_superuser': True
             },
             {
-                'username': 'cajero_trujillo',
-                'password': 'cajero123',
+                'username': 'sede_trujillo',
+                'password': 'OtzTRU#8472',
                 'email': 'trujillo@otizatours.com',
-                'sede': 'trujillo',
+                'sede': 'Sede Trujillo',
                 'es_superuser': False
             },
             {
-                'username': 'cajero_julcan',
-                'password': 'cajero123',
+                'username': 'sede_julcan',
+                'password': 'OtzJUL#5918',
                 'email': 'julcan@otizatours.com',
-                'sede': 'julcan',
+                'sede': 'Sede Julcán',
                 'es_superuser': False
             },
             {
-                'username': 'cajero_mache',
-                'password': 'cajero123',
+                'username': 'sede_mache',
+                'password': 'OtzMAC#3264',
                 'email': 'mache@otizatours.com',
-                'sede': 'mache',
+                'sede': 'Sede Mache',
                 'es_superuser': False
             }
         ]

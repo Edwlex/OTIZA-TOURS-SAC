@@ -137,3 +137,60 @@ AUTH_USER_MODEL = 'core.Usuario'  # ← Usa nuestro modelo personalizado
 LOGIN_URL = 'core:login'
 LOGIN_REDIRECT_URL = 'core:dashboard' 
 LOGOUT_REDIRECT_URL = 'core:login'
+
+# ==================== LOGGING CONFIGURATION ====================
+
+LOGS_DIR = os.path.join(BASE_DIR, 'logs')
+if not os.path.exists(LOGS_DIR):
+    os.makedirs(LOGS_DIR)
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+        'detailed': {
+            'format': '[{levelname}] {asctime} | {module}.{funcName} | {message}',
+            'style': '{',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
+        },
+    },
+    'handlers': {
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'detailed',
+        },
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(LOGS_DIR, 'otiza.log'),
+            'formatter': 'detailed',
+        },
+        'errors': {
+            'level': 'ERROR',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(LOGS_DIR, 'otiza_errors.log'),
+            'formatter': 'detailed',
+        },
+    },
+    'root': {
+        'handlers': ['console', 'file', 'errors'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'core': {
+            'handlers': ['console', 'file', 'errors'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+    },
+}
