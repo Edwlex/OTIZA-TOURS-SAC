@@ -1,11 +1,18 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth import authenticate, login, logout
-from django.contrib import messages
-from django.db.models import Sum, Count, Q
-from django.utils import timezone
-from datetime import datetime, timedelta
+import io
 import json
+from datetime import datetime, timedelta
+
+from django.contrib import messages
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
+from django.db.models import Count, Q, Sum
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.template.loader import render_to_string
+from django.utils import timezone
+from xhtml2pdf import pisa
+
+
 
 # ==================== AUTH ====================
 def login_view(request):
@@ -14,7 +21,7 @@ def login_view(request):
         username = request.POST.get('username')
         password = request.POST.get('password')
         sede = request.POST.get('sede')
-        
+
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
@@ -22,7 +29,7 @@ def login_view(request):
             return redirect('core:dashboard')
         else:
             messages.error(request, 'Usuario o contraseña incorrectos')
-    
+
     return render(request, 'login.html')
 
 @login_required
@@ -38,7 +45,7 @@ def dashboard_view(request):
     """Dashboard único que se adapta según el usuario"""
     usuario = request.user
     sede = usuario.sede
-    
+
     if sede.nombre == 'central':
         return dashboard_admin_simple(request, usuario, sede)
     else:
@@ -48,12 +55,12 @@ def dashboard_view(request):
 def dashboard_cajero(request, usuario, sede):
     """Dashboard para cajeros de Trujillo, Julcán y Mache"""
     hoy = timezone.now().date()
-    
+
     # Datos hardcodeados (después serán consultas a BD)
     ventas_hoy = 15
     monto_total_hoy = 1540.00
     viajes_completados_hoy = 8
-    
+
     proximos_viajes = [
         {
             'id': 1, 'hora_salida': '08:00', 'ruta': 'Trujillo → Julcán',
@@ -68,7 +75,7 @@ def dashboard_cajero(request, usuario, sede):
             'estado': 'Disponible', 'porcentaje_ocupacion': 40
         },
     ]
-    
+
     viajes_recientes = [
         {
             'fecha': '2026-07-14', 'hora': '08:00',
@@ -77,20 +84,20 @@ def dashboard_cajero(request, usuario, sede):
             'asientos_ocupados': 18, 'ingreso': 450.00, 'estado': 'Completado'
         },
     ]
-    
+
     # Cálculos
     asientos_disponibles_total = sum(v['asientos_disponibles'] for v in proximos_viajes)
     asientos_totales_total = sum(v['asientos_totales'] for v in proximos_viajes)
     porcentaje_disponibilidad = (asientos_disponibles_total / asientos_totales_total * 100) if asientos_totales_total > 0 else 0
-    
+
     # Sistema de fidelización
     cliente_busqueda = request.GET.get('dni_cliente', '')
     alerta_fidelizacion = None
-    
+
     if cliente_busqueda:
         viajes_totales = 11  # Simulado
         viajes_restantes = 12 - (viajes_totales % 12)
-        
+
         if viajes_restantes == 0:
             alerta_fidelizacion = {
                 'tipo': 'success',
@@ -105,7 +112,7 @@ def dashboard_cajero(request, usuario, sede):
                 'mensaje': 'Le falta 1 viaje para su Rasca y Gana.',
                 'dni': cliente_busqueda
             }
-    
+
     contexto = {
         'usuario': usuario, 'sede': sede, 'es_admin': False,
         'ventas_hoy': ventas_hoy, 'monto_total_hoy': monto_total_hoy,
@@ -117,8 +124,8 @@ def dashboard_cajero(request, usuario, sede):
         'alerta_fidelizacion': alerta_fidelizacion,
         'cliente_busqueda': cliente_busqueda
     }
-    
-    return render(request, 'dashboard/dashboard_cajero.html', contexto) 
+
+    return render(request, 'dashboard/dashboard_cajero.html', contexto)
 
 
 @login_required 
@@ -127,13 +134,13 @@ def dashboard_admin_simple(request, usuario, sede):
     Dashboard COMPLETO con filtros, KPIs, gráficos, tops y tabla detallada
     """
     hoy = timezone.now().date()
-    
+
     # Obtener filtros
     periodo = request.GET.get('periodo', 'hoy')
     sede_filtro = request.GET.get('sede', '')
     fecha_desde = request.GET.get('fecha_desde', '')
     fecha_hasta = request.GET.get('fecha_hasta', '')
-    
+
     contexto = {
         'usuario': usuario,
         'sede': sede,
@@ -143,36 +150,36 @@ def dashboard_admin_simple(request, usuario, sede):
         'sede_filtro': sede_filtro,
         'fecha_desde': fecha_desde,
         'fecha_hasta': fecha_hasta,
-        
+
         # KPIs del Día
         'ingresos_totales': 4580.00,
         'total_ventas': 45,
         'total_pasajeros': 1247,
         'total_viajes': 12,
         'ocupacion_promedio': 78,
-        
+
         # Gráfico de Tendencia
         'dias_semana': ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Hoy'],
         'ventas_por_dia': [8500, 9200, 10100, 9800, 11200, 13500, 4580],
-        
+
         # Ingresos por Sede
         'sedes': ['Trujillo', 'Julcán', 'Mache'],
         'ingresos_por_sede': [2540, 1320, 720],
-        
+
         # Resumen por Sede
         'resumen_por_sede': [
             {'nombre': 'Trujillo', 'ventas': 25, 'monto': 2540.00, 'porcentaje': 55},
             {'nombre': 'Julcán', 'ventas': 12, 'monto': 1320.00, 'porcentaje': 29},
             {'nombre': 'Mache', 'ventas': 8, 'monto': 720.00, 'porcentaje': 16},
         ],
-        
+
         # Top 3 Rutas
         'top_rutas': [
             {'ruta': 'Trujillo → Julcán', 'ventas': 8, 'ingresos': 2400.00},
             {'ruta': 'Trujillo → Mache', 'ventas': 6, 'ingresos': 1800.00},
             {'ruta': 'Julcán → Trujillo', 'ventas': 5, 'ingresos': 1250.00},
         ],
-        
+
         # Vehículos Activos
         'vehiculos_activos': [
             {'placa': 'ABC-123', 'chofer': 'Juan Pérez', 'estado': 'En ruta'},
@@ -191,14 +198,14 @@ def dashboard_admin_simple(request, usuario, sede):
             {'fecha': '2026-07-17', 'hora': '16:30', 'sede': 'Mache', 'ruta': 'Mache → Trujillo', 
              'vehiculo': 'GHI-321', 'chofer': 'Luis Martínez', 'pasajeros': 10, 'ingreso': 300.00},
         ],
-        
+
         # Incidencias
         'incidencias_pendientes': [
             {'sede': 'Trujillo', 'descripcion': 'Retraso en salida 08:00', 'fecha': hoy},
             {'sede': 'Mache', 'descripcion': 'Cliente sin cambio', 'fecha': hoy},
         ],
     }
-    
+
     return render(request, 'dashboard/dashboard_admin_simple.html', contexto)
 
 
@@ -208,12 +215,10 @@ def ventas_lista(request):
     """Lista de ventas - Adaptable para admin y cajero"""
     usuario = request.user
     sede = usuario.sede
-    
-    # Si es admin (sede central), muestra vista de admin
+
     if sede.nombre == 'central':
         return ventas_lista_admin(request, usuario, sede)
     else:
-        # Si es cajero, muestra vista de cajero
         return ventas_lista_cajero(request, usuario, sede)
 
 
@@ -223,8 +228,6 @@ def ventas_lista_admin(request, usuario, sede):
         'usuario': usuario,
         'sede': sede,
         'es_admin': True,
-        
-        # Datos de ejemplo (después de BD)
         'ventas': [
             {'id': 1, 'fecha': '2026-07-17', 'hora': '08:00', 'sede': 'Trujillo', 
              'ruta': 'Trujillo → Julcán', 'vehiculo': 'ABC-123', 'chofer': 'Juan Pérez', 
@@ -239,24 +242,20 @@ def ventas_lista_admin(request, usuario, sede):
              'ruta': 'Mache → Trujillo', 'vehiculo': 'GHI-321', 'chofer': 'Luis Martínez', 
              'pasajeros': 10, 'ingreso': 300.00, 'estado': 'Completado'},
         ],
-        
         'total_ventas': 45,
         'total_ingresos': 4580.00,
     }
-    
     return render(request, 'admin/ventas_lista.html', contexto)
 
 
 def ventas_lista_cajero(request, usuario, sede):
     """Lista de ventas para CAJERO (vista por sede)"""
-    # Tu código actual de ventas_lista va aquí
-    # O redirige a tu template actual de ventas
     return render(request, 'ventas/lista.html')
 
 
 @login_required
 def nueva_venta(request, viaje_id):
-    """Paso 1: Mapa de asientos (Ahora muestra mapa_asientos.html)"""
+    """Paso 1: Mapa de asientos"""
     viaje = {
         'id': viaje_id, 
         'hora_salida': '08:00',
@@ -264,9 +263,8 @@ def nueva_venta(request, viaje_id):
         'fecha': '2026-07-15',
         'vehiculo': {'placa': 'ABC-123', 'modelo': 'Toyota Hiace'},
         'precio_base': 25.00,
-        'chofer': 'Juan Pérez'  # Agregué esto para que no falle el header
+        'chofer': 'Juan Pérez'
     }
-    # CAMBIA ESTA LÍNEA: Ahora apunta al archivo correcto
     return render(request, 'ventas/mapa_asientos.html', {'viaje': viaje})
 
 @login_required
@@ -283,7 +281,7 @@ def procesar_venta(request):
     return redirect('core:dashboard')
 
 
-# ==================== CLIENTES Y FIDELIZACIÓN (CRÍTICO ANTI-FRAUDE) ====================
+# ==================== CLIENTES Y FIDELIZACIÓN ====================
 @login_required
 def historial_cliente(request, dni):
     """Historial de viajes de un cliente por DNI"""
@@ -306,112 +304,60 @@ def fidelizacion_cliente(request):
 def buscar_cliente_view(request):
     """Vista para la página de buscar cliente"""
     contexto = {
-        # Pasamos el DNI si viene en la URL para que el input lo recuerde
         'cliente_busqueda': request.GET.get('dni_cliente', ''),
     }
-    # Renderizamos la plantilla que creaste
     return render(request, 'clientes/buscar.html', contexto)
 
 
+# ==================== INCIDENCIAS ====================
 @login_required
 def incidencias_lista(request):
     """Lista de incidencias - Adaptable para admin y cajero"""
     usuario = request.user
     sede = usuario.sede
-    
-    # Si es admin (sede central), muestra vista de admin
+
     if sede.nombre == 'central':
         return incidencias_lista_admin(request, usuario, sede)
     else:
-        # Si es cajero, muestra vista de cajero (solo su sede)
         return incidencias_lista_cajero(request, usuario, sede)
 
 
 def incidencias_lista_admin(request, usuario, sede):
     """Lista de incidencias para ADMIN (todas las sedes)"""
-    
-    # Obtener filtros
     estado_filtro = request.GET.get('estado', '')
     sede_filtro = request.GET.get('sede', '')
-    
+
     contexto = {
         'usuario': usuario,
         'sede': sede,
         'es_admin': True,
         'estado_filtro': estado_filtro,
         'sede_filtro': sede_filtro,
-        
-        # KPIs
         'total_incidencias': 12,
         'pendientes': 5,
         'en_proceso': 3,
         'resueltas': 4,
-        
-        # Incidencias (datos de ejemplo)
         'incidencias': [
             {
-                'id': 1,
-                'fecha': '2026-07-17',
-                'hora': '08:15',
-                'sede': 'Trujillo',
-                'tipo': 'Retraso',
-                'descripcion': 'Retraso en salida 08:00 - Vehículo ABC-123',
-                'prioridad': 'Alta',
-                'estado': 'Pendiente',
-                'reportado_por': 'Juan Pérez',
+                'id': 1, 'fecha': '2026-07-17', 'hora': '08:15', 'sede': 'Trujillo',
+                'tipo': 'Retraso', 'descripcion': 'Retraso en salida 08:00 - Vehículo ABC-123',
+                'prioridad': 'Alta', 'estado': 'Pendiente', 'reportado_por': 'Juan Pérez',
                 'fecha_resolucion': None
             },
             {
-                'id': 2,
-                'fecha': '2026-07-17',
-                'hora': '09:30',
-                'sede': 'Mache',
-                'tipo': 'Cliente',
-                'descripcion': 'Cliente sin cambio - No pudo pagar pasaje',
-                'prioridad': 'Media',
-                'estado': 'En Proceso',
-                'reportado_por': 'Carlos Ruiz',
+                'id': 2, 'fecha': '2026-07-17', 'hora': '09:30', 'sede': 'Mache',
+                'tipo': 'Cliente', 'descripcion': 'Cliente sin cambio - No pudo pagar pasaje',
+                'prioridad': 'Media', 'estado': 'En Proceso', 'reportado_por': 'Carlos Ruiz',
                 'fecha_resolucion': None
             },
             {
-                'id': 3,
-                'fecha': '2026-07-16',
-                'hora': '14:20',
-                'sede': 'Julcán',
-                'tipo': 'Vehículo',
-                'descripcion': 'Falla mecánica menor - Vehículo XYZ-789',
-                'prioridad': 'Alta',
-                'estado': 'Resuelta',
-                'reportado_por': 'María López',
+                'id': 3, 'fecha': '2026-07-16', 'hora': '14:20', 'sede': 'Julcán',
+                'tipo': 'Vehículo', 'descripcion': 'Falla mecánica menor - Vehículo XYZ-789',
+                'prioridad': 'Alta', 'estado': 'Resuelta', 'reportado_por': 'María López',
                 'fecha_resolucion': '2026-07-16 16:00'
-            },
-            {
-                'id': 4,
-                'fecha': '2026-07-17',
-                'hora': '10:00',
-                'sede': 'Trujillo',
-                'tipo': 'Personal',
-                'descripcion': 'Chofer llegó tarde - Vehículo DEF-456',
-                'prioridad': 'Baja',
-                'estado': 'Pendiente',
-                'reportado_por': 'Supervisor',
-                'fecha_resolucion': None
-            },
-            {
-                'id': 5,
-                'fecha': '2026-07-17',
-                'hora': '11:45',
-                'sede': 'Trujillo',
-                'tipo': 'Sistema',
-                'descripcion': 'Error en sistema de ventas - Cajero 2',
-                'prioridad': 'Alta',
-                'estado': 'En Proceso',
-                'reportado_por': 'Ana García',
-                'fecha_resolucion': None
             },
         ],
     }
-    
     return render(request, 'admin/incidencias_lista.html', contexto)
 
 
@@ -421,21 +367,20 @@ def incidencias_lista_cajero(request, usuario, sede):
         'usuario': usuario,
         'sede': sede,
         'es_admin': False,
-        'incidencias': [],  # Tus incidencias de la sede
+        'incidencias': [],
     }
-    return render(request, 'incidencias/lista.html')  # O tu template actual
+    return render(request, 'incidencias/lista.html')
+
 
 # ==================== ADMIN - VISTAS ESPECÍFICAS ====================
-
 @login_required
 def fidelizacion_admin(request):
-    """Vista de fidelización para Admin (ve todos los clientes de todas las sedes)"""
+    """Vista de fidelización para Admin"""
     clientes_cercanos = [
         {'dni': '12345678', 'nombre': 'Juan Pérez', 'viajes': 11, 'faltan': 1, 'sede': 'Trujillo'},
         {'dni': '87654321', 'nombre': 'María López', 'viajes': 10, 'faltan': 2, 'sede': 'Julcán'},
         {'dni': '45678912', 'nombre': 'Carlos Ruiz', 'viajes': 11, 'faltan': 1, 'sede': 'Mache'},
     ]
-    
     contexto = {
         'usuario': request.user,
         'sede': request.user.sede,
@@ -445,7 +390,6 @@ def fidelizacion_admin(request):
         'premios_pendientes': 8,
         'premios_entregados_mes': 24
     }
-    
     return render(request, 'admin/fidelizacion.html', contexto)
 
 
@@ -459,7 +403,6 @@ def vehiculos_lista(request):
         {'id': 3, 'placa': 'DEF-456', 'modelo': 'Toyota Coaster', 'año': 2020, 'asientos': 25, 'estado': 'Mantenimiento'},
         {'id': 4, 'placa': 'GHI-321', 'modelo': 'Mercedes Sprinter', 'año': 2023, 'asientos': 18, 'estado': 'Activo'},
     ]
-    
     contexto = {
         'usuario': request.user,
         'sede': request.user.sede,
@@ -468,7 +411,6 @@ def vehiculos_lista(request):
         'total_vehiculos': len(vehiculos),
         'activos': sum(1 for v in vehiculos if v['estado'] == 'Activo'),
     }
-    
     return render(request, 'admin/vehiculos.html', contexto)
 
 @login_required
@@ -503,7 +445,6 @@ def choferes_lista(request):
         {'id': 2, 'nombre': 'María López', 'dni': '87654321', 'licencia': 'A1-765432', 'telefono': '987123456', 'estado': 'Activo'},
         {'id': 3, 'nombre': 'Carlos Ruiz', 'dni': '45678912', 'licencia': 'A1-456789', 'telefono': '987456123', 'estado': 'Vacaciones'},
     ]
-    
     contexto = {
         'usuario': request.user,
         'sede': request.user.sede,
@@ -511,7 +452,6 @@ def choferes_lista(request):
         'choferes': choferes,
         'total_choferes': len(choferes),
     }
-    
     return render(request, 'admin/choferes.html', contexto)
 
 @login_required
@@ -547,7 +487,6 @@ def rutas_lista(request):
         {'id': 3, 'origen': 'Julcán', 'destino': 'Trujillo', 'distancia': '85 km', 'duracion': '2h 30min', 'precio_base': 25.00},
         {'id': 4, 'origen': 'Mache', 'destino': 'Trujillo', 'distancia': '120 km', 'duracion': '3h 15min', 'precio_base': 30.00},
     ]
-    
     contexto = {
         'usuario': request.user,
         'sede': request.user.sede,
@@ -555,7 +494,6 @@ def rutas_lista(request):
         'rutas': rutas,
         'total_rutas': len(rutas),
     }
-    
     return render(request, 'admin/rutas.html', contexto)
 
 @login_required
@@ -590,14 +528,12 @@ def asignacion_viajes(request):
         {'id': 2, 'fecha': '2026-07-17', 'hora': '10:30', 'ruta': 'Trujillo → Mache', 'vehiculo': 'XYZ-789', 'chofer': 'María López', 'asientos_disponibles': 8, 'estado': 'Programado'},
         {'id': 3, 'fecha': '2026-07-17', 'hora': '14:00', 'ruta': 'Julcán → Trujillo', 'vehiculo': 'DEF-456', 'chofer': 'Carlos Ruiz', 'asientos_disponibles': 0, 'estado': 'Agotado'},
     ]
-    
     contexto = {
         'usuario': request.user,
         'sede': request.user.sede,
         'es_admin': True,
         'viajes_programados': viajes_programados,
     }
-    
     return render(request, 'admin/asignacion_viajes.html', contexto)
 
 
@@ -610,7 +546,6 @@ def usuarios_lista(request):
         {'id': 2, 'username': 'cajero_julcan', 'nombre': 'Luis Martínez', 'rol': 'Cajero', 'sede': 'Julcán', 'estado': 'Activo'},
         {'id': 3, 'username': 'cajero_mache', 'nombre': 'Carmen Silva', 'rol': 'Cajero', 'sede': 'Mache', 'estado': 'Inactivo'},
     ]
-    
     contexto = {
         'usuario': request.user,
         'sede': request.user.sede,
@@ -618,7 +553,6 @@ def usuarios_lista(request):
         'usuarios': usuarios,
         'total_usuarios': len(usuarios),
     }
-    
     return render(request, 'admin/usuarios.html', contexto)
 
 @login_required
@@ -637,109 +571,76 @@ def usuario_eliminar(request, id):
     messages.success(request, 'Usuario eliminado correctamente (Simulación)')
     return redirect('core:usuarios_lista')
 
+
+# ==================== NOTIFICACIONES ====================
 @login_required
 def notificaciones_lista(request):
     """Centro de notificaciones automáticas del sistema"""
     usuario = request.user
     sede = usuario.sede
-    
-    # NOTIFICACIONES AUTOMÁTICAS (Mock data - después vendrán de BD)
+
     notificaciones = [
         {
-            'id': 1,
-            'tipo': 'fidelizacion',
-            'categoria': 'alerta',
+            'id': 1, 'tipo': 'fidelizacion', 'categoria': 'alerta',
             'titulo': '¡Cliente Ganador!',
-            'descripcion': f'El cliente Juan Pérez (DNI: 12345678) completó 12 viajes. Entregar premio Rasca y Gana.',
-            'prioridad': 'alta',
-            'leida': False,
-            'fecha': 'Hace 5 minutos',
-            'icono': 'fa-gift',
-            'color': 'yellow'
+            'descripcion': 'El cliente Juan Pérez (DNI: 12345678) completó 12 viajes. Entregar premio Rasca y Gana.',
+            'prioridad': 'alta', 'leida': False, 'fecha': 'Hace 5 minutos',
+            'icono': 'fa-gift', 'color': 'yellow'
         },
         {
-            'id': 2,
-            'tipo': 'operativa',
-            'categoria': 'alerta',
+            'id': 2, 'tipo': 'operativa', 'categoria': 'alerta',
             'titulo': '⚠️ Retraso en Viaje',
-            'descripcion': 'Viaje 08:00 Trujillo→Julcán (ABC-123) reportó 15 min de retraso por condiciones climáticas.',
-            'prioridad': 'urgente',
-            'leida': False,
-            'fecha': 'Hace 22 minutos',
-            'icono': 'fa-exclamation-triangle',
-            'color': 'red'
-        },
-        {
-            'id': 3,
-            'tipo': 'comunicado',
-            'categoria': 'comunicado',
-            'titulo': ' Actualización de Precios',
-            'descripcion': 'A partir del 20/07/2026, el pasaje Trujillo→Mache tendrá un nuevo precio de S/ 30.00.',
-            'prioridad': 'media',
-            'leida': True,
-            'fecha': 'Hace 2 horas',
-            'icono': 'fa-bullhorn',
-            'color': 'blue',
-            'remitente': 'Admin - Otiza Tours'
-        },
-        {
-            'id': 4,
-            'tipo': 'fidelizacion',
-            'categoria': 'alerta',
-            'titulo': '⚡ ¡Casi lo logra!',
-            'descripcion': f'La cliente María López (DNI: 87654321) tiene 11 viajes. ¡Falta 1 para el Rasca y Gana!',
-            'prioridad': 'media',
-            'leida': False,
-            'fecha': 'Hace 1 hora',
-            'icono': 'fa-star',
-            'color': 'yellow'
+            'descripcion': 'Viaje 08:00 Trujillo→Julcán (ABC-123) reportó 15 min de retraso.',
+            'prioridad': 'urgente', 'leida': False, 'fecha': 'Hace 22 minutos',
+            'icono': 'fa-exclamation-triangle', 'color': 'red'
         },
     ]
-    
-    # Contar no leídas
+
     no_leidas = sum(1 for n in notificaciones if not n['leida'])
-    
+
     contexto = {
         'usuario': usuario,
         'sede': sede,
         'notificaciones': notificaciones,
         'no_leidas_count': no_leidas,
     }
-    
     return render(request, 'notificaciones/lista.html', contexto)
 
+
+# ==================== PERFIL DE USUARIO ====================
 @login_required
 def mi_perfil(request):
     """Vista de mi perfil de usuario"""
     if request.method == 'POST':
-        # Aquí tu compañero agregará la lógica para actualizar datos
         messages.success(request, 'Perfil actualizado correctamente')
         return redirect('core:mi_perfil')
-    
+
     contexto = {
         'usuario': request.user,
         'sede': request.user.sede,
     }
     return render(request, 'cuenta/mi_perfil.html', contexto)
 
+
+# ==================== REPORTES UNIFICADOS ====================
 @login_required
 def reportes_unificados(request):
     usuario = request.user
     sede = usuario.sede
     periodo = request.GET.get('periodo', 'diario')
     fecha_seleccionada = request.GET.get('fecha', timezone.now().date().isoformat())
-    
+
     contexto = {
         'usuario': usuario, 'sede': sede, 'es_admin': False,
         'periodo': periodo, 'fecha_seleccionada': fecha_seleccionada,
     }
-    
+
     if periodo == 'diario':
         contexto.update({
             'titulo_periodo': f"Reporte del día {fecha_seleccionada}",
             'total_ventas': 1540.00, 'total_viajes': 8, 'total_pasajeros': 142, 'total_boletos': 154,
-            'chart_labels': ['06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00'], # ← OBLIGATORIO
-            'chart_data': [250, 450, 380, 320, 290, 180, 120], # ← OBLIGATORIO
+            'chart_labels': ['06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00'],
+            'chart_data': [250, 450, 380, 320, 290, 180, 120],
             'ventas_detalle': [{'hora': '08:30', 'ruta': 'Trujillo → Julcán', 'vehiculo': 'ABC-123', 'pasajeros': 18, 'metodo_pago': 'efectivo', 'monto': 450.00}]
         })
     elif periodo == 'semanal':
@@ -747,25 +648,128 @@ def reportes_unificados(request):
             'titulo_periodo': "Reporte de la Semana Actual",
             'total_ventas': 10780.00, 'total_viajes': 56, 'total_pasajeros': 994,
             'dia_rentable': 'Viernes', 'monto_dia_rentable': 2100.00,
-            'chart_labels': ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'], # ← OBLIGATORIO
-            'chart_data': [1240, 1580, 1320, 1680, 2100, 1760, 1100], # ← OBLIGATORIO
-            'metodos_pago_labels': ['Efectivo', 'Yape', 'Plin', 'Transferencia'], # ← OBLIGATORIO
-            'metodos_pago_data': [65, 20, 10, 5] # ← OBLIGATORIO
+            'chart_labels': ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'],
+            'chart_data': [1240, 1580, 1320, 1680, 2100, 1760, 1100],
+            'metodos_pago_labels': ['Efectivo', 'Yape', 'Plin', 'Transferencia'],
+            'metodos_pago_data': [65, 20, 10, 5]
         })
     elif periodo == 'mensual':
         contexto.update({
             'titulo_periodo': "Reporte del Mes Actual",
             'total_ventas': 45680.00, 'total_viajes': 240, 'total_pasajeros': 4256, 'premios_entregados': 18,
-            'chart_labels': ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'], # ← OBLIGATORIO
-            'chart_data': [10500, 12300, 11800, 11080], # ← OBLIGATORIO
+            'chart_labels': ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'],
+            'chart_data': [10500, 12300, 11800, 11080],
             'rutas_detalle': [{'ruta': 'Trujillo → Julcán', 'viajes': 60, 'pasajeros': 1080, 'ingresos': 27000, 'ocupacion': 75, 'rendimiento': 'Excelente'}]
         })
     else: # Anual
         contexto.update({
             'titulo_periodo': "Reporte Anual 2026",
             'total_ventas': 548160.00, 'total_viajes': 2880, 'total_pasajeros': 51072, 'premios_entregados': 216,
-            'chart_labels': ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'], # ← OBLIGATORIO
-            'chart_data': [40000, 42000, 45000, 43000, 46000, 48000, 45680, 0, 0, 0, 0, 0] # ← OBLIGATORIO
+            'chart_labels': ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
+            'chart_data': [40000, 42000, 45000, 43000, 46000, 48000, 45680, 0, 0, 0, 0, 0]
         })
-    
+
     return render(request, 'reportes/reportes_unificados.html', contexto)
+
+
+# ==================== PORTAL CHOFERES ====================
+@login_required
+def chofer_reservar(request):
+    """Portal exclusivo para choferes - Reservar asiento"""
+    if not hasattr(request.user, 'rol') or request.user.rol != 'chofer':
+        messages.error(request, 'Acceso denegado. Solo choferes pueden acceder.')
+        return redirect('core:dashboard')
+
+    viajes = [
+        {'id': 1, 'ruta': 'Trujillo → Julcán', 'hora': '08:00 AM', 'vehiculo': 'ABC-123', 'libres': 12},
+        {'id': 2, 'ruta': 'Trujillo → Mache', 'hora': '10:30 AM', 'vehiculo': 'XYZ-789', 'libres': 3},
+        {'id': 3, 'ruta': 'Julcán → Trujillo', 'hora': '14:00 PM', 'vehiculo': 'DEF-456', 'libres': 0},
+    ]
+
+    mis_reservas = [
+        {'id': 1, 'asiento': '02A', 'ruta': 'Trujillo → Julcán', 'hora': '08:00 AM', 'fecha': 'Hoy'},
+    ]
+
+    contexto = {
+        'usuario': request.user,
+        'vehiculo': {'placa': 'ABC-123'},
+        'viajes': viajes,
+        'mis_reservas': mis_reservas,
+        'reservas_count': len(mis_reservas),
+        'fecha_actual': timezone.now(),
+    }
+
+    return render(request, 'chofer/reservar_asiento.html', contexto)
+
+
+@login_required
+def chofer_confirmar_reserva(request):
+    """Confirmar reserva de asiento por chofer"""
+    if request.method == 'POST' and hasattr(request.user, 'rol') and request.user.rol == 'chofer':
+        asiento = request.POST.get('asiento')
+        viaje_id = request.POST.get('viaje_id')
+
+        messages.success(request, f'✅ Asiento {asiento} reservado exitosamente')
+        return redirect('core:chofer_reservar')
+
+    return redirect('core:dashboard')
+
+
+@login_required
+def chofer_cancelar_reserva(request, reserva_id):
+    """Cancelar reserva del chofer"""
+    if hasattr(request.user, 'rol') and request.user.rol == 'chofer':
+        messages.success(request, 'Reserva cancelada correctamente')
+
+    return redirect('core:chofer_reservar')
+
+
+# ==================== IMPRESIÓN DE TICKETS ====================
+@login_required
+def descargar_ticket_pdf(request, ticket_id):  # ← ticket_id DEBE estar aquí
+    """Genera y descarga el ticket en PDF (Compatible con Windows)"""
+    from xhtml2pdf import pisa
+    import io
+    from django.http import HttpResponse
+    from django.template.loader import render_to_string
+    from django.utils import timezone
+    
+    # Datos simulados (tu compañero conectará a BD después)
+    ticket_data = {
+        'id': ticket_id,
+        'numero': f"TK-{ticket_id:04d}",
+        'fecha_emision': timezone.now().strftime("%d/%m/%Y %H:%M"),
+        'ruta': 'Trujillo → Julcán',
+        'hora': '08:00 AM',
+        'vehiculo': 'ABC-123',
+        'pasajero': 'JUAN PEREZ',
+        'dni': '12345678',
+        'asiento': '03',
+        'monto': 25.00,
+        'es_premiado': False
+    }
+    
+    # Renderizar HTML
+    html_string = render_to_string('ventas/ticket_pdf.html', {'ticket': ticket_data})
+    
+    # Generar PDF en memoria
+    result = io.BytesIO()
+    pdf = pisa.CreatePDF(
+        io.BytesIO(html_string.encode("UTF-8")),
+        result,
+        encoding='UTF-8'
+    )
+    
+    if pdf.err:
+        return HttpResponse("Error al generar el PDF", status=500)
+    
+    # Retornar archivo
+    response = HttpResponse(result.getvalue(), content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="ticket_{ticket_data["numero"]}.pdf"'
+    return response
+
+@login_required
+def ver_ticket(request, venta_id):
+    # Obtener datos de la venta desde BD
+    ticket = get_object_or_404(Venta, id=venta_id)
+    return render(request, 'ventas/ticket.html', {'ticket': ticket})

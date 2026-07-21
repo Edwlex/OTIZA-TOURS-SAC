@@ -4,106 +4,155 @@
 {% block title %}Ticket - Otiza Tours{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-6 py-8 max-w-md">
-    <!-- Ticket Térmico -->
-    <div class="bg-white border-2 border-gray-300 rounded-lg p-6 font-mono text-sm" id="ticketContent">
+<div class="max-w-md mx-auto px-4 py-6">
+
+    <!-- TICKET VISUAL (Optimizado para PDF/Impresión) -->
+    <div id="ticketContent" class="bg-white border-2 border-gray-300 rounded-lg p-6 font-mono text-sm shadow-lg">
         <!-- Header -->
-        <div class="text-center border-b-2 border-dashed border-gray-400 pb-4 mb-4">
-            <h2 class="text-2xl font-bold">OTIZA TOURS S.A.C.</h2>
-            <p class="text-xs">RUC: 20123456789</p>
-            <p class="text-xs">Ticket N° {{ ticket.numero }}</p>
-            <p class="text-xs">{{ ticket.fecha_emision }}</p>
+        <div class="text-center border-b-2 border-dashed border-gray-400 pb-3 mb-4">
+            <h2 class="text-xl font-bold tracking-tight">OTIZA TOURS S.A.C.</h2>
+            <p class="text-xs mt-1">RUC: 20123456789 | Av. Principal 123, Trujillo</p>
+            <p class="text-xs font-semibold mt-2">TICKET N° {{ ticket.numero|default:"TK-001" }}</p>
+            <p class="text-xs">{{ ticket.fecha_emision|default:"21/07/2026 15:30" }}</p>
         </div>
 
         <!-- Info del Viaje -->
-        <div class="mb-4">
+        <div class="mb-4 space-y-1">
             <p class="font-bold border-b border-gray-300 mb-2">INFORMACIÓN DEL VIAJE</p>
-            <div class="flex justify-between">
-                <span>Fecha:</span>
-                <span class="font-semibold">{{ ticket.viaje.fecha }}</span>
-            </div>
-            <div class="flex justify-between">
-                <span>Hora:</span>
-                <span class="font-semibold">{{ ticket.viaje.hora }}</span>
-            </div>
-            <div class="flex justify-between">
-                <span>Ruta:</span>
-                <span class="font-semibold">{{ ticket.viaje.ruta }}</span>
-            </div>
-            <div class="flex justify-between">
-                <span>Vehículo:</span>
-                <span class="font-semibold">{{ ticket.viaje.vehiculo }}</span>
-            </div>
+            <div class="flex justify-between"><span>Fecha:</span><span class="font-semibold">{{
+                    ticket.viaje.fecha|default:"21/07/2026" }}</span></div>
+            <div class="flex justify-between"><span>Hora:</span><span class="font-semibold">{{
+                    ticket.viaje.hora|default:"08:00 AM" }}</span></div>
+            <div class="flex justify-between"><span>Ruta:</span><span class="font-semibold">{{
+                    ticket.viaje.ruta|default:"Trujillo → Julcán" }}</span></div>
+            <div class="flex justify-between"><span>Vehículo:</span><span class="font-semibold">{{
+                    ticket.viaje.vehiculo|default:"ABC-123" }}</span></div>
         </div>
 
-        <!-- Info del Cliente -->
-        <div class="mb-4">
+        <!-- Info del Pasajero -->
+        <div class="mb-4 space-y-1">
             <p class="font-bold border-b border-gray-300 mb-2">PASAJERO</p>
-            <div class="flex justify-between">
-                <span>DNI:</span>
-                <span class="font-semibold">{{ ticket.cliente.dni }}</span>
-            </div>
-            <div class="flex justify-between">
-                <span>Nombre:</span>
-                <span class="font-semibold">{{ ticket.cliente.nombre }}</span>
-            </div>
-            <div class="flex justify-between">
+            <div class="flex justify-between"><span>DNI:</span><span class="font-semibold">{{
+                    ticket.cliente.dni|default:"76543210" }}</span></div>
+            <div class="flex justify-between"><span>Nombre:</span><span class="font-semibold">{{
+                    ticket.cliente.nombre|default:"PÉREZ GARCÍA JUAN" }}</span></div>
+            <div class="flex justify-between items-center">
                 <span>Asiento:</span>
-                <span class="font-bold text-lg">{{ ticket.asiento }}</span>
+                <span class="font-bold text-lg bg-gray-100 px-2 py-0.5 rounded">{{ ticket.asiento|default:"03" }}</span>
             </div>
         </div>
 
         <!-- Alerta de Premio -->
         {% if ticket.es_premiado == 'True' %}
-        <div class="bg-yellow-100 border-2 border-yellow-500 rounded p-3 mb-4 text-center animate-pulse">
-            <p class="text-lg font-bold text-yellow-800"> ¡FELICIDADES!</p>
+        <div class="bg-yellow-100 border-2 border-yellow-500 rounded p-3 mb-4 text-center">
+            <p class="text-lg font-bold text-yellow-800">🎉 ¡FELICIDADES!</p>
             <p class="text-sm text-yellow-700">Ha completado 12 viajes</p>
             <p class="text-sm font-bold text-yellow-800">ENTREGUE RASCA Y GANA</p>
         </div>
         {% endif %}
 
         <!-- Total -->
-        <div class="border-t-2 border-dashed border-gray-400 pt-4 mt-4">
+        <div class="border-t-2 border-dashed border-gray-400 pt-3 mt-3">
             <div class="flex justify-between text-lg font-bold">
                 <span>TOTAL PAGADO:</span>
-                <span>S/ {{ ticket.monto|floatformat:2 }}</span>
+                <span>S/ {{ ticket.monto|default:"25.00"|floatformat:2 }}</span>
             </div>
         </div>
 
         <!-- Footer -->
-        <div class="text-center mt-6 text-xs text-gray-500">
-            <p>¡Gracias por preferirnos!</p>
-            <p>Otiza Tours - Seguridad y Confianza</p>
+        <div class="text-center mt-5 text-xs text-gray-500 border-t border-gray-200 pt-3">
+            <p>¡Gracias por viajar con nosotros!</p>
+            <p class="mt-1">Otiza Tours - Seguridad y Confianza</p>
+            <p class="mt-2 text-[10px]">www.otizatours.com</p>
         </div>
     </div>
 
-    <!-- Botones de Acción -->
-    <div class="mt-6 flex space-x-4">
-        <button onclick="window.print()" 
-                class="flex-1 bg-otiza-green hover:bg-otiza-dark text-white py-3 rounded-lg font-semibold">
-            🖨️ Imprimir Ticket
+    <!-- BOTONES DE ACCIÓN -->
+    <div class="mt-6 grid grid-cols-1 gap-3">
+        <button onclick="window.print()"
+            class="w-full bg-otiza-green hover:bg-otiza-dark text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition">
+            <i class="fas fa-print"></i> 🖨️ Imprimir Térmico
         </button>
-        <a href="{% url 'core:dashboard' %}" 
-           class="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-3 rounded-lg font-semibold text-center">
-            ← Volver al Dashboard
+
+        <a href="{% url 'core:descargar_ticket_pdf' ticket.id %}"
+            class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition text-center">
+            <i class="fas fa-file-pdf"></i> Descargar PDF
+        </a>
+
+        <button onclick="enviarWhatsApp()"
+            class="w-full bg-green-500 hover:bg-green-600 text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition">
+            <i class="fab fa-whatsapp"></i> 📱 Enviar por WhatsApp
+        </button>
+
+        <a href="{% url 'core:dashboard' %}"
+            class="w-full bg-gray-500 hover:bg-gray-600 text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition text-center">
+            <i class="fas fa-arrow-left"></i> ← Volver
         </a>
     </div>
 </div>
 
+<!-- CSS PARA IMPRESIÓN/PDF -->
 <style>
     @media print {
         body * {
             visibility: hidden;
         }
-        #ticketContent, #ticketContent * {
+
+        #ticketContent,
+        #ticketContent * {
             visibility: visible;
         }
+
         #ticketContent {
             position: absolute;
             left: 0;
             top: 0;
-            width: 100%;
+            width: 80mm;
+            /* Ancho estándar térmico */
+            font-size: 12px;
+            border: none;
+            box-shadow: none;
+            padding: 4px;
+        }
+
+        .no-print {
+            display: none !important;
         }
     }
+
+    /* Simulación visual de ticket en pantalla */
+    #ticketContent {
+        max-width: 320px;
+        margin: 0 auto;
+    }
 </style>
+
+<script>
+function enviarWhatsApp() {
+    const ruta = "{{ ticket.ruta }}";
+    const fecha = "{{ ticket.fecha_emision }}";
+    const hora = "{{ ticket.hora }}";
+    const asiento = "{{ ticket.asiento }}";
+    const pasajero = "{{ ticket.pasajero }}";
+    const dni = "{{ ticket.dni }}";
+    const total = "S/ {{ ticket.monto|floatformat:2 }}";
+    const ticketNum = "{{ ticket.numero }}";
+    
+    // Enlace REAL que genera el PDF al hacer clic
+    const pdfUrl = window.location.origin + "{% url 'core:descargar_ticket_pdf' ticket.id %}";
+
+    const mensaje = `🚌 *OTIZA TOURS* - Ticket Oficial\n\n` +
+                   `🎫 Ticket: ${ticketNum}\n` +
+                   `👤 Pasajero: ${pasajero} (DNI: ${dni})\n` +
+                   `🚌 Ruta: ${ruta}\n` +
+                   ` Fecha: ${fecha}\n` +
+                   `🕐 Hora: ${hora}\n` +
+                   `💺 Asiento: ${asiento}\n` +
+                   `💰 Total: ${total}\n\n` +
+                   ` *Descarga tu ticket PDF aquí:*\n${pdfUrl}\n\n` +
+                   `¡Buen viaje! 🙏`;
+
+    window.open(`https://wa.me/?text=${encodeURIComponent(mensaje)}`, '_blank');
+}
+</script>
 {% endblock %}

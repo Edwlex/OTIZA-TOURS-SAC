@@ -5,7 +5,7 @@ from . import views
 app_name = 'core'
 
 urlpatterns = [
-    #  Redirect raíz a login
+    # Redirect raíz a login
     path('', RedirectView.as_view(url='/login/', permanent=False)),
     
     # ==================== AUTH ====================
@@ -15,24 +15,32 @@ urlpatterns = [
     # ==================== DASHBOARD ====================
     path('dashboard/', views.dashboard_view, name='dashboard'),
     
-    # ==================== VENTAS (CRÍTICAS PARA MVP) ====================
+    # ==================== VENTAS ====================
     path('ventas/', views.ventas_lista, name='ventas_lista'),
     path('ventas/nuevo/<int:viaje_id>/', views.nueva_venta, name='venta_create'),
     path('ventas/mapa-asientos/<int:viaje_id>/', views.mapa_asientos, name='mapa_asientos'),
     path('ventas/procesar/', views.procesar_venta, name='procesar_venta'),
     
-    # ==================== CLIENTES Y FIDELIZACIÓN (ANTI-FRAUDE) ====================
+    # ==================== TICKETS ====================
+    # Redirige a descargar_ticket_pdf para que coincida con la función de views.py
+    path('ventas/ticket/<int:ticket_id>/', views.descargar_ticket_pdf, name='ver_ticket'),
+    path('tickets/<int:ticket_id>/pdf/', views.descargar_ticket_pdf, name='descargar_ticket_pdf'),
+    # Agrega al final de urlpatterns:
+    path('tickets/<int:venta_id>/pdf/', views.descargar_ticket_pdf, name='descargar_ticket_pdf'),
+
+    # ==================== CLIENTES Y FIDELIZACIÓN ====================
     path('clientes/historial/<str:dni>/', views.historial_cliente, name='cliente_historial'),
     path('clientes/fidelizacion/', views.fidelizacion_cliente, name='fidelizacion'),
     path('clientes/buscar/', views.buscar_cliente_view, name='buscar_cliente'),
 
-    
-
-
-    # NUEVA RUTA UNIFICADA
+    # ==================== REPORTES ====================
     path('reportes/', views.reportes_unificados, name='reportes_unificados'),
     
-    
+    # ==================== NOTIFICACIONES ====================
+    path('notificaciones/', views.notificaciones_lista, name='notificaciones_lista'),
+
+    # ==================== PERFIL ====================
+    path('perfil/', views.mi_perfil, name='mi_perfil'),
     
     # ==================== ADMIN - FIDELIZACIÓN ====================
     path('panel-admin/fidelizacion/', views.fidelizacion_admin, name='fidelizacion_admin'),
@@ -42,9 +50,6 @@ urlpatterns = [
     path('panel-admin/vehiculos/nuevo/', views.vehiculo_nuevo, name='vehiculo_nuevo'),
     path('panel-admin/vehiculos/editar/<int:id>/', views.vehiculo_editar, name='vehiculo_editar'),
     path('panel-admin/vehiculos/eliminar/<int:id>/', views.vehiculo_eliminar, name='vehiculo_eliminar'),
-
-    # Agrega esta línea en urlpatterns
-    path('notificaciones/', views.notificaciones_lista, name='notificaciones_lista'),
 
     path('panel-admin/choferes/', views.choferes_lista, name='choferes_lista'),
     path('panel-admin/choferes/nuevo/', views.chofer_nuevo, name='chofer_nuevo'),
@@ -64,5 +69,9 @@ urlpatterns = [
     
     # ==================== INCIDENCIAS ====================
     path('incidencias/', views.incidencias_lista, name='incidencias_lista'),
- 
+
+    # ==================== PORTAL CHOFERES ====================
+    path('chofer/reservar/', views.chofer_reservar, name='chofer_reservar'),
+    path('chofer/confirmar-reserva/', views.chofer_confirmar_reserva, name='chofer_confirmar_reserva'),
+    path('chofer/cancelar-reserva/<int:reserva_id>/', views.chofer_cancelar_reserva, name='chofer_cancelar_reserva'),
 ]
