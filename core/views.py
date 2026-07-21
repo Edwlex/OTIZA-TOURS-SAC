@@ -1,34 +1,124 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth import authenticate, login, logout
-from django.contrib import messages
-from django.db.models import Sum, Count, Q
-from django.utils import timezone
 from datetime import datetime, timedelta
 import json
+import logging
+
+from asgiref.server import logger
+from django.contrib import messages
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
+from django.db.models import Count, Q, Sum
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
+
+from core.forms.login_forms import LoginForm
+from core.services.auth_service import AuthService
+
+
+# Configurar logger
+logger = logging.getLogger('core.auth')
 
 # ==================== AUTH ====================
-def login_view(request):
-    """Vista de login con selección de sede"""
-    if request.method == 'POST':
-        username = request.POST.get('username')
-        password = request.POST.get('password')
-        sede = request.POST.get('sede')
-        
-        user = authenticate(request, username=username, password=password)
-        if user is not None:
-            login(request, user)
-            request.session['sede_usuario'] = sede
-            return redirect('core:dashboard')
-        else:
-            messages.error(request, 'Usuario o contraseña incorrectos')
-    
-    return render(request, 'login.html')
 
-@login_required
+def login_view(request):
+    """Vista de login con autenticación por sede y logging detallado"""
+    
+    logger.info("=" * 60)
+    logger.info("INTENTO DE LOGIN INICIADO")
+    logger.info(f"IP: {request.META.get('REMOTE_ADDR')}")
+    logger.info(f"Método: {request.method}")
+    
+    # Si el usuario ya está autenticado, redirigir al dashboard
+    if request.user.is_authenticated:
+        logger.warning(f"Usuario {request.user.username} ya está autenticado. Redirigiendo...")
+        return redirect('core:dashboard')
+    
+    if request.method == 'POST':
+        logger.info("-" * 60)
+        logger.info("PROCESANDO FORMULARIO DE LOGIN")
+        
+        # Obtener datos del formulario
+        username = request.POST.get('username', '')
+        password = request.POST.get('password', '')
+        sede_nombre = request.POST.get('sede', '')
+        
+        logger.info(f"Username recibido: {username}")
+        logger.info(f"Sede seleccionada: {sede_nombre}")
+        logger.info(f"Password recibido: {'*' * len(password) if password else 'VACÍO'}")
+        
+        form = LoginForm(request.POST)
+        
+        if form.is_valid():
+            logger.info("[OK] Formulario es VALIDO")
+            user = form.get_user()
+            
+            if user:
+                logger.info(f"[OK] Usuario encontrado: {user.username}")
+                logger.info(f"   - Email: {user.email}")
+                logger.info(f"   - Sede: {user.sede}")
+                logger.info(f"   - Activo: {user.is_active}")
+                logger.info(f"   - Staff: {user.is_staff}")
+                
+                try:
+                    # Iniciar sesión
+                    login(request, user)
+                    logger.info(f"[OK] SESION INICIADA EXITOSAMENTE")
+                    
+                    # Guardar la sede en la sesión
+                    request.session['sede_usuario'] = user.sede.nombre
+                    request.session['sede_id'] = user.sede.id
+                    logger.info(f"   - Sede guardada en sesión: {user.sede.nombre}")
+                    logger.info(f"   - Session ID: {request.session.session_key}")
+                    
+                    # Mensaje de bienvenida
+                    messages.success(
+                        request, 
+                        f'¡Bienvenido {user.get_full_name() or user.username}! Sede: {user.sede.get_nombre_display()}'
+                    )
+                    
+                    # Determinar URL de redirección
+                    next_url = request.GET.get('next', 'core:dashboard')
+                    logger.info(f" Redirigiendo a: {next_url}")
+                    logger.info("=" * 60)
+                    
+                    return redirect(next_url)
+                    
+                except Exception as e:
+                    logger.error(f"[ERROR] Error al iniciar sesión: {str(e)}")
+                    messages.error(request, f"Error al iniciar sesión: {str(e)}")
+            else:
+                logger.error("[ERROR] form.get_user() retornó None")
+                messages.error(request, "Error interno al obtener usuario")
+        else:
+            logger.error("[ERROR] Formulario NO es válido")
+            logger.error(f"Errores del formulario: {form.errors}")
+            
+            # Mostrar errores del formulario
+            for field, errors in form.errors.items():
+                for error in errors:
+                    logger.error(f"   - {field}: {error}")
+                    messages.error(request, f"{field}: {error}")
+            
+            for error in form.non_field_errors():
+                logger.error(f"   - Non-field error: {error}")
+                messages.error(request, error)
+    else:
+        logger.info("Método GET - Mostrando formulario de login")
+        form = LoginForm()
+    
+    logger.info("=" * 60)
+    return render(request, 'login.html', {'form': form})
+
+
 def logout_view(request):
-    """Cerrar sesión"""
+    """Cerrar sesión con logging"""
+    username = request.user.username if request.user.is_authenticated else 'ANÓNIMO'
+    logger.info(f"CERRANDO SESIÓN para usuario: {username}")
+    
     logout(request)
+    messages.info(request, 'Sesión cerrada correctamente')
+    
+    logger.info("Redirigiendo a login")
     return redirect('core:login')
 
 
@@ -39,7 +129,8 @@ def dashboard_view(request):
     usuario = request.user
     sede = usuario.sede
     
-    if sede.nombre == 'central':
+    # Verificar si es admin (por nombre de sede o por superuser)
+    if sede.nombre == 'Oficina Central' or usuario.is_superuser:
         return dashboard_admin_simple(request, usuario, sede)
     else:
         return dashboard_cajero(request, usuario, sede)
@@ -210,12 +301,11 @@ def ventas_lista(request):
     sede = usuario.sede
     
     # Si es admin (sede central), muestra vista de admin
-    if sede.nombre == 'central':
+    if sede.nombre == 'Oficina Central' or usuario.is_superuser:
         return ventas_lista_admin(request, usuario, sede)
     else:
         # Si es cajero, muestra vista de cajero
         return ventas_lista_cajero(request, usuario, sede)
-
 
 def ventas_lista_admin(request, usuario, sede):
     """Lista de ventas para ADMIN (vista consolidada)"""

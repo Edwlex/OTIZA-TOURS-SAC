@@ -5,10 +5,10 @@ from django.utils import timezone
 # ==================== SEDES ====================
 class Sede(models.Model):
     NOMBRE_SEDES = [
-        ('trujillo', 'Trujillo'),
-        ('julcan', 'Julcán'),
-        ('mache', 'Mache'),
-        ('central', 'Sede Central (Dueño)'),
+        ('Sede Trujillo', 'Trujillo'),
+        ('Sede Julcán', 'Julcán'),
+        ('Sede Mache', 'Mache'),
+        ('Oficina Central', 'Sede Central (Dueño)'),
     ]
     
     nombre = models.CharField(max_length=50, choices=NOMBRE_SEDES, unique=True)
@@ -38,6 +38,10 @@ class Usuario(AbstractUser):
     class Meta:
         verbose_name = 'Usuario'
         verbose_name_plural = 'Usuarios'
+        # Evita que se creen usuarios duplicados
+        constraints = [
+            models.UniqueConstraint(fields=['username', 'sede'], name='unique_usuario_sede')
+        ]
 
 
 # ==================== VEHÍCULOS ====================
