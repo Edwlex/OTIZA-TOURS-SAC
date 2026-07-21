@@ -58,7 +58,6 @@ urlpatterns = [
 
     path('panel-admin/asignacion-viajes/', views.asignacion_viajes, name='asignacion_viajes'),
     path('panel-admin/usuarios/', views.usuarios_lista, name='usuarios_lista'),
-    path('panel-admin/configuracion/', views.configuracion, name='configuracion'),
     path('panel-admin/usuarios/nuevo/', views.usuario_nuevo, name='usuario_nuevo'),
     path('panel-admin/usuarios/<int:id>/editar/', views.usuario_editar, name='usuario_editar'),
     path('panel-admin/usuarios/<int:id>/eliminar/', views.usuario_eliminar, name='usuario_eliminar'),  

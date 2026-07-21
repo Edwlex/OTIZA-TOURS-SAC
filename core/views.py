@@ -637,19 +637,6 @@ def usuario_eliminar(request, id):
     messages.success(request, 'Usuario eliminado correctamente (Simulación)')
     return redirect('core:usuarios_lista')
 
-
-# ==================== ADMIN - CONFIGURACIÓN ====================
-@login_required
-def configuracion(request):
-    """Configuración del sistema"""
-    contexto = {
-        'usuario': request.user,
-        'sede': request.user.sede,
-        'es_admin': True,
-    }
-    
-    return render(request, 'admin/configuracion.html', contexto)
-
 @login_required
 def notificaciones_lista(request):
     """Centro de notificaciones automáticas del sistema"""
