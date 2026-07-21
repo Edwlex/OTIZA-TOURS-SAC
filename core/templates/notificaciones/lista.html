@@ -1,7 +1,6 @@
-{% extends 'base.html' %}
+{% extends 'base_cajero.html' %}
 
 {% block title %}Notificaciones - Otiza Tours{% endblock %}
-{% block page_title %}Notificaciones{% endblock %}
 
 {% block content %}
 <div class="space-y-6">
@@ -9,84 +8,32 @@
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-bold text-slate-800">Centro de Notificaciones</h1>
-            <p class="text-slate-500 mt-1">Gestiona y organiza todas las notificaciones del sistema</p>
+            <h1 class="text-2xl font-bold text-slate-800"> Centro de Alertas</h1>
+            <p class="text-slate-500 mt-1">Notificaciones automáticas del sistema y comunicados</p>
         </div>
-        <div class="flex gap-3">
-            <button onclick="marcarTodasLeidas()" class="bg-white border-2 border-slate-200 text-slate-700 px-5 py-2.5 rounded-xl hover:border-otiza-green hover:text-otiza-green transition font-medium flex items-center gap-2 shadow-sm">
-                <i class="fas fa-check-double"></i> Marcar todo leído
-            </button>
-            <button onclick="toggleModal('modalNuevaNotif')" class="gradient-primary text-white px-5 py-2.5 rounded-xl hover:shadow-lg transition font-medium flex items-center gap-2 shadow-md">
-                <i class="fas fa-plus-circle"></i> Nueva Notificación
-            </button>
-        </div>
+        <button onclick="marcarTodasLeidas()" class="bg-white border-2 border-slate-200 text-slate-700 px-5 py-2.5 rounded-xl hover:border-otiza-green hover:text-otiza-green transition font-medium flex items-center gap-2 shadow-sm">
+            <i class="fas fa-check-double"></i> Marcar todo leído
+        </button>
     </div>
 
-    <!-- Filtros -->
-    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-wrap gap-4 items-center">
-        <div class="flex-1 min-w-[200px]">
-            <input type="text" id="searchNotif" placeholder="Buscar notificaciones..." class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition">
-        </div>
-        
-        <select id="filterTipo" class="px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition bg-white text-sm">
-            <option value="">Todos los tipos</option>
-            <option value="venta">Venta</option>
-            <option value="fidelizacion">Fidelización</option>
-            <option value="operativa">Operativa</option>
-            <option value="sistema">Sistema</option>
-        </select>
-        
-        <select id="filterEstado" class="px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition bg-white text-sm">
-            <option value="">Todos los estados</option>
-            <option value="no_leida">No leídas</option>
-            <option value="leida">Leídas</option>
-        </select>
-        
-        <button onclick="aplicarFiltros()" class="bg-slate-800 hover:bg-slate-900 text-white px-5 py-2 rounded-lg text-sm font-medium transition">
-            <i class="fas fa-filter mr-2"></i>Filtrar
+    <!-- Tabs de Filtros -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-2 flex gap-2">
+        <button onclick="filtrarNotificaciones('todas')" class="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition bg-otiza-green text-white" id="tab-todas">
+            Todas
+        </button>
+        <button onclick="filtrarNotificaciones('no_leidas')" class="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition text-slate-600 hover:bg-slate-50" id="tab-no_leidas">
+            No Leídas <span id="badgeNoLeidas" class="ml-2 px-2 py-0.5 bg-red-500 text-white text-xs rounded-full">3</span>
+        </button>
+        <button onclick="filtrarNotificaciones('comunicados')" class="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition text-slate-600 hover:bg-slate-50" id="tab-comunicados">
+            Comunicados
         </button>
     </div>
 
     <!-- Lista de Notificaciones -->
     <div class="space-y-3" id="listaNotificaciones">
         
-        <!-- Notificación 1: No leída - Urgente -->
-        <div class="notif-item bg-white rounded-xl shadow-sm border-l-4 border-red-500 p-5 hover:shadow-md transition group" data-tipo="operativa" data-leida="false" data-id="1">
-            <div class="flex items-start gap-4">
-                <div class="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center text-red-600 text-xl flex-shrink-0">
-                    <i class="fas fa-exclamation-triangle"></i>
-                </div>
-                <div class="flex-1">
-                    <div class="flex items-start justify-between">
-                        <div>
-                            <h3 class="font-bold text-slate-800 flex items-center gap-2">
-                                Retraso reportado
-                                <span class="px-2 py-0.5 bg-red-100 text-red-700 text-[10px] font-bold rounded-full">URGENTE</span>
-                            </h3>
-                            <p class="text-sm text-slate-600 mt-1">Viaje 08:00 Trujillo→Julcán con 15 min de retraso por condiciones climáticas adversas.</p>
-                            <div class="flex items-center gap-3 mt-2 text-xs text-slate-400">
-                                <span><i class="far fa-clock mr-1"></i> Hace 5 min</span>
-                                <span><i class="fas fa-bus mr-1"></i> ABC-123</span>
-                            </div>
-                        </div>
-                        <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onclick="marcarLeida(1)" class="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition" title="Marcar como leída">
-                                <i class="fas fa-check"></i>
-                            </button>
-                            <button onclick="editarNotificacion(1)" class="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Editar">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button onclick="eliminarNotificacion(1)" class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition" title="Eliminar">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Notificación 2: No leída - Fidelización -->
-        <div class="notif-item bg-white rounded-xl shadow-sm border-l-4 border-yellow-500 p-5 hover:shadow-md transition group" data-tipo="fidelizacion" data-leida="false" data-id="2">
+        <!-- Notificación 1: Fidelización (Automática) -->
+        <div class="notif-item bg-white rounded-xl shadow-sm border-l-4 border-yellow-500 p-5 hover:shadow-md transition group" data-tipo="fidelizacion" data-leida="false" data-categoria="alerta">
             <div class="flex items-start gap-4">
                 <div class="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center text-yellow-600 text-xl flex-shrink-0">
                     <i class="fas fa-gift"></i>
@@ -95,53 +42,97 @@
                     <div class="flex items-start justify-between">
                         <div>
                             <h3 class="font-bold text-slate-800 flex items-center gap-2">
-                                Cliente completó 12 viajes
-                                <span class="px-2 py-0.5 bg-yellow-100 text-yellow-700 text-[10px] font-bold rounded-full">RASCA Y GANA</span>
+                                🎉 ¡Cliente Ganador!
+                                <span class="px-2 py-0.5 bg-yellow-100 text-yellow-700 text-[10px] font-bold rounded-full">ACCIÓN REQUERIDA</span>
                             </h3>
-                            <p class="text-sm text-slate-600 mt-1">El cliente DNI 12345678 ha completado 12 viajes. Entregar premio Rasca y Gana.</p>
+                            <p class="text-sm text-slate-600 mt-1">El cliente <strong>Juan Pérez (DNI: 12345678)</strong> completó 12 viajes. Entregar premio <strong>Rasca y Gana</strong>.</p>
                             <div class="flex items-center gap-3 mt-2 text-xs text-slate-400">
-                                <span><i class="far fa-clock mr-1"></i> Hace 22 min</span>
-                                <span><i class="fas fa-user mr-1"></i> Juan Pérez</span>
+                                <span><i class="far fa-clock mr-1"></i> Hace 5 minutos</span>
+                                <span class="text-yellow-600 font-medium"><i class="fas fa-exclamation-circle mr-1"></i>Pendiente</span>
+                            </div>
+                        </div>
+                        <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onclick="marcarLeida(1)" class="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition" title="Marcar como atendida">
+                                <i class="fas fa-check"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notificación 2: Retraso Operativo (Automática) -->
+        <div class="notif-item bg-white rounded-xl shadow-sm border-l-4 border-red-500 p-5 hover:shadow-md transition group" data-tipo="operativa" data-leida="false" data-categoria="alerta">
+            <div class="flex items-start gap-4">
+                <div class="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center text-red-600 text-xl flex-shrink-0">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="flex-1">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                                ⚠️ Retraso en Viaje
+                                <span class="px-2 py-0.5 bg-red-100 text-red-700 text-[10px] font-bold rounded-full">URGENTE</span>
+                            </h3>
+                            <p class="text-sm text-slate-600 mt-1">Viaje <strong>08:00 Trujillo→Julcán</strong> (ABC-123) reportó 15 min de retraso por condiciones climáticas.</p>
+                            <div class="flex items-center gap-3 mt-2 text-xs text-slate-400">
+                                <span><i class="far fa-clock mr-1"></i> Hace 22 minutos</span>
+                                <span class="text-red-600 font-medium"><i class="fas fa-exclamation-circle mr-1"></i>Atención requerida</span>
                             </div>
                         </div>
                         <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button onclick="marcarLeida(2)" class="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition">
                                 <i class="fas fa-check"></i>
                             </button>
-                            <button onclick="editarNotificacion(2)" class="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button onclick="eliminarNotificacion(2)" class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition">
-                                <i class="fas fa-trash"></i>
-                            </button>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Notificación 3: Leída - Venta -->
-        <div class="notif-item bg-white rounded-xl shadow-sm border-l-4 border-green-500 p-5 hover:shadow-md transition group opacity-75" data-tipo="venta" data-leida="true" data-id="3">
+        <!-- Notificación 3: Comunicado del Admin -->
+        <div class="notif-item bg-white rounded-xl shadow-sm border-l-4 border-blue-500 p-5 hover:shadow-md transition group" data-tipo="comunicado" data-leida="true" data-categoria="comunicado">
             <div class="flex items-start gap-4">
-                <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-green-600 text-xl flex-shrink-0">
-                    <i class="fas fa-check-circle"></i>
+                <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 text-xl flex-shrink-0">
+                    <i class="fas fa-bullhorn"></i>
                 </div>
                 <div class="flex-1">
                     <div class="flex items-start justify-between">
                         <div>
-                            <h3 class="font-bold text-slate-800">Venta confirmada</h3>
-                            <p class="text-sm text-slate-600 mt-1">Boleto #1234 generado correctamente. Monto: S/ 25.00 (Efectivo). Ruta: Trujillo→Julcán</p>
+                            <h3 class="font-bold text-slate-800"> Actualización de Precios</h3>
+                            <p class="text-sm text-slate-600 mt-1">A partir del 20/07/2026, el pasaje Trujillo→Mache tendrá un nuevo precio de <strong>S/ 30.00</strong>.</p>
+                            <div class="flex items-center gap-3 mt-2 text-xs text-slate-400">
+                                <span><i class="far fa-clock mr-1"></i> Hace 2 horas</span>
+                                <span class="text-blue-600 font-medium"><i class="fas fa-info-circle mr-1"></i>Comunicado</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notificación 4: Fidelización (Otro cliente) -->
+        <div class="notif-item bg-white rounded-xl shadow-sm border-l-4 border-yellow-500 p-5 hover:shadow-md transition group" data-tipo="fidelizacion" data-leida="false" data-categoria="alerta">
+            <div class="flex items-start gap-4">
+                <div class="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center text-yellow-600 text-xl flex-shrink-0">
+                    <i class="fas fa-star"></i>
+                </div>
+                <div class="flex-1">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                                ⚡ ¡Casi lo logra!
+                                <span class="px-2 py-0.5 bg-orange-100 text-orange-700 text-[10px] font-bold rounded-full">1 VIAJE FALTANTE</span>
+                            </h3>
+                            <p class="text-sm text-slate-600 mt-1">La cliente <strong>María López (DNI: 87654321)</strong> tiene 11 viajes. ¡Falta 1 para el Rasca y Gana!</p>
                             <div class="flex items-center gap-3 mt-2 text-xs text-slate-400">
                                 <span><i class="far fa-clock mr-1"></i> Hace 1 hora</span>
-                                <span class="text-green-600 font-medium"><i class="fas fa-check mr-1"></i>Leída</span>
+                                <span class="text-orange-600 font-medium"><i class="fas fa-clock mr-1"></i>Pendiente</span>
                             </div>
                         </div>
                         <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onclick="editarNotificacion(3)" class="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button onclick="eliminarNotificacion(3)" class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition">
-                                <i class="fas fa-trash"></i>
+                            <button onclick="marcarLeida(4)" class="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition">
+                                <i class="fas fa-check"></i>
                             </button>
                         </div>
                     </div>
@@ -151,85 +142,71 @@
 
     </div>
 
-    <!-- Empty State (oculto por defecto) -->
+    <!-- Empty State -->
     <div id="emptyState" class="hidden bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
-        <div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <i class="fas fa-bell text-3xl text-slate-400"></i>
+        <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <i class="fas fa-check text-3xl text-green-600"></i>
         </div>
-        <h3 class="text-lg font-bold text-slate-800 mb-2">No hay notificaciones</h3>
-        <p class="text-slate-500">Todas las notificaciones han sido atendidas</p>
+        <h3 class="text-lg font-bold text-slate-800 mb-2">¡Todo al día!</h3>
+        <p class="text-slate-500">No hay alertas pendientes ni nuevos comunicados</p>
     </div>
 
-</div>
-
-<!-- MODAL: Nueva Notificación -->
-<div id="modalNuevaNotif" class="fixed inset-0 z-50 hidden">
-    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="toggleModal('modalNuevaNotif')"></div>
-    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6">
-        <div class="flex justify-between items-center mb-6">
-            <h3 class="text-xl font-bold text-slate-800">Nueva Notificación</h3>
-            <button onclick="toggleModal('modalNuevaNotif')" class="text-slate-400 hover:text-slate-600 transition">
-                <i class="fas fa-times text-xl"></i>
-            </button>
-        </div>
-        
-        <form id="formNuevaNotif" class="space-y-4">
-            <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">Tipo</label>
-                <select class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition">
-                    <option value="venta">Venta</option>
-                    <option value="fidelizacion">Fidelización</option>
-                    <option value="operativa">Operativa</option>
-                    <option value="sistema">Sistema</option>
-                </select>
-            </div>
-            
-            <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">Título</label>
-                <input type="text" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition" placeholder="Ej: Nuevo viaje programado" required>
-            </div>
-            
-            <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">Descripción</label>
-                <textarea rows="3" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition resize-none" placeholder="Describe la notificación..." required></textarea>
-            </div>
-            
-            <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">Prioridad</label>
-                <select class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition">
-                    <option value="baja">Baja</option>
-                    <option value="media" selected>Media</option>
-                    <option value="alta">Alta</option>
-                    <option value="urgente">Urgente</option>
-                </select>
-            </div>
-            
-            <div class="pt-2 flex gap-3">
-                <button type="button" onclick="toggleModal('modalNuevaNotif')" class="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg text-slate-700 font-medium hover:bg-slate-50 transition">Cancelar</button>
-                <button type="submit" class="flex-1 px-4 py-2.5 gradient-primary text-white rounded-lg font-medium transition shadow-sm">Crear Notificación</button>
-            </div>
-        </form>
-    </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-function toggleModal(modalId) {
-    document.getElementById(modalId).classList.toggle('hidden');
+let notificacionesActivas = 4; // Contador de no leídas
+
+function filtrarNotificaciones(filtro) {
+    // Actualizar tabs
+    document.querySelectorAll('[id^="tab-"]').forEach(tab => {
+        tab.classList.remove('bg-otiza-green', 'text-white');
+        tab.classList.add('text-slate-600', 'hover:bg-slate-50');
+    });
+    document.getElementById(`tab-${filtro}`).classList.remove('text-slate-600', 'hover:bg-slate-50');
+    document.getElementById(`tab-${filtro}`).classList.add('bg-otiza-green', 'text-white');
+    
+    // Filtrar notificaciones
+    document.querySelectorAll('.notif-item').forEach(notif => {
+        const esLeida = notif.getAttribute('data-leida') === 'true';
+        const categoria = notif.getAttribute('data-categoria');
+        
+        if (filtro === 'todas') {
+            notif.style.display = 'block';
+        } else if (filtro === 'no_leidas') {
+            notif.style.display = esLeida ? 'none' : 'block';
+        } else if (filtro === 'comunicados') {
+            notif.style.display = categoria === 'comunicado' ? 'block' : 'none';
+        }
+    });
 }
 
 function marcarLeida(id) {
     const notif = document.querySelector(`[data-id="${id}"]`);
+    if (!notif) return;
+    
     notif.classList.remove('border-red-500', 'border-yellow-500');
     notif.classList.add('border-green-500', 'opacity-75');
     notif.setAttribute('data-leida', 'true');
     
-    // Actualizar badge
+    // Animación de desvanecimiento
+    notif.style.transition = 'all 0.3s ease';
+    notif.style.transform = 'translateX(10px)';
+    notif.style.opacity = '0.75';
+    
+    notificacionesActivas--;
     actualizarBadge();
     
-    // Aquí iría la llamada AJAX a tu backend
-    console.log(`Notificación ${id} marcada como leída`);
+    // Verificar si no hay más no leídas
+    if (notificacionesActivas === 0) {
+        setTimeout(() => {
+            document.getElementById('emptyState').classList.remove('hidden');
+            document.getElementById('listaNotificaciones').classList.add('hidden');
+        }, 300);
+    }
+    
+    console.log(`Notificación ${id} marcada como atendida`);
 }
 
 function marcarTodasLeidas() {
@@ -238,54 +215,18 @@ function marcarTodasLeidas() {
         notif.classList.add('border-green-500', 'opacity-75');
         notif.setAttribute('data-leida', 'true');
     });
+    notificacionesActivas = 0;
     actualizarBadge();
-    console.log('Todas las notificaciones marcadas como leídas');
-}
-
-function editarNotificacion(id) {
-    const notif = document.querySelector(`[data-id="${id}"]`);
-    const titulo = notif.querySelector('h3').textContent;
-    const descripcion = notif.querySelector('p').textContent;
     
-    // Abrir modal de edición (similar al de nueva notificación)
-    toggleModal('modalNuevaNotif');
-    console.log(`Editando notificación ${id}: ${titulo}`);
-}
-
-function eliminarNotificacion(id) {
-    if(confirm('¿Estás seguro de eliminar esta notificación?')) {
-        const notif = document.querySelector(`[data-id="${id}"]`);
-        notif.style.opacity = '0';
-        setTimeout(() => notif.remove(), 300);
-        actualizarBadge();
-        console.log(`Notificación ${id} eliminada`);
-    }
-}
-
-function aplicarFiltros() {
-    const tipo = document.getElementById('filterTipo').value;
-    const estado = document.getElementById('filterEstado').value;
-    const busqueda = document.getElementById('searchNotif').value.toLowerCase();
-    
-    document.querySelectorAll('.notif-item').forEach(notif => {
-        const matchTipo = !tipo || notif.getAttribute('data-tipo') === tipo;
-        const matchEstado = !estado || notif.getAttribute('data-leida') === (estado === 'leida' ? 'true' : 'false');
-        const matchBusqueda = !busqueda || notif.textContent.toLowerCase().includes(busqueda);
-        
-        if (matchTipo && matchEstado && matchBusqueda) {
-            notif.style.display = 'block';
-        } else {
-            notif.style.display = 'none';
-        }
-    });
+    document.getElementById('emptyState').classList.remove('hidden');
+    document.getElementById('listaNotificaciones').classList.add('hidden');
 }
 
 function actualizarBadge() {
-    const noLeidas = document.querySelectorAll('.notif-item[data-leida="false"]').length;
-    const badge = document.getElementById('notifBadge');
+    const badge = document.getElementById('badgeNoLeidas');
     if (badge) {
-        badge.textContent = noLeidas;
-        if (noLeidas === 0) {
+        badge.textContent = notificacionesActivas;
+        if (notificacionesActivas === 0) {
             badge.classList.add('hidden');
         } else {
             badge.classList.remove('hidden');
@@ -293,11 +234,7 @@ function actualizarBadge() {
     }
 }
 
-// Cerrar modales con ESC
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        document.querySelectorAll('.fixed.z-50').forEach(modal => modal.classList.add('hidden'));
-    }
-});
+// Inicializar
+filtrarNotificaciones('todas');
 </script>
 {% endblock %}

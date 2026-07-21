@@ -27,10 +27,11 @@ urlpatterns = [
     path('clientes/buscar/', views.buscar_cliente_view, name='buscar_cliente'),
 
     
-    # ==================== REPORTES BÁSICOS (CAJERO) ====================
-    path('reportes/diario/', views.reporte_diario, name='reporte_diario'),
-    path('reportes/semanal/', views.reporte_semanal, name='reporte_semanal'),
-    path('reportes/mensual/', views.reporte_mensual, name='reporte_mensual'),
+
+
+    # NUEVA RUTA UNIFICADA
+    path('reportes/', views.reportes_unificados, name='reportes_unificados'),
+    
     
     
     # ==================== ADMIN - FIDELIZACIÓN ====================

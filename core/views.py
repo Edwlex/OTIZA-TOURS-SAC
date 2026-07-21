@@ -118,10 +118,10 @@ def dashboard_cajero(request, usuario, sede):
         'cliente_busqueda': cliente_busqueda
     }
     
-    return render(request, 'dashboard/dashboard_cajero.html', contexto)
+    return render(request, 'dashboard/dashboard_cajero.html', contexto) 
 
 
-@login_required
+@login_required 
 def dashboard_admin_simple(request, usuario, sede):
     """
     Dashboard COMPLETO con filtros, KPIs, gráficos, tops y tabla detallada
@@ -311,31 +311,6 @@ def buscar_cliente_view(request):
     }
     # Renderizamos la plantilla que creaste
     return render(request, 'clientes/buscar.html', contexto)
-
-
-# ==================== REPORTES BÁSICOS (CAJERO) ====================
-@login_required
-def reporte_diario(request):
-    """Reporte diario para cajero (solo su sede)"""
-    contexto = {
-        'usuario': request.user, 
-        'sede': request.user.sede, 
-        'es_admin': False,
-        'fecha': timezone.now().date(),
-        'total_ventas': 15,
-        'recaudacion_total': 1540.00
-    }
-    return render(request, 'reportes/diario.html', contexto)
-
-@login_required
-def reporte_semanal(request):
-    """Reporte semanal para cajero"""
-    return render(request, 'reportes/semanal.html')
-
-@login_required
-def reporte_mensual(request):
-    """Reporte mensual para cajero"""
-    return render(request, 'reportes/mensual.html')
 
 
 @login_required
@@ -677,11 +652,73 @@ def configuracion(request):
 
 @login_required
 def notificaciones_lista(request):
-    """Lista de notificaciones"""
+    """Centro de notificaciones automáticas del sistema"""
+    usuario = request.user
+    sede = usuario.sede
+    
+    # NOTIFICACIONES AUTOMÁTICAS (Mock data - después vendrán de BD)
+    notificaciones = [
+        {
+            'id': 1,
+            'tipo': 'fidelizacion',
+            'categoria': 'alerta',
+            'titulo': '¡Cliente Ganador!',
+            'descripcion': f'El cliente Juan Pérez (DNI: 12345678) completó 12 viajes. Entregar premio Rasca y Gana.',
+            'prioridad': 'alta',
+            'leida': False,
+            'fecha': 'Hace 5 minutos',
+            'icono': 'fa-gift',
+            'color': 'yellow'
+        },
+        {
+            'id': 2,
+            'tipo': 'operativa',
+            'categoria': 'alerta',
+            'titulo': '⚠️ Retraso en Viaje',
+            'descripcion': 'Viaje 08:00 Trujillo→Julcán (ABC-123) reportó 15 min de retraso por condiciones climáticas.',
+            'prioridad': 'urgente',
+            'leida': False,
+            'fecha': 'Hace 22 minutos',
+            'icono': 'fa-exclamation-triangle',
+            'color': 'red'
+        },
+        {
+            'id': 3,
+            'tipo': 'comunicado',
+            'categoria': 'comunicado',
+            'titulo': ' Actualización de Precios',
+            'descripcion': 'A partir del 20/07/2026, el pasaje Trujillo→Mache tendrá un nuevo precio de S/ 30.00.',
+            'prioridad': 'media',
+            'leida': True,
+            'fecha': 'Hace 2 horas',
+            'icono': 'fa-bullhorn',
+            'color': 'blue',
+            'remitente': 'Admin - Otiza Tours'
+        },
+        {
+            'id': 4,
+            'tipo': 'fidelizacion',
+            'categoria': 'alerta',
+            'titulo': '⚡ ¡Casi lo logra!',
+            'descripcion': f'La cliente María López (DNI: 87654321) tiene 11 viajes. ¡Falta 1 para el Rasca y Gana!',
+            'prioridad': 'media',
+            'leida': False,
+            'fecha': 'Hace 1 hora',
+            'icono': 'fa-star',
+            'color': 'yellow'
+        },
+    ]
+    
+    # Contar no leídas
+    no_leidas = sum(1 for n in notificaciones if not n['leida'])
+    
     contexto = {
-        'notificaciones': [],  # Aquí iría tu queryset
-        'no_leidas_count': 3,
+        'usuario': usuario,
+        'sede': sede,
+        'notificaciones': notificaciones,
+        'no_leidas_count': no_leidas,
     }
+    
     return render(request, 'notificaciones/lista.html', contexto)
 
 @login_required
@@ -697,3 +734,51 @@ def mi_perfil(request):
         'sede': request.user.sede,
     }
     return render(request, 'cuenta/mi_perfil.html', contexto)
+
+@login_required
+def reportes_unificados(request):
+    usuario = request.user
+    sede = usuario.sede
+    periodo = request.GET.get('periodo', 'diario')
+    fecha_seleccionada = request.GET.get('fecha', timezone.now().date().isoformat())
+    
+    contexto = {
+        'usuario': usuario, 'sede': sede, 'es_admin': False,
+        'periodo': periodo, 'fecha_seleccionada': fecha_seleccionada,
+    }
+    
+    if periodo == 'diario':
+        contexto.update({
+            'titulo_periodo': f"Reporte del día {fecha_seleccionada}",
+            'total_ventas': 1540.00, 'total_viajes': 8, 'total_pasajeros': 142, 'total_boletos': 154,
+            'chart_labels': ['06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00'], # ← OBLIGATORIO
+            'chart_data': [250, 450, 380, 320, 290, 180, 120], # ← OBLIGATORIO
+            'ventas_detalle': [{'hora': '08:30', 'ruta': 'Trujillo → Julcán', 'vehiculo': 'ABC-123', 'pasajeros': 18, 'metodo_pago': 'efectivo', 'monto': 450.00}]
+        })
+    elif periodo == 'semanal':
+        contexto.update({
+            'titulo_periodo': "Reporte de la Semana Actual",
+            'total_ventas': 10780.00, 'total_viajes': 56, 'total_pasajeros': 994,
+            'dia_rentable': 'Viernes', 'monto_dia_rentable': 2100.00,
+            'chart_labels': ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'], # ← OBLIGATORIO
+            'chart_data': [1240, 1580, 1320, 1680, 2100, 1760, 1100], # ← OBLIGATORIO
+            'metodos_pago_labels': ['Efectivo', 'Yape', 'Plin', 'Transferencia'], # ← OBLIGATORIO
+            'metodos_pago_data': [65, 20, 10, 5] # ← OBLIGATORIO
+        })
+    elif periodo == 'mensual':
+        contexto.update({
+            'titulo_periodo': "Reporte del Mes Actual",
+            'total_ventas': 45680.00, 'total_viajes': 240, 'total_pasajeros': 4256, 'premios_entregados': 18,
+            'chart_labels': ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'], # ← OBLIGATORIO
+            'chart_data': [10500, 12300, 11800, 11080], # ← OBLIGATORIO
+            'rutas_detalle': [{'ruta': 'Trujillo → Julcán', 'viajes': 60, 'pasajeros': 1080, 'ingresos': 27000, 'ocupacion': 75, 'rendimiento': 'Excelente'}]
+        })
+    else: # Anual
+        contexto.update({
+            'titulo_periodo': "Reporte Anual 2026",
+            'total_ventas': 548160.00, 'total_viajes': 2880, 'total_pasajeros': 51072, 'premios_entregados': 216,
+            'chart_labels': ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'], # ← OBLIGATORIO
+            'chart_data': [40000, 42000, 45000, 43000, 46000, 48000, 45680, 0, 0, 0, 0, 0] # ← OBLIGATORIO
+        })
+    
+    return render(request, 'reportes/reportes_unificados.html', contexto)
