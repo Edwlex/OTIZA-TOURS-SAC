@@ -1,0 +1,62 @@
+/* ==================== SIDEBAR CAJERO ==================== */
+.sidebar-cajero {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.sidebar-cajero nav {
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Scrollbar personalizado */
+.sidebar-cajero nav::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar-cajero nav::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
+
+.sidebar-cajero nav::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 3px;
+}
+
+.sidebar-cajero nav::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+/* Items del menú */
+.sidebar-item {
+    transition: all 0.3s ease;
+    text-decoration: none;
+    color: white;
+}
+
+.sidebar-item:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-item.active {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-left: 4px solid #fbbf24;
+}
+
+/* ==================== CONTENIDO PRINCIPAL ==================== */
+main {
+    scroll-behavior: smooth;
+}
+
+/* ==================== RESPONSIVE ==================== */
+@media (max-width: 1024px) {
+    .sidebar-cajero {
+        transform: translateX(-100%);
+    }
+    
+    .sidebar-cajero.mobile-open {
+        transform: translateX(0);
+    }
+}
