@@ -52,9 +52,12 @@
 <div class="bg-white rounded-xl shadow-sm border border-gray-200">
     <div class="p-6 border-b border-gray-200 flex justify-between items-center">
         <h3 class="text-lg font-bold text-gray-800">Lista de Usuarios</h3>
-        <button class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
-            <i class="fas fa-user-plus mr-2"></i>Nuevo Usuario
-        </button>
+        
+        <!-- ✅ CORREGIDO: Ahora es un enlace <a> en lugar de <button> -->
+        <a href="{% url 'core:usuario_nuevo' %}" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition flex items-center gap-2 font-medium">
+            <i class="fas fa-user-plus"></i>
+            <span>Nuevo Usuario</span>
+        </a>
     </div>
     
     <div class="overflow-x-auto">
@@ -93,12 +96,12 @@
                         </span>
                     </td>
                     <td class="px-6 py-4 space-x-2">
-                        <button class="text-yellow-600 hover:text-yellow-800 transition" title="Editar">
+                        <a href="{% url 'core:usuario_editar' usuario_item.id %}" class="text-yellow-600 hover:text-yellow-800 transition" title="Editar">
                             <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="text-red-600 hover:text-red-800 transition" title="Eliminar" onclick="return confirm('¿Estás seguro de eliminar este usuario?')">
+                        </a>
+                        <a href="{% url 'core:usuario_eliminar' usuario_item.id %}" class="text-red-600 hover:text-red-800 transition" title="Eliminar" onclick="return confirm('¿Estás seguro de eliminar este usuario?')">
                             <i class="fas fa-trash"></i>
-                        </button>
+                        </a>
                     </td>
                 </tr>
                 {% empty %}

@@ -1,0 +1,92 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block title %}Nueva Ruta - Otiza Tours{% endblock %}
+
+{% block page_title %}
+<h2 class="text-lg font-bold text-gray-800">Registrar Nueva Ruta</h2>
+<p class="text-xs text-gray-500">Define los tramos de viaje de la empresa</p>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <!-- Tarjeta del Formulario -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="p-6 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+            <h3 class="text-lg font-bold text-gray-800">Detalles del Trayecto</h3>
+            <a href="{% url 'core:rutas_lista' %}" class="text-sm text-gray-500 hover:text-indigo-600 transition">
+                <i class="fas fa-arrow-left mr-1"></i> Volver a la lista
+            </a>
+        </div>
+
+        <form method="POST" class="p-8 space-y-6">
+            {% csrf_token %}
+
+            <!-- SECCIÓN 1: CIUDADES (ORIGEN / DESTINO) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Origen -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Ciudad de Origen *</label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-3 text-gray-400"><i class="fas fa-map-marker-alt text-blue-500"></i></span>
+                        <input type="text" name="origen" required placeholder="Ej: Trujillo" 
+                               class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition">
+                    </div>
+                </div>
+
+                <!-- Destino -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Ciudad de Destino *</label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-3 text-gray-400"><i class="fas fa-flag-checkered text-green-500"></i></span>
+                        <input type="text" name="destino" required placeholder="Ej: Julcán" 
+                               class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition">
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECCIÓN 2: DATOS DEL TRAYECTO -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Distancia -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Distancia (km)</label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-3 text-gray-400"><i class="fas fa-road"></i></span>
+                        <input type="number" name="distancia" step="0.01" placeholder="85" 
+                               class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition">
+                    </div>
+                </div>
+
+                <!-- Duración -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Duración Estimada</label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-3 text-gray-400"><i class="fas fa-clock"></i></span>
+                        <input type="text" name="duracion" placeholder="2h 30min" 
+                               class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition">
+                    </div>
+                </div>
+
+                <!-- Precio Base -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Precio Base (S/)</label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-3 text-gray-400"><i class="fas fa-money-bill-wave"></i></span>
+                        <input type="number" name="precio_base" step="0.01" required placeholder="25.00" 
+                               class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botones de Acción -->
+            <div class="pt-6 border-t border-gray-200 flex justify-end gap-4">
+                <a href="{% url 'core:rutas_lista' %}" class="px-6 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition">
+                    Cancelar
+                </a>
+                <button type="submit" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition shadow-md flex items-center gap-2">
+                    <i class="fas fa-save"></i> Guardar Ruta
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

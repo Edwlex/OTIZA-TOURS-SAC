@@ -646,6 +646,22 @@ def usuarios_lista(request):
     
     return render(request, 'admin/usuarios.html', contexto)
 
+@login_required
+def usuario_nuevo(request):
+    """Abrir formulario visual para nuevo usuario/cajero"""
+    return render(request, 'admin/usuario_form.html')
+
+@login_required
+def usuario_editar(request, id):
+    """Abrir formulario visual para editar usuario"""
+    return render(request, 'admin/usuario_form.html')
+
+@login_required
+def usuario_eliminar(request, id):
+    """Simulación visual de eliminación"""
+    messages.success(request, 'Usuario eliminado correctamente (Simulación)')
+    return redirect('core:usuarios_lista')
+
 
 # ==================== ADMIN - CONFIGURACIÓN ====================
 @login_required
