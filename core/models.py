@@ -31,6 +31,11 @@ class Usuario(AbstractUser):
     telefono = models.CharField(max_length=20, blank=True)
     es_cajero = models.BooleanField(default=True)
     activo = models.BooleanField(default=True)
+    # En el modelo Usuario, agrega estos campos si no existen:
+    licencia_conducir = models.CharField(max_length=20, blank=True, help_text="Número de licencia de conducir")
+    categoria_licencia = models.CharField(max_length=10, blank=True, help_text="Ej: A-IIA, A-IIIB")
+    fecha_vencimiento_licencia = models.DateField(null=True, blank=True)
+    es_chofer = models.BooleanField(default=False, help_text="¿Es chofer activo?")
     
     def __str__(self):
         return f"{self.username} - {self.sede}"

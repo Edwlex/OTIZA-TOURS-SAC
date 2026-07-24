@@ -4,11 +4,12 @@
 {% block title %}Fidelización Admin - Otiza Tours{% endblock %}
 
 {% block page_title %}
-<h2 class="text-lg font-bold text-gray-800">Fidelización - Panel Admin</h2>
-<p class="text-xs text-gray-500">Gestión Global de Clientes</p>
+<h2 class="text-lg font-bold text-gray-800">🎁 Programa de Fidelización</h2>
+<p class="text-xs text-gray-500">Gestión global de clientes y premios Rasca y Gana</p>
 {% endblock %}
 
 {% block content %}
+
 <!-- KPIs -->
 <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
     <div class="kpi-card bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl p-6 text-white shadow-lg">
@@ -47,31 +48,44 @@
                 <i class="fas fa-star text-2xl"></i>
             </div>
         </div>
-        <p class="text-sm opacity-90">Cerca de Ganar (≤2 viajes)</p>
-        <p class="text-3xl font-bold mt-1">{{ clientes_cercanos|length }}</p>
+        <p class="text-sm opacity-90">Regla del Programa</p>
+        <p class="text-xl font-bold mt-2">12 Viajes = 🎟️ Rasca y Gana</p>
     </div>
 </div>
 
+<!-- Filtros Rápidos -->
+<div class="flex flex-wrap gap-2 mb-6">
+    <a href="?filtro=todos" class="px-4 py-2 rounded-lg text-sm font-medium transition {% if filtro_actual == 'todos' %}bg-indigo-600 text-white shadow-md{% else %}bg-white text-gray-700 border border-gray-300 hover:bg-gray-50{% endif %}">
+        Todos los Clientes
+    </a>
+    <a href="?filtro=premios" class="px-4 py-2 rounded-lg text-sm font-medium transition {% if filtro_actual == 'premios' %}bg-yellow-500 text-white shadow-md{% else %}bg-white text-gray-700 border border-gray-300 hover:bg-gray-50{% endif %}">
+        🎁 Con Premio Pendiente
+    </a>
+    <a href="?filtro=cerca" class="px-4 py-2 rounded-lg text-sm font-medium transition {% if filtro_actual == 'cerca' %}bg-purple-500 text-white shadow-md{% else %}bg-white text-gray-700 border border-gray-300 hover:bg-gray-50{% endif %}">
+         Cerca de Ganar (≤3)
+    </a>
+</div>
+
 <!-- Tabla de Clientes -->
-<div class="bg-white rounded-xl shadow-sm border border-gray-200">
-    <div class="p-6 border-b border-gray-200">
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div class="p-6 border-b border-gray-200 flex justify-between items-center">
         <h3 class="text-lg font-bold text-gray-800">
-            <i class="fas fa-star text-yellow-500 mr-2"></i>
+            <i class="fas fa-trophy text-yellow-500 mr-2"></i>
             Estado de Fidelización
         </h3>
-        <p class="text-sm text-gray-500 mt-1">Clientes cercanos a completar 12 viajes</p>
+        <span class="text-sm text-gray-500">{{ clientes_cercanos|length }} clientes</span>
     </div>
 
     <div class="overflow-x-auto">
         <table class="table-admin w-full">
-            <thead class="bg-gray-50 border-b border-gray-200">
+            <thead class="bg-gray-50">
                 <tr>
                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Cliente</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Sede</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Viajes</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">DNI</th>
+                    <th class="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Viajes</th>
                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Progreso</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Estado</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Acciones</th>
+                    <th class="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Estado</th>
+                    <th class="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Acciones</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
@@ -84,41 +98,52 @@
                             </div>
                             <div>
                                 <p class="font-semibold text-gray-800">{{ cliente.nombre }}</p>
-                                <p class="text-xs text-gray-500">DNI: {{ cliente.dni }}</p>
+                                <p class="text-xs text-gray-500">{{ cliente.telefono|default:"Sin teléfono" }}</p>
                             </div>
                         </div>
                     </td>
-                    <td class="px-6 py-4 text-sm text-gray-800">{{ cliente.sede }}</td>
-                    <td class="px-6 py-4">
-                        <span class="font-semibold text-gray-800">{{ cliente.viajes }}/12</span>
-                        <p class="text-xs text-gray-500">Faltan: {{ cliente.faltan }}</p>
-                    </td>
-                    <td class="px-6 py-4">
-                        <div class="w-full bg-gray-200 rounded-full h-2">
-                            <div class="bg-indigo-600 h-2 rounded-full" style="width: {{ cliente.viajes|floatformat:0 }}%"></div>
+                    <td class="px-6 py-4 font-mono text-sm text-gray-700">{{ cliente.dni }}</td>
+                    <td class="px-6 py-4 text-center font-bold text-gray-800">{{ cliente.viajes }}</td>
+                    <td class="px-6 py-4 w-1/4">
+                        <div class="flex items-center gap-2">
+                            <div class="flex-1 bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                                <div class="bg-indigo-600 h-2.5 rounded-full transition-all duration-500" style="width: {{ cliente.porcentaje }}%"></div>
+                            </div>
+                            <span class="text-xs font-medium text-gray-600 w-8 text-right">
+                                {% if cliente.faltan == 0 %}100%{% else %}{{ cliente.faltan }}{% endif %}
+                            </span>
                         </div>
-                        <p class="text-xs text-gray-500 mt-1">{{ cliente.viajes|floatformat:0 }}%</p>
+                        {% if cliente.faltan > 0 %}
+                        <p class="text-xs text-gray-500 mt-1">Faltan: {{ cliente.faltan }} viajes</p>
+                        {% else %}
+                        <p class="text-xs text-green-600 font-semibold mt-1">¡Ciclo Completado!</p>
+                        {% endif %}
                     </td>
-                    <td class="px-6 py-4">
-                        {% if cliente.faltan == 0 %}
-                            <span class="px-3 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">¡Ganador!</span>
-                        {% elif cliente.faltan == 1 %}
-                            <span class="px-3 py-1 bg-yellow-100 text-yellow-700 text-xs font-semibold rounded-full">Casi lo logra</span>
+                    <td class="px-6 py-4 text-center">
+                        {% if cliente.tiene_premio %}
+                            <span class="px-3 py-1 bg-yellow-100 text-yellow-700 text-xs font-semibold rounded-full">🎁 Pendiente</span>
+                        {% elif cliente.faltan <= 3 %}
+                            <span class="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full">⚡ Cerca</span>
                         {% else %}
                             <span class="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">En curso</span>
                         {% endif %}
                     </td>
-                    <td class="px-6 py-4">
-                        <a href="{% url 'core:cliente_historial' cliente.dni %}" class="text-indigo-600 hover:text-indigo-800 font-medium text-sm">
-                            Ver Historial <i class="fas fa-arrow-right ml-1"></i>
-                        </a>
+                    <td class="px-6 py-4 text-center">
+                        {% if cliente.tiene_premio %}
+                        <button onclick="marcarPremioEntregado('{{ cliente.dni }}')" class="px-3 py-1 bg-green-600 text-white text-xs font-semibold rounded-lg hover:bg-green-700 transition">
+                            ✅ Marcar Entregado
+                        </button>
+                        {% else %}
+                        <span class="text-xs text-gray-400">-</span>
+                        {% endif %}
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="6" class="px-6 py-8 text-center text-gray-500">
-                        <i class="fas fa-inbox text-4xl mb-2 text-gray-300"></i>
-                        <p>No hay clientes cercanos al premio en este momento</p>
+                    <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                        <i class="fas fa-inbox text-4xl mb-3 text-gray-300"></i>
+                        <p class="font-medium">No hay clientes que coincidan con el filtro</p>
+                        <p class="text-sm text-gray-400 mt-1">Registra ventas con DNI para activar el programa</p>
                     </td>
                 </tr>
                 {% endfor %}
@@ -126,4 +151,17 @@
         </table>
     </div>
 </div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function marcarPremioEntregado(dni) {
+    if(confirm(`¿Confirmar entrega del Rasca y Gana al cliente DNI ${dni}?`)) {
+        // Aquí iría la llamada AJAX al backend para registrar la entrega
+        alert(`✅ Premio marcado como entregado para ${dni}\n(En producción, esto se guardaría en BD)`);
+        location.reload();
+    }
+}
+</script>
 {% endblock %}

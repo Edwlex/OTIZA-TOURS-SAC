@@ -1,0 +1,75 @@
+{% extends 'admin/base_admin.html' %}
+{% load static %}
+
+{% block title %}{% if viaje %}Editar Viaje{% else %}Nuevo Viaje{% endif %} - Otiza Tours{% endblock %}
+
+{% block page_title %}
+<h2 class="text-lg font-bold text-gray-800">{% if viaje %}Editar Viaje{% else %}Nuevo Viaje{% endif %}</h2>
+<p class="text-xs text-gray-500">Complete los datos del viaje</p>
+{% endblock %}
+
+{% block content %}
+
+<div class="max-w-4xl mx-auto">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Ruta -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Ruta</label>
+                    {{ form.ruta }}
+                </div>
+                
+                <!-- Vehículo -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Vehículo</label>
+                    {{ form.vehiculo }}
+                </div>
+                
+                <!-- Sede de Salida -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Sede de Salida</label>
+                    {{ form.sede_salida }}
+                </div>
+                
+                <!-- Fecha de Salida -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Fecha de Salida</label>
+                    {{ form.fecha_salida }}
+                </div>
+                
+                <!-- Hora de Salida -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Hora de Salida</label>
+                    {{ form.hora_salida }}
+                </div>
+                
+                <!-- Fecha de Llegada -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Fecha de Llegada</label>
+                    {{ form.fecha_llegada }}
+                </div>
+                
+                <!-- Hora de Llegada -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Hora de Llegada</label>
+                    {{ form.hora_llegada }}
+                </div>
+            </div>
+            
+            <!-- Botones -->
+            <div class="flex justify-end space-x-4 pt-6 border-t border-gray-200">
+                <a href="{% url 'core:asignacion_viajes' %}" class="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
+                    Cancelar
+                </a>
+                <button type="submit" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-semibold">
+                    {% if viaje %}Actualizar Viaje{% else %}Crear Viaje{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

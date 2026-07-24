@@ -51,22 +51,34 @@ urlpatterns = [
     path('panel-admin/vehiculos/editar/<int:id>/', views.vehiculo_editar, name='vehiculo_editar'),
     path('panel-admin/vehiculos/eliminar/<int:id>/', views.vehiculo_eliminar, name='vehiculo_eliminar'),
 
+    
+    path('incidencias/', views.incidencias_lista, name='incidencias_lista'),
+    path('incidencias/nuevo/', views.incidencia_nuevo, name='incidencia_nuevo'),
+    path('incidencias/actualizar/<int:id>/', views.incidencia_actualizar_estado, name='incidencia_actualizar_estado'),
+    path('incidencias/eliminar/<int:id>/', views.incidencia_eliminar, name='incidencia_eliminar'),
+    # ==================== ADMIN - GESTIÓN DE CHOFERES ====================
     path('panel-admin/choferes/', views.choferes_lista, name='choferes_lista'),
     path('panel-admin/choferes/nuevo/', views.chofer_nuevo, name='chofer_nuevo'),
     path('panel-admin/choferes/editar/<int:id>/', views.chofer_editar, name='chofer_editar'),
     path('panel-admin/choferes/eliminar/<int:id>/', views.chofer_eliminar, name='chofer_eliminar'),
 
+    # ==================== ADMIN - GESTIÓN DE RUTAS ====================
     path('panel-admin/rutas/', views.rutas_lista, name='rutas_lista'),
     path('panel-admin/rutas/nuevo/', views.ruta_nuevo, name='ruta_nuevo'),
     path('panel-admin/rutas/editar/<int:id>/', views.ruta_editar, name='ruta_editar'),
     path('panel-admin/rutas/eliminar/<int:id>/', views.ruta_eliminar, name='ruta_eliminar'),
 
+    # ==================== ADMIN - ASIGNACIÓN DE VIAJES ====================
     path('panel-admin/asignacion-viajes/', views.asignacion_viajes, name='asignacion_viajes'),
+    path('panel-admin/viajes/nuevo/', views.viaje_nuevo, name='viaje_nuevo'),
+    path('panel-admin/viajes/editar/<int:id>/', views.viaje_editar, name='viaje_editar'),
+    path('panel-admin/viajes/eliminar/<int:id>/', views.viaje_eliminar, name='viaje_eliminar'),
+
+    # ==================== ADMIN - GESTIÓN DE USUARIOS ====================
     path('panel-admin/usuarios/', views.usuarios_lista, name='usuarios_lista'),
     path('panel-admin/usuarios/nuevo/', views.usuario_nuevo, name='usuario_nuevo'),
-    path('panel-admin/usuarios/<int:id>/editar/', views.usuario_editar, name='usuario_editar'),
-    path('panel-admin/usuarios/<int:id>/eliminar/', views.usuario_eliminar, name='usuario_eliminar'),  
-    
+    path('panel-admin/usuarios/editar/<int:id>/', views.usuario_editar, name='usuario_editar'),
+    path('panel-admin/usuarios/eliminar/<int:id>/', views.usuario_eliminar, name='usuario_eliminar'),
     # ==================== INCIDENCIAS ====================
     path('incidencias/', views.incidencias_lista, name='incidencias_lista'),
 
