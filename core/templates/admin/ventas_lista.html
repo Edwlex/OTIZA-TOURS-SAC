@@ -46,12 +46,11 @@
                 
                 <div class="w-px h-8 bg-gray-300 mx-1 hidden xl:block"></div>
                 
-                <button type="button" onclick="window.print()" class="px-4 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition text-sm font-medium flex items-center gap-2">
-                    <i class="fas fa-print"></i> Imprimir
-                </button>
-                <button type="button" class="px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition text-sm font-medium flex items-center gap-2 shadow-sm">
-                    <i class="fas fa-file-excel"></i> Exportar
-                </button>
+                <!-- BOTÓN EXPORTAR ACTUALIZADO -->
+                <a href="{% url 'core:ventas_exportar' %}?{{ request.GET.urlencode }}" 
+                   class="px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition text-sm font-medium flex items-center gap-2 shadow-sm">
+                    <i class="fas fa-file-excel"></i> Exportar Excel
+                </a>
             </div>
         </div>
     </form>
@@ -110,10 +109,10 @@
                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Ticket</th>
                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Fecha</th>
                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Cliente</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">DNI</th>
                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Ruta</th>
                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Asiento</th>
                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Sede</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Cajero</th>
                     <th class="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Monto</th>
                 </tr>
             </thead>
@@ -125,13 +124,12 @@
                     <td class="px-6 py-4 text-sm text-gray-700">
                         <div>
                             <p class="font-medium">{{ venta.nombre_cliente|default:"Pax Anónimo" }}</p>
-                            <p class="text-xs text-gray-500">{{ venta.numero_documento|default:"---" }}</p>
                         </div>
                     </td>
+                    <td class="px-6 py-4 text-sm text-gray-700">{{ venta.numero_documento|default:"---" }}</td> 
                     <td class="px-6 py-4 text-sm text-gray-700">{{ venta.viaje.ruta }}</td>
                     <td class="px-6 py-4 text-sm text-gray-700">Asiento {{ venta.asiento.numero_asiento }}</td>
                     <td class="px-6 py-4 text-sm text-gray-700">{{ venta.sede_venta }}</td>
-                    <td class="px-6 py-4 text-sm text-gray-700">{{ venta.cajero.get_full_name|default:venta.cajero.username }}</td>
                     <td class="px-6 py-4 text-right font-bold text-green-600">S/ {{ venta.monto_total|floatformat:2 }}</td>
                 </tr>
                 {% empty %}

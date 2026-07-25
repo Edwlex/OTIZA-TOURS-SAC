@@ -5,128 +5,166 @@
 
 {% block page_title %}
 <h2 class="text-lg font-bold text-gray-800">{% if chofer %}Editar Chofer{% else %}Nuevo Chofer{% endif %}</h2>
-<p class="text-xs text-gray-500">Complete los datos del chofer</p>
+<p class="text-xs text-gray-500">Registro de personal de conducción</p>
 {% endblock %}
 
 {% block content %}
 
-<div class="max-w-4xl mx-auto">
+<div class="max-w-5xl mx-auto">
+    <!-- Alerta informativa -->
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+        <div class="flex items-start">
+            <i class="fas fa-info-circle text-blue-600 mt-0.5 mr-3"></i>
+            <div>
+                <h4 class="text-sm font-semibold text-blue-800">Información Importante</h4>
+                <ul class="text-xs text-blue-600 mt-1 space-y-1">
+                    <li>• El DNI será el nombre de usuario para iniciar sesión</li>
+                    <li>• Se generará una contraseña temporal automáticamente</li>
+                    <li>• La categoría de licencia debe ser A-III o superior para buses</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <form method="post" class="space-y-6">
             {% csrf_token %}
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- DNI (Username) -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">DNI</label>
-                    {{ form.username }}
-                    {% if form.username.errors %}
-                    <p class="text-red-500 text-xs mt-1">{{ form.username.errors.0 }}</p>
-                    {% endif %}
+            <!-- Datos Personales -->
+            <div>
+                <h3 class="text-sm font-bold text-gray-700 uppercase tracking-wide mb-4 flex items-center">
+                    <i class="fas fa-user mr-2 text-indigo-600"></i>
+                    Datos Personales
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            DNI <span class="text-red-500">*</span>
+                        </label>
+                        {{ form.username }}
+                        {% if form.username.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.username.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Email <span class="text-red-500">*</span>
+                        </label>
+                        {{ form.email }}
+                        {% if form.email.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.email.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Nombre <span class="text-red-500">*</span>
+                        </label>
+                        {{ form.first_name }}
+                        {% if form.first_name.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.first_name.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Apellido <span class="text-red-500">*</span>
+                        </label>
+                        {{ form.last_name }}
+                        {% if form.last_name.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.last_name.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Teléfono
+                        </label>
+                        {{ form.telefono }}
+                        {% if form.telefono.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.telefono.errors.0 }}</p>
+                        {% endif %}
+                    </div>
                 </div>
-                
-                <!-- Contraseña -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                        Contraseña
-                        {% if chofer %}<span class="text-xs text-gray-500">(Dejar vacío para no cambiar)</span>{% endif %}
-                    </label>
-                    {{ form.password }}
-                    {% if form.password.errors %}
-                    <p class="text-red-500 text-xs mt-1">{{ form.password.errors.0 }}</p>
-                    {% endif %}
+            </div>
+
+            <!-- Datos de Licencia -->
+            <div class="border-t border-gray-200 pt-6">
+                <h3 class="text-sm font-bold text-gray-700 uppercase tracking-wide mb-4 flex items-center">
+                    <i class="fas fa-id-card mr-2 text-indigo-600"></i>
+                    Licencia de Conducir
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            N° de Licencia <span class="text-red-500">*</span>
+                        </label>
+                        {{ form.licencia_conducir }}
+                        {% if form.licencia_conducir.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.licencia_conducir.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Categoría <span class="text-red-500">*</span>
+                        </label>
+                        {{ form.categoria_licencia }}
+                        {% if form.categoria_licencia.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.categoria_licencia.errors.0 }}</p>
+                        {% endif %}
+                        <p class="text-xs text-gray-500 mt-1">A-IIIa/b/c requerida para buses</p>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Vencimiento <span class="text-red-500">*</span>
+                        </label>
+                        {{ form.fecha_vencimiento_licencia }}
+                        {% if form.fecha_vencimiento_licencia.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.fecha_vencimiento_licencia.errors.0 }}</p>
+                        {% endif %}
+                        <p class="text-xs text-gray-500 mt-1">Fecha de vencimiento de licencia</p>
+                    </div>
                 </div>
-                
-                <!-- Email -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                    {{ form.email }}
-                    {% if form.email.errors %}
-                    <p class="text-red-500 text-xs mt-1">{{ form.email.errors.0 }}</p>
-                    {% endif %}
-                </div>
-                
-                <!-- Teléfono -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Teléfono</label>
-                    {{ form.telefono }}
-                    {% if form.telefono.errors %}
-                    <p class="text-red-500 text-xs mt-1">{{ form.telefono.errors.0 }}</p>
-                    {% endif %}
-                </div>
-                
-                <!-- Nombre -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Nombre</label>
-                    {{ form.first_name }}
-                    {% if form.first_name.errors %}
-                    <p class="text-red-500 text-xs mt-1">{{ form.first_name.errors.0 }}</p>
-                    {% endif %}
-                </div>
-                
-                <!-- Apellido -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Apellido</label>
-                    {{ form.last_name }}
-                    {% if form.last_name.errors %}
-                    <p class="text-red-500 text-xs mt-1">{{ form.last_name.errors.0 }}</p>
-                    {% endif %}
-                </div>
-                
-                <!-- Licencia de Conducir -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Licencia de Conducir</label>
-                    {{ form.licencia_conducir }}
-                    {% if form.licencia_conducir.errors %}
-                    <p class="text-red-500 text-xs mt-1">{{ form.licencia_conducir.errors.0 }}</p>
-                    {% endif %}
-                </div>
-                
-                <!-- Categoría de Licencia -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Categoría</label>
-                    {{ form.categoria_licencia }}
-                    {% if form.categoria_licencia.errors %}
-                    <p class="text-red-500 text-xs mt-1">{{ form.categoria_licencia.errors.0 }}</p>
-                    {% endif %}
-                </div>
-                
-                <!-- Fecha de Vencimiento -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Fecha de Vencimiento</label>
-                    {{ form.fecha_vencimiento_licencia }}
-                    {% if form.fecha_vencimiento_licencia.errors %}
-                    <p class="text-red-500 text-xs mt-1">{{ form.fecha_vencimiento_licencia.errors.0 }}</p>
-                    {% endif %}
-                </div>
-                
-                <!-- Sede Asignada -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Sede Asignada</label>
-                    {{ form.sede }}
-                    {% if form.sede.errors %}
-                    <p class="text-red-500 text-xs mt-1">{{ form.sede.errors.0 }}</p>
-                    {% endif %}
-                </div>
-                
-                <!-- Activo -->
-                <div class="md:col-span-2">
-                    <label class="flex items-center space-x-2">
-                        {{ form.activo }}
-                        <span class="text-sm font-medium text-gray-700">Chofer Activo</span>
-                    </label>
-                    {% if form.activo.errors %}
-                    <p class="text-red-500 text-xs mt-1">{{ form.activo.errors.0 }}</p>
-                    {% endif %}
+            </div>
+
+            <!-- Asignación -->
+            <div class="border-t border-gray-200 pt-6">
+                <h3 class="text-sm font-bold text-gray-700 uppercase tracking-wide mb-4 flex items-center">
+                    <i class="fas fa-building mr-2 text-indigo-600"></i>
+                    Asignación
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Sede Asignada <span class="text-red-500">*</span>
+                        </label>
+                        {{ form.sede }}
+                        {% if form.sede.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.sede.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="flex items-center pt-6">
+                        <label class="flex items-center space-x-2">
+                            {{ form.activo }}
+                            <span class="text-sm font-medium text-gray-700">Chofer Activo</span>
+                        </label>
+                        {% if form.activo.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.activo.errors.0 }}</p>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
             
             <!-- Botones -->
             <div class="flex justify-end space-x-4 pt-6 border-t border-gray-200">
-                <a href="{% url 'core:choferes_lista' %}" class="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
+                <a href="{% url 'core:choferes_lista' %}" class="px-6 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium">
                     Cancelar
                 </a>
-                <button type="submit" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-semibold">
+                <button type="submit" class="px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-semibold shadow-md">
                     {% if chofer %}Actualizar Chofer{% else %}Crear Chofer{% endif %}
                 </button>
             </div>

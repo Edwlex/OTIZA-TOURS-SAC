@@ -27,14 +27,34 @@ class Sede(models.Model):
 
 # ==================== USUARIOS ====================
 class Usuario(AbstractUser):
+    # CATEGORÍAS DE LICENCIA
+    CATEGORIAS_LICENCIA = [
+        ('', 'Seleccione categoría...'),
+        ('A-I', 'A-I (Motocicletas)'),
+        ('A-IIA', 'A-IIA (Automóviles particulares)'),
+        ('A-IIB', 'A-IIB (Automóviles públicos - Taxis)'),
+        ('A-IIIa', 'A-IIIa (Buses pequeños < 20 pasajeros)'),
+        ('A-IIIb', 'A-IIIb (Buses medianos 20-50 pasajeros)'),
+        ('A-IIIc', 'A-IIIc (Buses grandes > 50 pasajeros)'),
+        ('B-I', 'B-I (Camionetas ligeras)'),
+        ('B-IIa', 'B-IIa (Camiones medianos)'),
+        ('B-IIb', 'B-IIb (Camiones pesados)'),
+        ('B-IIIa', 'B-IIIa (Camiones articulados)'),
+        ('B-IIIb', 'B-IIIb (Camiones especiales)'),
+        ('C-I', 'C-I (Maquinaria liviana)'),
+        ('C-IIa', 'C-IIa (Maquinaria pesada)'),
+        ('C-IIb', 'C-IIb (Maquinaria especial)'),
+    ]
+    
     sede = models.ForeignKey(Sede, on_delete=models.PROTECT, related_name='usuarios')
     telefono = models.CharField(max_length=20, blank=True)
     es_cajero = models.BooleanField(default=True)
     activo = models.BooleanField(default=True)
-    # En el modelo Usuario, agrega estos campos si no existen:
+    
+    # Campos específicos para choferes
     licencia_conducir = models.CharField(max_length=20, blank=True, help_text="Número de licencia de conducir")
-    categoria_licencia = models.CharField(max_length=10, blank=True, help_text="Ej: A-IIA, A-IIIB")
-    fecha_vencimiento_licencia = models.DateField(null=True, blank=True)
+    categoria_licencia = models.CharField(max_length=10, choices=CATEGORIAS_LICENCIA, blank=True, help_text="Categoría de licencia")
+    fecha_vencimiento_licencia = models.DateField(null=True, blank=True, help_text="Fecha de vencimiento de licencia")
     es_chofer = models.BooleanField(default=False, help_text="¿Es chofer activo?")
     
     def __str__(self):
@@ -43,11 +63,9 @@ class Usuario(AbstractUser):
     class Meta:
         verbose_name = 'Usuario'
         verbose_name_plural = 'Usuarios'
-        # Evita que se creen usuarios duplicados
         constraints = [
             models.UniqueConstraint(fields=['username', 'sede'], name='unique_usuario_sede')
         ]
-
 
 # ==================== VEHÍCULOS ====================
 class Vehiculo(models.Model):
@@ -103,7 +121,39 @@ class Viaje(models.Model):
     hora_llegada = models.TimeField()
     estado = models.CharField(max_length=20, choices=ESTADO_VIAJE, default='programado')
     creado_en = models.DateTimeField(auto_now_add=True)
+
+    # --- AGREGA ESTO AQUÍ ---
+    def obtener_hora_llegada(self):
+        """Calcula la hora de llegada usando la misma lógica robusta del servicio"""
+        from datetime import datetime, timedelta
+        import re
+        
+        if self.hora_salida and self.ruta and self.ruta.duracion_estimada:
+            duracion_texto = str(self.ruta.duracion_estimada).lower().strip()
+            horas = 0
+            minutos = 0
+            
+            # Regex para horas: acepta "1 hora", "2 horas", "1h", "2 h"
+            match_horas = re.search(r'(\d+)\s*(?:hora|horas|h)\b', duracion_texto)
+            if match_horas:
+                horas = int(match_horas.group(1))
+            
+            # Regex para minutos: acepta "30 min", "30 minutos", "30m", "30 m"
+            match_minutos = re.search(r'(\d+)\s*(?:min|minutos|m)\b', duracion_texto)
+            if match_minutos:
+                minutos = int(match_minutos.group(1))
+            
+            # Calcular llegada
+            salida_dt = datetime.combine(self.fecha_salida, self.hora_salida)
+            llegada_dt = salida_dt + timedelta(hours=horas, minutes=minutos)
+            
+            return llegada_dt.strftime('%H:%M')
+        
+        # Fallback: retornar hora de salida si no hay datos
+        return self.hora_salida.strftime('%H:%M') if self.hora_salida else "--:--"
     
+    # --- FIN DE LO NUEVO ---
+
     def __str__(self):
         return f"{self.ruta} - {self.fecha_salida} {self.hora_salida}"
     
@@ -111,7 +161,6 @@ class Viaje(models.Model):
         verbose_name = 'Viaje'
         verbose_name_plural = 'Viajes'
         ordering = ['fecha_salida', 'hora_salida']
-
 
 # ==================== ASIENTOS DE VIAJE ====================
 class AsientoViaje(models.Model):

@@ -20,43 +20,60 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Ruta</label>
                     {{ form.ruta }}
+                    {% if form.ruta.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ form.ruta.errors.0 }}</p>
+                    {% endif %}
                 </div>
                 
                 <!-- Vehículo -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Vehículo</label>
                     {{ form.vehiculo }}
+                    {% if form.vehiculo.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ form.vehiculo.errors.0 }}</p>
+                    {% endif %}
                 </div>
                 
                 <!-- Sede de Salida -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Sede de Salida</label>
                     {{ form.sede_salida }}
+                    {% if form.sede_salida.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ form.sede_salida.errors.0 }}</p>
+                    {% endif %}
                 </div>
                 
                 <!-- Fecha de Salida -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Fecha de Salida</label>
-                    {{ form.fecha_salida }}
+                    <!-- Input con atributo min para bloquear fechas pasadas -->
+                    <input type="date" 
+                           name="fecha_salida" 
+                           id="id_fecha_salida"
+                           value="{{ form.fecha_salida.value|default:'' }}"
+                           min="{% now 'Y-m-d' %}"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                    {% if form.fecha_salida.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ form.fecha_salida.errors.0 }}</p>
+                    {% endif %}
                 </div>
                 
                 <!-- Hora de Salida -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Hora de Salida</label>
                     {{ form.hora_salida }}
+                    {% if form.hora_salida.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ form.hora_salida.errors.0 }}</p>
+                    {% endif %}
                 </div>
-                
-                <!-- Fecha de Llegada -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Fecha de Llegada</label>
-                    {{ form.fecha_llegada }}
-                </div>
-                
-                <!-- Hora de Llegada -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Hora de Llegada</label>
-                    {{ form.hora_llegada }}
-                </div>
+            </div>
+            
+            <!-- Información de llegada (Solo lectura) -->
+            <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+                <p class="text-sm text-indigo-800 font-medium">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    La hora de llegada se calcula automáticamente según la duración de la ruta.
+                </p>
             </div>
             
             <!-- Botones -->
@@ -71,5 +88,39 @@
         </form>
     </div>
 </div>
+
+<!-- Script para filtrar horas pasadas si se selecciona hoy -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fechaInput = document.getElementById('id_fecha_salida');
+    const horaInput = document.getElementById('id_hora_salida');
+    
+    if (fechaInput && horaInput) {
+        const hoy = new Date().toISOString().split('T')[0];
+        
+        // Establecer mínimo en fecha
+        fechaInput.min = hoy;
+        
+        // Si selecciona hoy, filtrar horas pasadas
+        function actualizarHorasMinimas() {
+            if (fechaInput.value === hoy) {
+                const ahora = new Date();
+                // Redondear a la próxima media hora
+                const minutos = Math.ceil(ahora.getMinutes() / 30) * 30;
+                const hora = minutos >= 60 ? ahora.getHours() + 1 : ahora.getHours();
+                const minFinal = minutos >= 60 ? 0 : minutos;
+                
+                const horaMin = String(hora).padStart(2, '0') + ':' + String(minFinal).padStart(2, '0');
+                horaInput.min = horaMin;
+            } else {
+                horaInput.min = '00:00';
+            }
+        }
+        
+        fechaInput.addEventListener('change', actualizarHorasMinimas);
+        actualizarHorasMinimas(); // Ejecutar al cargar
+    }
+});
+</script>
 
 {% endblock %}

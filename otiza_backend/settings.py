@@ -194,3 +194,13 @@ LOGGING = {
         },
     },
 }
+
+# ==================== SESSION CONFIG ====================
+# Sesión expira al cerrar el navegador (desarrollo)
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
+# O expira después de 30 minutos (1800 segundos)
+SESSION_COOKIE_AGE = 1800  # 30 minutos
+
+# Renovar sesión con cada request
+SESSION_SAVE_EVERY_REQUEST = True

@@ -82,10 +82,15 @@
                         <a href="{% url 'core:vehiculo_editar' vehiculo.id %}" class="text-yellow-600 hover:text-yellow-800" title="Editar">
                             <i class="fas fa-edit"></i>
                         </a>
-                        <a href="{% url 'core:vehiculo_eliminar' vehiculo.id %}" class="text-red-600 hover:text-red-800" 
-                           onclick="return confirm('¿Estás seguro de eliminar este vehículo?')" title="Eliminar">
-                            <i class="fas fa-trash"></i>
-                        </a>
+                        <form action="{% url 'core:vehiculo_eliminar' vehiculo.id %}" 
+                            method="POST" 
+                            class="inline" 
+                            onsubmit="return confirm('¿Estás seguro de eliminar este vehículo? Esta acción no se puede deshacer.')">
+                            {% csrf_token %}
+                            <button type="submit" class="text-red-600 hover:text-red-800" title="Eliminar">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
                     </td>
                 </tr>
                 {% empty %}

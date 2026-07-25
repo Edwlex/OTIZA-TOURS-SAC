@@ -5,83 +5,117 @@
 
 {% block page_title %}
 <h2 class="text-lg font-bold text-gray-800">{% if ruta %}Editar Ruta{% else %}Nueva Ruta{% endif %}</h2>
-<p class="text-xs text-gray-500">Complete los datos de la ruta</p>
+<p class="text-xs text-gray-500">Configuración de rutas disponibles</p>
 {% endblock %}
 
 {% block content %}
 
 <div class="max-w-4xl mx-auto">
+    <!-- Alerta informativa -->
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+        <div class="flex items-start">
+            <i class="fas fa-info-circle text-blue-600 mt-0.5 mr-3"></i>
+            <div>
+                <h4 class="text-sm font-semibold text-blue-800">Información Importante</h4>
+                <ul class="text-xs text-blue-600 mt-1 space-y-1">
+                    <li>• La duración estimada afecta el cálculo automático de llegada en los viajes</li>
+                    <li>• Formato válido: "2 horas 30 min", "2h 30m", o "150 min"</li>
+                    <li>• El precio base se usará como referencia para las ventas</li>
+                    <li>• No se pueden crear rutas con mismo origen y destino</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <form method="post" class="space-y-6">
             {% csrf_token %}
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Origen -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-map-marker-alt text-blue-600 mr-1"></i>
-                        Ciudad de Origen
-                    </label>
-                    {{ form.origen }}
-                    {% if form.origen.errors %}
-                    <p class="text-red-500 text-xs mt-1">{{ form.origen.errors.0 }}</p>
-                    {% endif %}
+            <!-- Ciudades -->
+            <div>
+                <h3 class="text-sm font-bold text-gray-700 uppercase tracking-wide mb-4 flex items-center">
+                    <i class="fas fa-route mr-2 text-indigo-600"></i>
+                    Ciudades de la Ruta
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-map-marker-alt text-blue-600 mr-1"></i>
+                            Ciudad de Origen <span class="text-red-500">*</span>
+                        </label>
+                        {{ form.origen }}
+                        {% if form.origen.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.origen.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-flag-checkered text-green-600 mr-1"></i>
+                            Ciudad de Destino <span class="text-red-500">*</span>
+                        </label>
+                        {{ form.destino }}
+                        {% if form.destino.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.destino.errors.0 }}</p>
+                        {% endif %}
+                    </div>
                 </div>
-                
-                <!-- Destino -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-flag-checkered text-green-600 mr-1"></i>
-                        Ciudad de Destino
-                    </label>
-                    {{ form.destino }}
-                    {% if form.destino.errors %}
-                    <p class="text-red-500 text-xs mt-1">{{ form.destino.errors.0 }}</p>
-                    {% endif %}
+            </div>
+
+            <!-- Detalles -->
+            <div class="border-t border-gray-200 pt-6">
+                <h3 class="text-sm font-bold text-gray-700 uppercase tracking-wide mb-4 flex items-center">
+                    <i class="fas fa-info-circle mr-2 text-indigo-600"></i>
+                    Detalles del Viaje
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-road text-gray-600 mr-1"></i>
+                            Distancia (km) <span class="text-red-500">*</span>
+                        </label>
+                        {{ form.distancia_km }}
+                        {% if form.distancia_km.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.distancia_km.errors.0 }}</p>
+                        {% endif %}
+                        <p class="text-xs text-gray-500 mt-1">Distancia real del recorrido</p>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-clock text-gray-600 mr-1"></i>
+                            Duración Estimada <span class="text-red-500">*</span>
+                        </label>
+                        {{ form.duracion_estimada }}
+                        {% if form.duracion_estimada.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.duracion_estimada.errors.0 }}</p>
+                        {% endif %}
+                        <p class="text-xs text-gray-500 mt-1">Ej: "2 horas 30 min"</p>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-dollar-sign text-green-600 mr-1"></i>
+                            Precio Base (S/) <span class="text-red-500">*</span>
+                        </label>
+                        {{ form.precio_base }}
+                        {% if form.precio_base.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.precio_base.errors.0 }}</p>
+                        {% endif %}
+                        <p class="text-xs text-gray-500 mt-1">Precio de referencia</p>
+                    </div>
                 </div>
-                
-                <!-- Distancia -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-road text-gray-600 mr-1"></i>
-                        Distancia (km)
-                    </label>
-                    {{ form.distancia_km }}
-                    {% if form.distancia_km.errors %}
-                    <p class="text-red-500 text-xs mt-1">{{ form.distancia_km.errors.0 }}</p>
-                    {% endif %}
-                </div>
-                
-                <!-- Duración Estimada -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-clock text-gray-600 mr-1"></i>
-                        Duración Estimada
-                    </label>
-                    {{ form.duracion_estimada }}
-                    {% if form.duracion_estimada.errors %}
-                    <p class="text-red-500 text-xs mt-1">{{ form.duracion_estimada.errors.0 }}</p>
-                    {% endif %}
-                    <p class="text-xs text-gray-500 mt-1">Ej: "2 horas 30 min"</p>
-                </div>
-                
-                <!-- Precio Base -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-dollar-sign text-green-600 mr-1"></i>
-                        Precio Base (S/)
-                    </label>
-                    {{ form.precio_base }}
-                    {% if form.precio_base.errors %}
-                    <p class="text-red-500 text-xs mt-1">{{ form.precio_base.errors.0 }}</p>
-                    {% endif %}
-                </div>
-                
-                <!-- Activa -->
+            </div>
+
+            <!-- Estado -->
+            <div class="border-t border-gray-200 pt-6">
                 <div class="flex items-center">
-                    <label class="flex items-center space-x-2 mt-6">
+                    <label class="flex items-center space-x-2">
                         {{ form.activa }}
-                        <span class="text-sm font-medium text-gray-700">Ruta Activa</span>
+                        <span class="text-sm font-medium text-gray-700">
+                            <i class="fas fa-check-circle text-green-600 mr-1"></i>
+                            Ruta Activa (disponible para ventas)
+                        </span>
                     </label>
                     {% if form.activa.errors %}
                     <p class="text-red-500 text-xs mt-1">{{ form.activa.errors.0 }}</p>
@@ -91,10 +125,10 @@
             
             <!-- Botones -->
             <div class="flex justify-end space-x-4 pt-6 border-t border-gray-200">
-                <a href="{% url 'core:rutas_lista' %}" class="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
+                <a href="{% url 'core:rutas_lista' %}" class="px-6 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium">
                     Cancelar
                 </a>
-                <button type="submit" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-semibold">
+                <button type="submit" class="px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-semibold shadow-md">
                     {% if ruta %}Actualizar Ruta{% else %}Crear Ruta{% endif %}
                 </button>
             </div>

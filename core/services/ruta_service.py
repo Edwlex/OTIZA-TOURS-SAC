@@ -225,3 +225,34 @@ class RutaService:
         logger.info(f"  - Rutas encontradas: {rutas.count()}")
         
         return rutas
+
+    @staticmethod
+    def parsear_duracion_estimada(duracion_texto):
+        """
+        Parsea texto de duración y retorna horas y minutos
+        Acepta: "2 horas 30 min", "2 hora 30 minutos", "2h 30m", etc.
+        """
+        import re
+        
+        duracion_texto = duracion_texto.lower().strip()
+        horas = 0
+        minutos = 0
+        
+        # Patrón para horas: 1 o más dígitos seguidos de "hora" u "horas" o "h"
+        match_horas = re.search(r'(\d+)\s*(?:hora|horas|h)\b', duracion_texto)
+        if match_horas:
+            horas = int(match_horas.group(1))
+        
+        # Patrón para minutos: 1 o más dígitos seguidos de "min", "minutos" o "m"
+        match_minutos = re.search(r'(\d+)\s*(?:min|minutos|m)\b', duracion_texto)
+        if match_minutos:
+            minutos = int(match_minutos.group(1))
+        
+        # Si no hay minutos explícitos pero hay decimales en horas
+        if horas > 0 and minutos == 0:
+            match_decimal = re.search(r'(\d+)\.(\d+)', duracion_texto)
+            if match_decimal:
+                horas = int(match_decimal.group(1))
+                minutos = int(float('0.' + match_decimal.group(2)) * 60)
+        
+        return horas, minutos

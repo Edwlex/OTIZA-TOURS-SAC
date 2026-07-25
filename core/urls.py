@@ -20,6 +20,7 @@ urlpatterns = [
     path('ventas/nuevo/<int:viaje_id>/', views.nueva_venta, name='venta_create'),
     path('ventas/mapa-asientos/<int:viaje_id>/', views.mapa_asientos, name='mapa_asientos'),
     path('ventas/procesar/', views.procesar_venta, name='procesar_venta'),
+    path('ventas/exportar/', views.ventas_exportar, name='ventas_exportar'),
     
     # ==================== TICKETS ====================
     # Redirige a descargar_ticket_pdf para que coincida con la función de views.py
