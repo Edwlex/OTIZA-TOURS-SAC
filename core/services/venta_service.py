@@ -76,3 +76,55 @@ class VentaService:
             'total_boletos': kpis['total_boletos'] or 0,
             'promedio_venta': kpis['promedio'] or 0
         }
+    
+    @staticmethod
+    def generar_excel_ventas(ventas_qs):
+        """Genera un archivo Excel con los datos de ventas filtrados"""
+        import io
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, Alignment, PatternFill
+        from openpyxl.utils import get_column_letter
+        
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Ventas"
+
+        # Cabeceras exactas de la tabla
+        headers = ["Nro Ticket", "Fecha", "Cliente", "DNI", "Ruta", "Asiento", "Sede", "Cajero", "Monto (S/)"]
+        ws.append(headers)
+
+        # Estilo de cabeceras (CORREGIDO: formato aRGB de 8 dígitos)
+        header_font = Font(bold=True, color="FFFFFF")  # Blanco
+        header_fill = PatternFill(start_color="FF4F46E5", end_color="FF4F46E5", fill_type="solid")  # Indigo opaco
+        
+        for col_num, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col_num)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+
+        # Llenar datos
+        for venta in ventas_qs:
+            ws.append([
+                venta.numero_ticket,
+                venta.fecha_venta.strftime("%d/%m/%Y %H:%M"),
+                venta.nombre_cliente or "Pax Anónimo",
+                venta.numero_documento or "---",
+                str(venta.viaje.ruta),
+                f"Asiento {venta.asiento.numero_asiento}",
+                str(venta.sede_venta),
+                venta.cajero.get_full_name() or venta.cajero.username,
+                venta.monto_total
+            ])
+
+        # Ajustar ancho de columnas automáticamente
+        for col_num in range(1, len(headers) + 1):
+            column_letter = get_column_letter(col_num)
+            max_length = max(len(str(cell.value)) for cell in ws[column_letter])
+            ws.column_dimensions[column_letter].width = max_length + 3
+
+        # Guardar en memoria
+        buffer = io.BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+        return buffer

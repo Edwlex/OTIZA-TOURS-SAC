@@ -4,34 +4,34 @@ from core.models import Ruta
 
 
 class RutaForm(forms.ModelForm):
-    """Formulario para crear/editar rutas"""
+    """Formulario profesional para crear/editar rutas"""
     
     class Meta:
         model = Ruta
         fields = ['origen', 'destino', 'distancia_km', 'duracion_estimada', 'precio_base', 'activa']
         widgets = {
             'origen': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500',
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500',
                 'placeholder': 'Trujillo',
-                'list': 'origen-list'
+                'list': 'ciudades-sugeridas'
             }),
             'destino': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500',
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500',
                 'placeholder': 'Julcán',
-                'list': 'destino-list'
+                'list': 'ciudades-sugeridas'
             }),
             'distancia_km': forms.NumberInput(attrs={
-                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500',
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500',
                 'placeholder': '85.50',
                 'step': '0.01',
                 'min': '0.01'
             }),
             'duracion_estimada': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500',
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500',
                 'placeholder': '2 horas 30 min'
             }),
             'precio_base': forms.NumberInput(attrs={
-                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500',
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500',
                 'placeholder': '25.00',
                 'step': '0.01',
                 'min': '0.01'
@@ -55,6 +55,7 @@ class RutaForm(forms.ModelForm):
         if len(origen) < 3:
             raise ValidationError("El nombre de la ciudad debe tener al menos 3 caracteres")
         
+        # Capitalizar primera letra
         return origen.title()
     
     def clean_destino(self):
@@ -98,7 +99,28 @@ class RutaForm(forms.ModelForm):
         if distancia is None or distancia <= 0:
             raise ValidationError("La distancia debe ser mayor a 0 km")
         
+        if distancia > 10000:
+            raise ValidationError("La distancia no puede ser mayor a 10,000 km")
+        
         return distancia
+    
+    def clean_duracion_estimada(self):
+        """Validar duración estimada"""
+        duracion = self.cleaned_data.get('duracion_estimada', '').strip()
+        
+        if not duracion:
+            raise ValidationError("La duración estimada es obligatoria")
+        
+        # Validar formato con regex
+        import re
+        patron = r'(\d+\s*(?:hora|horas|h)\s*(\d+\s*(?:min|minutos|m)?)?)|(\d+\s*(?:min|minutos|m))'
+        
+        if not re.search(patron, duracion.lower()):
+            raise ValidationError(
+                "Formato inválido. Use: '2 horas 30 min', '2h 30m', o '150 min'"
+            )
+        
+        return duracion.lower()
     
     def clean_precio_base(self):
         """Validar precio"""
@@ -106,5 +128,8 @@ class RutaForm(forms.ModelForm):
         
         if precio is None or precio <= 0:
             raise ValidationError("El precio base debe ser mayor a 0")
+        
+        if precio > 10000:
+            raise ValidationError("El precio no puede ser mayor a S/ 10,000")
         
         return precio

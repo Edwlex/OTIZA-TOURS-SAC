@@ -6,39 +6,41 @@ from datetime import datetime, timedelta
 
 from django.conf import settings
 from asgiref.server import logger
+# ==================== IMPORTS GLOBALES (AL INICIO) ====================
+
+import re
+import secrets
+
+
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
+from django.http import HttpResponse
 from django.db.models import Count, Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
+from django.template.loader import render_to_string
 from django.utils import timezone
 
+# xhtml2pdf para tickets (si lo usas)
+try:
+    from xhtml2pdf import pisa
+except ImportError:
+    pisa = None
 
-from core.services.incidencia_service import IncidenciaService
-from core.forms.incidencia_forms import IncidenciaForm
-from core.models import Incidencia
-from core.services.fidelizacion_service import FidelizacionService
-from core.services.usuario_service import UsuarioService
-from core.forms.usuario_forms import UsuarioForm
-from core.models import Usuario
-from core.services.ruta_service import RutaService
-from core.forms.ruta_forms import RutaForm
-from core.models import Ruta
-from core.services.venta_service import VentaService
-from core.forms.venta_forms import VentaFiltroForm
-from core.forms.chofer_forms import ChoferForm
-from core.forms.login_forms import LoginForm
-from core.forms.vehiculo_forms import VehiculoForm
-from core.forms.viaje_forms import ViajeForm
-from core.models import Usuario, Vehiculo, Viaje
+# Servicios
 from core.services.auth_service import AuthService
 from core.services.chofer_service import ChoferService
+from core.services.dashboard_service import DashboardService
+from core.services.fidelizacion_service import FidelizacionService
+from core.services.incidencia_service import IncidenciaService
+from core.services.ruta_service import RutaService
+from core.services.usuario_service import UsuarioService
+from core.services.venta_service import VentaService
 from core.services.vehiculo_service import VehiculoService
 from core.services.viaje_service import ViajeService
-from core.models import Sede
-from core.services.dashboard_service import DashboardService
 
+<<<<<<< HEAD
 from django.shortcuts import render
 from django.http import HttpResponse
 from xhtml2pdf import pisa
@@ -46,112 +48,128 @@ from django.template.loader import render_to_string
 from django.shortcuts import get_object_or_404
 
 
+=======
+# Formularios
+from core.forms.chofer_forms import ChoferForm
+from core.forms.incidencia_forms import IncidenciaForm
+from core.forms.login_forms import LoginForm
+from core.forms.ruta_forms import RutaForm
+from core.forms.usuario_forms import UsuarioForm
+from core.forms.venta_forms import VentaFiltroForm
+from core.forms.vehiculo_forms import VehiculoForm
+from core.forms.viaje_forms import ViajeForm
+
+# Modelos
+from core.models import Incidencia, Ruta, Sede, Usuario, Vehiculo, Viaje, Venta
+
+# ==================== CONFIGURACIÓN DE LOGGERS ====================
+logger = logging.getLogger('core.views')
+logger_auth = logging.getLogger('core.auth')
+logger_venta = logging.getLogger('core.venta_views')
+logger_incidencia = logging.getLogger('core.incidencia_views')
+logger_fidelizacion = logging.getLogger('core.fidelizacion_views')
+logger_vehiculo = logging.getLogger('core.vehiculo_views')
+logger_chofer = logging.getLogger('core.chofer_views')
+logger_ruta = logging.getLogger('core.ruta_views')
+logger_usuario = logging.getLogger('core.usuario_views')
+logger_viaje = logging.getLogger('core.viajes_views')
+>>>>>>> 391b1f10d52ba72f9d5c32bb53cadead532c18ac
 
 
 # ==================== AUTH ====================
 
-# Configurar logger
-logger = logging.getLogger('core.auth')
-
 def login_view(request):
     """Vista de login con autenticación por sede y logging detallado"""
     
-    logger.info("=" * 60)
-    logger.info("INTENTO DE LOGIN INICIADO")
-    logger.info(f"IP: {request.META.get('REMOTE_ADDR')}")
-    logger.info(f"Método: {request.method}")
+    logger_auth.info("=" * 60)
+    logger_auth.info("INTENTO DE LOGIN INICIADO")
+    logger_auth.info(f"IP: {request.META.get('REMOTE_ADDR')}")
+    logger_auth.info(f"Método: {request.method}")
     
-    # Si el usuario ya está autenticado, redirigir al dashboard
     if request.user.is_authenticated:
-        logger.warning(f"Usuario {request.user.username} ya está autenticado. Redirigiendo...")
+        logger_auth.warning(f"Usuario {request.user.username} ya está autenticado. Redirigiendo...")
         return redirect('core:dashboard')
     
     if request.method == 'POST':
-        logger.info("-" * 60)
-        logger.info("PROCESANDO FORMULARIO DE LOGIN")
+        logger_auth.info("-" * 60)
+        logger_auth.info("PROCESANDO FORMULARIO DE LOGIN")
         
-        # Obtener datos del formulario
         username = request.POST.get('username', '')
         password = request.POST.get('password', '')
         sede_nombre = request.POST.get('sede', '')
         
-        logger.info(f"Username recibido: {username}")
-        logger.info(f"Sede seleccionada: {sede_nombre}")
-        logger.info(f"Password recibido: {'*' * len(password) if password else 'VACÍO'}")
+        logger_auth.info(f"Username recibido: {username}")
+        logger_auth.info(f"Sede seleccionada: {sede_nombre}")
+        logger_auth.info(f"Password recibido: {'*' * len(password) if password else 'VACÍO'}")
         
         form = LoginForm(request.POST)
         
         if form.is_valid():
-            logger.info("[OK] Formulario es VALIDO")
+            logger_auth.info("[OK] Formulario es VALIDO")
             user = form.get_user()
             
             if user:
-                logger.info(f"[OK] Usuario encontrado: {user.username}")
-                logger.info(f"   - Email: {user.email}")
-                logger.info(f"   - Sede: {user.sede}")
-                logger.info(f"   - Activo: {user.is_active}")
-                logger.info(f"   - Staff: {user.is_staff}")
+                logger_auth.info(f"[OK] Usuario encontrado: {user.username}")
+                logger_auth.info(f"   - Email: {user.email}")
+                logger_auth.info(f"   - Sede: {user.sede}")
+                logger_auth.info(f"   - Activo: {user.is_active}")
+                logger_auth.info(f"   - Staff: {user.is_staff}")
                 
                 try:
-                    # Iniciar sesión
                     login(request, user)
-                    logger.info(f"[OK] SESION INICIADA EXITOSAMENTE")
+                    logger_auth.info(f"[OK] SESION INICIADA EXITOSAMENTE")
                     
-                    # Guardar la sede en la sesión
                     request.session['sede_usuario'] = user.sede.nombre
                     request.session['sede_id'] = user.sede.id
-                    logger.info(f"   - Sede guardada en sesión: {user.sede.nombre}")
-                    logger.info(f"   - Session ID: {request.session.session_key}")
+                    logger_auth.info(f"   - Sede guardada en sesión: {user.sede.nombre}")
+                    logger_auth.info(f"   - Session ID: {request.session.session_key}")
                     
-                    # Mensaje de bienvenida
                     messages.success(
                         request, 
                         f'¡Bienvenido {user.get_full_name() or user.username}! Sede: {user.sede.get_nombre_display()}'
                     )
                     
-                    # Determinar URL de redirección
                     next_url = request.GET.get('next', 'core:dashboard')
-                    logger.info(f" Redirigiendo a: {next_url}")
-                    logger.info("=" * 60)
+                    logger_auth.info(f" Redirigiendo a: {next_url}")
+                    logger_auth.info("=" * 60)
                     
                     return redirect(next_url)
                     
                 except Exception as e:
-                    logger.error(f"[ERROR] Error al iniciar sesión: {str(e)}")
+                    logger_auth.error(f"[ERROR] Error al iniciar sesión: {str(e)}")
                     messages.error(request, f"Error al iniciar sesión: {str(e)}")
             else:
-                logger.error("[ERROR] form.get_user() retornó None")
+                logger_auth.error("[ERROR] form.get_user() retornó None")
                 messages.error(request, "Error interno al obtener usuario")
         else:
-            logger.error("[ERROR] Formulario NO es válido")
-            logger.error(f"Errores del formulario: {form.errors}")
+            logger_auth.error("[ERROR] Formulario NO es válido")
+            logger_auth.error(f"Errores del formulario: {form.errors}")
             
-            # Mostrar errores del formulario
             for field, errors in form.errors.items():
                 for error in errors:
-                    logger.error(f"   - {field}: {error}")
+                    logger_auth.error(f"   - {field}: {error}")
                     messages.error(request, f"{field}: {error}")
             
             for error in form.non_field_errors():
-                logger.error(f"   - Non-field error: {error}")
+                logger_auth.error(f"   - Non-field error: {error}")
                 messages.error(request, error)
     else:
-        logger.info("Método GET - Mostrando formulario de login")
+        logger_auth.info("Método GET - Mostrando formulario de login")
         form = LoginForm()
     
-    logger.info("=" * 60)
+    logger_auth.info("=" * 60)
     return render(request, 'login.html', {'form': form})
 
 
 def logout_view(request):
     """Cerrar sesión con logging"""
     username = request.user.username if request.user.is_authenticated else 'ANÓNIMO'
-    logger.info(f"CERRANDO SESIÓN para usuario: {username}")
+    logger_auth.info(f"CERRANDO SESIÓN para usuario: {username}")
     
     logout(request)
     messages.info(request, 'Sesión cerrada correctamente')
     
-    logger.info("Redirigiendo a login")
+    logger_auth.info("Redirigiendo a login")
     return redirect('core:login')
 
 
@@ -162,7 +180,6 @@ def dashboard_view(request):
     usuario = request.user
     sede = usuario.sede
     
-    # Verificar si es admin (por nombre de sede o por superuser)
     if sede.nombre == 'Oficina Central' or usuario.is_superuser:
         return dashboard_admin_simple(request, usuario, sede)
     else:
@@ -202,17 +219,15 @@ def dashboard_cajero(request, usuario, sede):
         },
     ]
 
-    # Cálculos
     asientos_disponibles_total = sum(v['asientos_disponibles'] for v in proximos_viajes)
     asientos_totales_total = sum(v['asientos_totales'] for v in proximos_viajes)
     porcentaje_disponibilidad = (asientos_disponibles_total / asientos_totales_total * 100) if asientos_totales_total > 0 else 0
 
-    # Sistema de fidelización
     cliente_busqueda = request.GET.get('dni_cliente', '')
     alerta_fidelizacion = None
 
     if cliente_busqueda:
-        viajes_totales = 11  # Simulado
+        viajes_totales = 11
         viajes_restantes = 12 - (viajes_totales % 12)
 
         if viajes_restantes == 0:
@@ -245,85 +260,64 @@ def dashboard_cajero(request, usuario, sede):
     return render(request, 'dashboard/dashboard_cajero.html', contexto)
 
 
-
 @login_required
 def dashboard_admin_simple(request, usuario, sede):
     """Dashboard COMPLETO para admin con filtros reales"""
     hoy = timezone.now().date()
     
-    # ===== LEER TODOS LOS FILTROS DEL TEMPLATE =====
     periodo = request.GET.get('periodo', 'hoy')
     sede_filtro = request.GET.get('sede', '')
     fecha_desde = request.GET.get('fecha_desde', '')
     fecha_hasta = request.GET.get('fecha_hasta', '')
     
-    # ===== DETERMINAR FECHA DE CÁLCULO SEGÚN PERÍODO =====
     if periodo == 'semana':
-        # Lunes de esta semana
         fecha_calculo = hoy - timedelta(days=hoy.weekday())
     elif periodo == 'mes':
-        # Primer día del mes
         fecha_calculo = hoy.replace(day=1)
     elif periodo == 'anio':
-        # Primer día del año
         fecha_calculo = hoy.replace(month=1, day=1)
     elif fecha_desde:
-        # Si hay fecha personalizada, usarla
         try:
             fecha_calculo = timezone.datetime.strptime(fecha_desde, '%Y-%m-%d').date()
         except ValueError:
             fecha_calculo = hoy
     else:
-        # Default: hoy
         fecha_calculo = hoy
     
-    # ===== DETERMINAR SEDE PARA FILTRAR =====
     sede_para_filtro = None
     if sede_filtro and sede_filtro != '':
         sede_para_filtro = get_object_or_404(Sede, nombre=sede_filtro)
     else:
-        sede_para_filtro = sede  # Usa la sede del usuario si no hay filtro
+        sede_para_filtro = sede
     
-    # ===== LLAMAR AL SERVICIO CON FILTROS =====
     data = DashboardService.obtener_datos_dashboard(
         fecha=fecha_calculo,
         es_admin=True,
         sede=sede_para_filtro
     )
     
-    # ===== MAPEAR CONTEXTO PARA EL TEMPLATE =====
     contexto = {
         'usuario': usuario,
         'sede': sede,
         'es_admin': True,
         'fecha': fecha_calculo,
-        
-        # Filtros para que el template los recuerde
         'periodo': periodo,
         'sede_filtro': sede_filtro,
         'fecha_desde': fecha_desde,
         'fecha_hasta': fecha_hasta,
-        
-        # KPIs
         'ingresos_totales': data['ingresos_totales'],
         'total_ventas': data['total_boletos'],
         'total_pasajeros': data['total_pasajeros'],
         'total_viajes': data['total_viajes'],
         'ocupacion_promedio': data['ocupacion_promedio'],
-        
-        # Gráficos
         'dias_semana': data['dias_semana'],
         'ventas_por_dia': data['ventas_por_dia'],
         'sedes': data['sedes'],
         'ingresos_por_sede': data['ingresos_por_sede'],
-        
-        # Resumen por sede (para tabla pequeña si la usas)
         'resumen_por_sede': [
             {'nombre': s, 'ventas': 0, 'monto': m, 'porcentaje': 0} 
             for s, m in zip(data['sedes'], data['ingresos_por_sede'])
         ],
-        
-        # Actividad reciente
         'actividad_reciente': [
             {
                 'hora': v.fecha_venta.strftime('%H:%M'),
@@ -332,8 +326,6 @@ def dashboard_admin_simple(request, usuario, sede):
                 'monto': v.monto_total
             } for v in data['actividad_reciente']
         ],
-        
-        # Incidencias pendientes
         'incidencias_pendientes': [
             {
                 'sede': inc.sede_reporte.nombre,
@@ -345,10 +337,8 @@ def dashboard_admin_simple(request, usuario, sede):
     
     return render(request, 'dashboard/dashboard_admin_simple.html', contexto)
 
-# ==================== VENTAS (CRÍTICAS PARA MVP) ====================
 
-logger = logging.getLogger('core.venta_views')
-
+# ==================== VENTAS ====================
 
 @login_required
 def ventas_lista(request):
@@ -400,6 +390,28 @@ def ventas_lista_cajero(request, usuario, sede):
         'promedio_venta': kpis['promedio_venta'],
     }
     return render(request, 'ventas/lista.html', contexto)
+
+
+@login_required
+def ventas_exportar(request):
+    """Exporta la lista de ventas filtrada a Excel"""
+    form = VentaFiltroForm(request.GET)
+    filtros = form.cleaned_data if form.is_valid() else {}
+    
+    es_admin = request.user.is_superuser or request.user.sede.nombre == 'Oficina Central'
+    sede = request.user.sede if not es_admin else None
+    
+    ventas = VentaService.obtener_ventas_filtradas(filtros, es_admin=es_admin, sede=sede)
+    buffer = VentaService.generar_excel_ventas(ventas)
+    
+    filename = f"ventas_otiza_{timezone.now().strftime('%Y%m%d_%H%M')}.xlsx"
+    
+    response = HttpResponse(
+        buffer.getvalue(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
 
 
 @login_required
@@ -460,9 +472,6 @@ def buscar_cliente_view(request):
 
 # ==================== INCIDENCIAS ====================
 
-logger = logging.getLogger('core.incidencia_views')
-
-
 @login_required
 def incidencias_lista(request):
     """Lista de incidencias - Adaptable para admin y cajero"""
@@ -480,10 +489,8 @@ def incidencias_lista_admin(request, usuario, sede):
     """Lista de incidencias para ADMIN (todas las sedes)"""
     estado_filtro = request.GET.get('estado', '')
     tipo_filtro = request.GET.get('tipo', '')
-    sede_filtro = request.GET.get('sede', '')  # ← NUEVO: Filtro por sede
+    sede_filtro = request.GET.get('sede', '')
     
-    # Convertir string a objeto Sede
-    from core.models import Sede
     sede_obj = Sede.objects.filter(nombre=sede_filtro).first() if sede_filtro else None
     
     incidencias = IncidenciaService.obtener_incidencias_filtradas(
@@ -493,7 +500,6 @@ def incidencias_lista_admin(request, usuario, sede):
         es_admin=True
     )
     
-    # KPIs
     total = incidencias.count()
     pendientes = incidencias.filter(estado='pendiente').count()
     en_proceso = incidencias.filter(estado='en_proceso').count()
@@ -506,7 +512,7 @@ def incidencias_lista_admin(request, usuario, sede):
         'en_proceso': en_proceso, 'resueltas': resueltas,
         'estado_filtro': estado_filtro, 'tipo_filtro': tipo_filtro,
         'sede_filtro': sede_filtro,
-        'sedes': Sede.objects.filter(activa=True),  # ← Para el dropdown
+        'sedes': Sede.objects.filter(activa=True),
     }
     return render(request, 'admin/incidencias_lista.html', contexto)
 
@@ -588,26 +594,22 @@ def incidencia_eliminar(request, id):
     return redirect('core:incidencias_lista')
 
 
-# ==================== ADMIN - VISTAS ESPECÍFICAS ====================
-
-logger = logging.getLogger('core.fidelizacion_views')
+# ==================== ADMIN - FIDELIZACIÓN ====================
 
 @login_required
 def fidelizacion_admin(request):
-    """Vista de fidelización para Admin (ve todos los clientes de todas las sedes)"""
+    """Vista de fidelización para Admin"""
     usuario = request.user
     sede = usuario.sede
     
-    # Verificar permisos de admin
     if sede.nombre != 'Oficina Central' and not usuario.is_superuser:
         messages.error(request, 'No tienes permisos para ver la fidelización global')
         return redirect('core:dashboard')
     
-    # Obtener filtro de la URL
     filtro = request.GET.get('filtro', 'todos')
     
     try:
-        logger.info(f"FIDELIZACION_VIEW - Cargando datos con filtro: {filtro}")
+        logger_fidelizacion.info(f"FIDELIZACION_VIEW - Cargando datos con filtro: {filtro}")
         clientes = FidelizacionService.obtener_progreso_clientes(filtro)
         kpis = FidelizacionService.obtener_kpis_fidelizacion()
         
@@ -625,27 +627,24 @@ def fidelizacion_admin(request):
         return render(request, 'admin/fidelizacion.html', contexto)
         
     except Exception as e:
-        logger.error(f"FIDELIZACION_VIEW - Error al cargar fidelización: {str(e)}", exc_info=True)
+        logger_fidelizacion.error(f"FIDELIZACION_VIEW - Error: {str(e)}", exc_info=True)
         messages.error(request, f'Error al cargar datos de fidelización: {str(e)}')
         return redirect('core:dashboard')
 
 
-# ==================== ADMIN - GESTIÓN DE VEHÍCULOS ====================
-logger = logging.getLogger('core.vehiculo_views')
+# ==================== ADMIN - VEHÍCULOS ====================
 
 @login_required
 def vehiculos_lista(request):
-    """Lista de vehículos - Adaptable para admin y cajero"""
+    """Lista de vehículos"""
     usuario = request.user
     sede = usuario.sede
     
-    # Si es admin, ve todos los vehículos
     if sede.nombre == 'Oficina Central' or usuario.is_superuser:
         vehiculos = Vehiculo.objects.all().select_related('sede_asignada')
         total_vehiculos = vehiculos.count()
         activos = vehiculos.filter(activo=True).count()
     else:
-        # Si es cajero, ve solo los vehículos de su sede
         vehiculos = Vehiculo.objects.filter(sede_asignada=sede).select_related('sede_asignada')
         total_vehiculos = vehiculos.count()
         activos = vehiculos.filter(activo=True).count()
@@ -664,7 +663,7 @@ def vehiculos_lista(request):
 
 @login_required
 def vehiculo_nuevo(request):
-    """Crear nuevo vehículo (Admin)"""
+    """Crear nuevo vehículo"""
     usuario = request.user
     
     if not usuario.is_superuser and usuario.sede.nombre != 'Oficina Central':
@@ -672,12 +671,12 @@ def vehiculo_nuevo(request):
         return redirect('core:vehiculos_lista')
     
     if request.method == 'POST':
-        logger.info(f"VEHICULO_NUEVO - POST recibido de {usuario.username}")
+        logger_vehiculo.info(f"VEHICULO_NUEVO - POST recibido de {usuario.username}")
         form = VehiculoForm(request.POST, usuario=usuario)
         
         if form.is_valid():
             try:
-                logger.info("VEHICULO_NUEVO - Formulario válido, creando vehículo...")
+                logger_vehiculo.info("VEHICULO_NUEVO - Formulario válido, creando vehículo...")
                 
                 vehiculo = VehiculoService.crear_vehiculo(
                     placa=form.cleaned_data['placa'],
@@ -693,18 +692,18 @@ def vehiculo_nuevo(request):
                     request, 
                     f'Vehículo {vehiculo.placa} creado exitosamente con {vehiculo.capacidad_asientos} asientos.'
                 )
-                logger.info(f"VEHICULO_NUEVO - Vehículo {vehiculo.id} creado exitosamente")
+                logger_vehiculo.info(f"VEHICULO_NUEVO - Vehículo {vehiculo.id} creado exitosamente")
                 
                 return redirect('core:vehiculos_lista')
                 
             except ValidationError as e:
-                logger.error(f"VEHICULO_NUEVO - Error de validación: {str(e)}")
+                logger_vehiculo.error(f"VEHICULO_NUEVO - Error de validación: {str(e)}")
                 messages.error(request, str(e))
             except Exception as e:
-                logger.error(f"VEHICULO_NUEVO - Error inesperado: {str(e)}", exc_info=True)
+                logger_vehiculo.error(f"VEHICULO_NUEVO - Error inesperado: {str(e)}", exc_info=True)
                 messages.error(request, f'Error al crear el vehículo: {str(e)}')
         else:
-            logger.error(f"VEHICULO_NUEVO - Formulario inválido: {form.errors}")
+            logger_vehiculo.error(f"VEHICULO_NUEVO - Formulario inválido: {form.errors}")
             for field, errors in form.errors.items():
                 for error in errors:
                     messages.error(request, f'{field}: {error}')
@@ -722,7 +721,7 @@ def vehiculo_nuevo(request):
 
 @login_required
 def vehiculo_editar(request, id):
-    """Editar vehículo existente (Admin)"""
+    """Editar vehículo existente"""
     usuario = request.user
     vehiculo = get_object_or_404(Vehiculo, id=id)
     
@@ -731,21 +730,21 @@ def vehiculo_editar(request, id):
         return redirect('core:vehiculos_lista')
     
     if request.method == 'POST':
-        logger.info(f"VEHICULO_EDITAR - POST para vehículo {id}")
+        logger_vehiculo.info(f"VEHICULO_EDITAR - POST para vehículo {id}")
         form = VehiculoForm(request.POST, instance=vehiculo, usuario=usuario)
         
         if form.is_valid():
             try:
-                logger.info(f"VEHICULO_EDITAR - Actualizando vehículo {id}...")
+                logger_vehiculo.info(f"VEHICULO_EDITAR - Actualizando vehículo {id}...")
                 form.save()
                 messages.success(request, 'Vehículo actualizado exitosamente')
-                logger.info(f"VEHICULO_EDITAR - Vehículo {id} actualizado")
+                logger_vehiculo.info(f"VEHICULO_EDITAR - Vehículo {id} actualizado")
                 return redirect('core:vehiculos_lista')
             except Exception as e:
-                logger.error(f"VEHICULO_EDITAR - Error: {str(e)}", exc_info=True)
+                logger_vehiculo.error(f"VEHICULO_EDITAR - Error: {str(e)}", exc_info=True)
                 messages.error(request, f'Error al actualizar: {str(e)}')
         else:
-            logger.error(f"VEHICULO_EDITAR - Formulario inválido: {form.errors}")
+            logger_vehiculo.error(f"VEHICULO_EDITAR - Formulario inválido: {form.errors}")
     else:
         form = VehiculoForm(instance=vehiculo, usuario=usuario)
     
@@ -761,47 +760,51 @@ def vehiculo_editar(request, id):
 
 @login_required
 def vehiculo_eliminar(request, id):
-    """Eliminar vehículo (Admin)"""
+    """Eliminar vehículo"""
     usuario = request.user
-    vehiculo = get_object_or_404(Vehiculo, id=id)
     
     if not usuario.is_superuser and usuario.sede.nombre != 'Oficina Central':
         messages.error(request, 'No tienes permisos para eliminar vehículos')
         return redirect('core:vehiculos_lista')
     
+    vehiculo = get_object_or_404(Vehiculo, id=id)
+    
     if request.method == 'POST':
         try:
-            logger.info(f"VEHICULO_ELIMINAR - Eliminando vehículo {id}")
-            VehiculoService.eliminar_vehiculo(id)
-            messages.success(request, 'Vehículo eliminado exitosamente')
-            logger.info(f"VEHICULO_ELIMINAR - Vehículo {id} eliminado")
-        except ValidationError as e:
-            logger.error(f"VEHICULO_ELIMINAR - Error: {str(e)}")
-            messages.error(request, str(e))
+            logger_vehiculo.info(f"VEHICULO_ELIMINAR - Eliminando vehículo {id}")
+            
+            if vehiculo.viajes.exists():
+                num_viajes = vehiculo.viajes.count()
+                messages.error(
+                    request, 
+                    f'No se puede eliminar: El vehículo {vehiculo.placa} tiene {num_viajes} viajes asociados'
+                )
+                logger_vehiculo.error(f"VEHICULO_ELIMINAR - No se puede eliminar, tiene {num_viajes} viajes")
+            else:
+                vehiculo.delete()
+                messages.success(request, f'Vehículo {vehiculo.placa} eliminado correctamente')
+                logger_vehiculo.info(f"VEHICULO_ELIMINAR - Vehículo {id} eliminado exitosamente")
+                
         except Exception as e:
-            logger.error(f"VEHICULO_ELIMINAR - Error inesperado: {str(e)}", exc_info=True)
             messages.error(request, f'Error al eliminar: {str(e)}')
+            logger_vehiculo.error(f"VEHICULO_ELIMINAR - Error: {str(e)}", exc_info=True)
     
     return redirect('core:vehiculos_lista')
 
-# ==================== ADMIN - GESTIÓN DE CHOFERES ====================
 
-logger = logging.getLogger('core.chofer_views')
-
+# ==================== ADMIN - CHOFERES ====================
 
 @login_required
 def choferes_lista(request):
-    """Lista de choferes - Adaptable para admin y cajero"""
+    """Lista de choferes"""
     usuario = request.user
     sede = usuario.sede
     
-    # Si es admin, ve todos los choferes
     if sede.nombre == 'Oficina Central' or usuario.is_superuser:
         choferes = Usuario.objects.filter(es_chofer=True).select_related('sede')
         total_choferes = choferes.count()
         activos = choferes.filter(activo=True).count()
     else:
-        # Si es cajero, ve solo los choferes de su sede
         choferes = Usuario.objects.filter(sede=sede, es_chofer=True).select_related('sede')
         total_choferes = choferes.count()
         activos = choferes.filter(activo=True).count()
@@ -820,7 +823,7 @@ def choferes_lista(request):
 
 @login_required
 def chofer_nuevo(request):
-    """Crear nuevo chofer (Admin)"""
+    """Crear nuevo chofer - SIN contraseña manual"""
     usuario = request.user
     
     if not usuario.is_superuser and usuario.sede.nombre != 'Oficina Central':
@@ -828,20 +831,22 @@ def chofer_nuevo(request):
         return redirect('core:choferes_lista')
     
     if request.method == 'POST':
-        logger.info(f"CHOFER_NUEVO - POST recibido de {usuario.username}")
+        logger_chofer.info(f"CHOFER_NUEVO - POST recibido de {usuario.username}")
         form = ChoferForm(request.POST, usuario=usuario)
         
         if form.is_valid():
             try:
-                logger.info("CHOFER_NUEVO - Formulario válido, creando chofer...")
+                logger_chofer.info("CHOFER_NUEVO - Formulario válido, creando chofer...")
+                
+                password_temporal = secrets.token_urlsafe(8)
                 
                 chofer = ChoferService.crear_chofer(
                     username=form.cleaned_data['username'],
-                    password=form.cleaned_data['password'],
+                    password=password_temporal,
                     email=form.cleaned_data['email'],
                     first_name=form.cleaned_data['first_name'],
                     last_name=form.cleaned_data['last_name'],
-                    dni=form.cleaned_data['username'],  # Username = DNI
+                    dni=form.cleaned_data['username'],
                     licencia_conducir=form.cleaned_data['licencia_conducir'],
                     categoria_licencia=form.cleaned_data['categoria_licencia'],
                     fecha_vencimiento_licencia=form.cleaned_data['fecha_vencimiento_licencia'],
@@ -852,23 +857,19 @@ def chofer_nuevo(request):
                 
                 messages.success(
                     request, 
-                    f'Chofer {chofer.first_name} {chofer.last_name} creado exitosamente.'
+                    f'Chofer {chofer.first_name} {chofer.last_name} creado exitosamente.\n'
+                    f'Contraseña temporal: {password_temporal}'
                 )
-                logger.info(f"CHOFER_NUEVO - Chofer {chofer.id} creado exitosamente")
+                logger_chofer.info(f"CHOFER_NUEVO - Chofer {chofer.id} creado exitosamente")
                 
                 return redirect('core:choferes_lista')
                 
             except ValidationError as e:
-                logger.error(f"CHOFER_NUEVO - Error de validación: {str(e)}")
+                logger_chofer.error(f"CHOFER_NUEVO - Error de validación: {str(e)}")
                 messages.error(request, str(e))
             except Exception as e:
-                logger.error(f"CHOFER_NUEVO - Error inesperado: {str(e)}", exc_info=True)
+                logger_chofer.error(f"CHOFER_NUEVO - Error inesperado: {str(e)}", exc_info=True)
                 messages.error(request, f'Error al crear el chofer: {str(e)}')
-        else:
-            logger.error(f"CHOFER_NUEVO - Formulario inválido: {form.errors}")
-            for field, errors in form.errors.items():
-                for error in errors:
-                    messages.error(request, f'{field}: {error}')
     else:
         form = ChoferForm(usuario=usuario)
     
@@ -883,7 +884,7 @@ def chofer_nuevo(request):
 
 @login_required
 def chofer_editar(request, id):
-    """Editar chofer existente (Admin)"""
+    """Editar chofer existente"""
     usuario = request.user
     chofer = get_object_or_404(Usuario, id=id, es_chofer=True)
     
@@ -892,14 +893,13 @@ def chofer_editar(request, id):
         return redirect('core:choferes_lista')
     
     if request.method == 'POST':
-        logger.info(f"CHOFER_EDITAR - POST para chofer {id}")
+        logger_chofer.info(f"CHOFER_EDITAR - POST para chofer {id}")
         form = ChoferForm(request.POST, instance=chofer, usuario=usuario)
         
         if form.is_valid():
             try:
-                logger.info(f"CHOFER_EDITAR - Actualizando chofer {id}...")
+                logger_chofer.info(f"CHOFER_EDITAR - Actualizando chofer {id}...")
                 
-                # Actualizar campos manualmente
                 chofer.email = form.cleaned_data['email']
                 chofer.first_name = form.cleaned_data['first_name']
                 chofer.last_name = form.cleaned_data['last_name']
@@ -910,20 +910,19 @@ def chofer_editar(request, id):
                 chofer.sede = form.cleaned_data['sede']
                 chofer.activo = form.cleaned_data['activo']
                 
-                # Si se cambió la contraseña, actualizarla
                 if form.cleaned_data.get('password'):
                     chofer.set_password(form.cleaned_data['password'])
                 
                 chofer.save()
                 
                 messages.success(request, 'Chofer actualizado exitosamente')
-                logger.info(f"CHOFER_EDITAR - Chofer {id} actualizado")
+                logger_chofer.info(f"CHOFER_EDITAR - Chofer {id} actualizado")
                 return redirect('core:choferes_lista')
             except Exception as e:
-                logger.error(f"CHOFER_EDITAR - Error: {str(e)}", exc_info=True)
+                logger_chofer.error(f"CHOFER_EDITAR - Error: {str(e)}", exc_info=True)
                 messages.error(request, f'Error al actualizar: {str(e)}')
         else:
-            logger.error(f"CHOFER_EDITAR - Formulario inválido: {form.errors}")
+            logger_chofer.error(f"CHOFER_EDITAR - Formulario inválido: {form.errors}")
     else:
         form = ChoferForm(instance=chofer, usuario=usuario)
     
@@ -939,7 +938,7 @@ def chofer_editar(request, id):
 
 @login_required
 def chofer_eliminar(request, id):
-    """Eliminar/Desactivar chofer (Admin)"""
+    """Eliminar/Desactivar chofer"""
     usuario = request.user
     chofer = get_object_or_404(Usuario, id=id, es_chofer=True)
     
@@ -949,37 +948,33 @@ def chofer_eliminar(request, id):
     
     if request.method == 'POST':
         try:
-            logger.info(f"CHOFER_ELIMINAR - Desactivando chofer {id}")
+            logger_chofer.info(f"CHOFER_ELIMINAR - Desactivando chofer {id}")
             ChoferService.eliminar_chofer(id)
             messages.success(request, f'Chofer {chofer.first_name} {chofer.last_name} desactivado exitosamente')
-            logger.info(f"CHOFER_ELIMINAR - Chofer {id} desactivado")
+            logger_chofer.info(f"CHOFER_ELIMINAR - Chofer {id} desactivado")
         except ValidationError as e:
-            logger.error(f"CHOFER_ELIMINAR - Error: {str(e)}")
+            logger_chofer.error(f"CHOFER_ELIMINAR - Error: {str(e)}")
             messages.error(request, str(e))
         except Exception as e:
-            logger.error(f"CHOFER_ELIMINAR - Error inesperado: {str(e)}", exc_info=True)
+            logger_chofer.error(f"CHOFER_ELIMINAR - Error inesperado: {str(e)}", exc_info=True)
             messages.error(request, f'Error al desactivar: {str(e)}')
     
     return redirect('core:choferes_lista')
 
-# ==================== ADMIN - GESTIÓN DE RUTAS ====================
 
-logger = logging.getLogger('core.ruta_views')
-
+# ==================== ADMIN - RUTAS ====================
 
 @login_required
 def rutas_lista(request):
-    """Lista de rutas - Adaptable para admin y cajero"""
+    """Lista de rutas"""
     usuario = request.user
     sede = usuario.sede
     
-    # Si es admin, ve todas las rutas
     if sede.nombre == 'Oficina Central' or usuario.is_superuser:
         rutas = Ruta.objects.all()
         total_rutas = rutas.count()
         activas = rutas.filter(activa=True).count()
     else:
-        # Si es cajero, ve solo las rutas activas
         rutas = Ruta.objects.filter(activa=True)
         total_rutas = rutas.count()
         activas = rutas.count()
@@ -998,7 +993,7 @@ def rutas_lista(request):
 
 @login_required
 def ruta_nuevo(request):
-    """Crear nueva ruta (Admin)"""
+    """Crear nueva ruta"""
     usuario = request.user
     
     if not usuario.is_superuser and usuario.sede.nombre != 'Oficina Central':
@@ -1006,12 +1001,12 @@ def ruta_nuevo(request):
         return redirect('core:rutas_lista')
     
     if request.method == 'POST':
-        logger.info(f"RUTA_NUEVO - POST recibido de {usuario.username}")
+        logger_ruta.info(f"RUTA_NUEVO - POST recibido de {usuario.username}")
         form = RutaForm(request.POST, usuario=usuario)
         
         if form.is_valid():
             try:
-                logger.info("RUTA_NUEVO - Formulario válido, creando ruta...")
+                logger_ruta.info("RUTA_NUEVO - Formulario válido, creando ruta...")
                 
                 ruta = RutaService.crear_ruta(
                     origen=form.cleaned_data['origen'],
@@ -1024,20 +1019,21 @@ def ruta_nuevo(request):
                 
                 messages.success(
                     request, 
-                    f'Ruta {ruta.origen} → {ruta.destino} creada exitosamente.'
+                    f'Ruta {ruta.origen} → {ruta.destino} creada exitosamente. '
+                    f'Duración: {ruta.duracion_estimada}, Precio: S/ {ruta.precio_base}'
                 )
-                logger.info(f"RUTA_NUEVO - Ruta {ruta.id} creada exitosamente")
+                logger_ruta.info(f"RUTA_NUEVO - Ruta {ruta.id} creada exitosamente")
                 
                 return redirect('core:rutas_lista')
                 
             except ValidationError as e:
-                logger.error(f"RUTA_NUEVO - Error de validación: {str(e)}")
+                logger_ruta.error(f"RUTA_NUEVO - Error de validación: {str(e)}")
                 messages.error(request, str(e))
             except Exception as e:
-                logger.error(f"RUTA_NUEVO - Error inesperado: {str(e)}", exc_info=True)
+                logger_ruta.error(f"RUTA_NUEVO - Error inesperado: {str(e)}", exc_info=True)
                 messages.error(request, f'Error al crear la ruta: {str(e)}')
         else:
-            logger.error(f"RUTA_NUEVO - Formulario inválido: {form.errors}")
+            logger_ruta.error(f"RUTA_NUEVO - Formulario inválido: {form.errors}")
             for field, errors in form.errors.items():
                 for error in errors:
                     messages.error(request, f'{field}: {error}')
@@ -1055,7 +1051,7 @@ def ruta_nuevo(request):
 
 @login_required
 def ruta_editar(request, id):
-    """Editar ruta existente (Admin)"""
+    """Editar ruta existente"""
     usuario = request.user
     ruta = get_object_or_404(Ruta, id=id)
     
@@ -1064,21 +1060,21 @@ def ruta_editar(request, id):
         return redirect('core:rutas_lista')
     
     if request.method == 'POST':
-        logger.info(f"RUTA_EDITAR - POST para ruta {id}")
+        logger_ruta.info(f"RUTA_EDITAR - POST para ruta {id}")
         form = RutaForm(request.POST, instance=ruta, usuario=usuario)
         
         if form.is_valid():
             try:
-                logger.info(f"RUTA_EDITAR - Actualizando ruta {id}...")
+                logger_ruta.info(f"RUTA_EDITAR - Actualizando ruta {id}...")
                 form.save()
-                messages.success(request, 'Ruta actualizada exitosamente')
-                logger.info(f"RUTA_EDITAR - Ruta {id} actualizada")
+                messages.success(request, f'Ruta {ruta.origen} → {ruta.destino} actualizada correctamente')
+                logger_ruta.info(f"RUTA_EDITAR - Ruta {id} actualizada")
                 return redirect('core:rutas_lista')
             except Exception as e:
-                logger.error(f"RUTA_EDITAR - Error: {str(e)}", exc_info=True)
+                logger_ruta.error(f"RUTA_EDITAR - Error: {str(e)}", exc_info=True)
                 messages.error(request, f'Error al actualizar: {str(e)}')
         else:
-            logger.error(f"RUTA_EDITAR - Formulario inválido: {form.errors}")
+            logger_ruta.error(f"RUTA_EDITAR - Formulario inválido: {form.errors}")
     else:
         form = RutaForm(instance=ruta, usuario=usuario)
     
@@ -1094,46 +1090,51 @@ def ruta_editar(request, id):
 
 @login_required
 def ruta_eliminar(request, id):
-    """Eliminar ruta (Admin)"""
+    """Eliminar ruta"""
     usuario = request.user
-    ruta = get_object_or_404(Ruta, id=id)
     
     if not usuario.is_superuser and usuario.sede.nombre != 'Oficina Central':
         messages.error(request, 'No tienes permisos para eliminar rutas')
         return redirect('core:rutas_lista')
     
+    ruta = get_object_or_404(Ruta, id=id)
+    
     if request.method == 'POST':
         try:
-            logger.info(f"RUTA_ELIMINAR - Eliminando ruta {id}")
-            RutaService.eliminar_ruta(id)
-            messages.success(request, 'Ruta eliminada exitosamente')
-            logger.info(f"RUTA_ELIMINAR - Ruta {id} eliminada")
-        except ValidationError as e:
-            logger.error(f"RUTA_ELIMINAR - Error: {str(e)}")
-            messages.error(request, str(e))
+            logger_ruta.info(f"RUTA_ELIMINAR - Eliminando ruta {id}")
+            
+            if ruta.viajes.exists():
+                num_viajes = ruta.viajes.count()
+                messages.error(
+                    request, 
+                    f'No se puede eliminar: La ruta {ruta.origen} → {ruta.destino} tiene {num_viajes} viajes programados'
+                )
+                logger_ruta.error(f"RUTA_ELIMINAR - No se puede eliminar, tiene {num_viajes} viajes")
+            else:
+                ruta.delete()
+                messages.success(request, f'Ruta {ruta.origen} → {ruta.destino} eliminada correctamente')
+                logger_ruta.info(f"RUTA_ELIMINAR - Ruta {id} eliminada exitosamente")
+                
         except Exception as e:
-            logger.error(f"RUTA_ELIMINAR - Error inesperado: {str(e)}", exc_info=True)
             messages.error(request, f'Error al eliminar: {str(e)}')
+            logger_ruta.error(f"RUTA_ELIMINAR - Error: {str(e)}", exc_info=True)
     
     return redirect('core:rutas_lista')
-# ==================== ADMIN - GESTIÓN DE USUARIOS ====================
 
-logger = logging.getLogger('core.usuario_views')
 
+# ==================== ADMIN - USUARIOS ====================
 
 @login_required
 def usuarios_lista(request):
-    """Lista de usuarios/cajeros - Adaptable para admin y cajero"""
+    """Lista de usuarios/cajeros"""
     usuario = request.user
     sede = usuario.sede
     
-    # Si es admin, ve todos los usuarios
     if sede.nombre == 'Oficina Central' or usuario.is_superuser:
         usuarios = Usuario.objects.all().select_related('sede')
         total_usuarios = usuarios.count()
         activos = usuarios.filter(activo=True).count()
     else:
-        # Si es cajero, ve solo los usuarios de su sede
         usuarios = Usuario.objects.filter(sede=sede).select_related('sede')
         total_usuarios = usuarios.count()
         activos = usuarios.filter(activo=True).count()
@@ -1152,7 +1153,7 @@ def usuarios_lista(request):
 
 @login_required
 def usuario_nuevo(request):
-    """Crear nuevo usuario/cajero (Admin)"""
+    """Crear nuevo usuario/cajero"""
     usuario = request.user
     
     if not usuario.is_superuser and usuario.sede.nombre != 'Oficina Central':
@@ -1160,12 +1161,12 @@ def usuario_nuevo(request):
         return redirect('core:usuarios_lista')
     
     if request.method == 'POST':
-        logger.info(f"USUARIO_NUEVO - POST recibido de {usuario.username}")
+        logger_usuario.info(f"USUARIO_NUEVO - POST recibido de {usuario.username}")
         form = UsuarioForm(request.POST, usuario=usuario)
         
         if form.is_valid():
             try:
-                logger.info("USUARIO_NUEVO - Formulario válido, creando usuario...")
+                logger_usuario.info("USUARIO_NUEVO - Formulario válido, creando usuario...")
                 
                 nuevo_usuario = UsuarioService.crear_usuario(
                     username=form.cleaned_data['username'],
@@ -1183,18 +1184,18 @@ def usuario_nuevo(request):
                     request, 
                     f'Usuario {nuevo_usuario.username} creado exitosamente.'
                 )
-                logger.info(f"USUARIO_NUEVO - Usuario {nuevo_usuario.id} creado exitosamente")
+                logger_usuario.info(f"USUARIO_NUEVO - Usuario {nuevo_usuario.id} creado exitosamente")
                 
                 return redirect('core:usuarios_lista')
                 
             except ValidationError as e:
-                logger.error(f"USUARIO_NUEVO - Error de validación: {str(e)}")
+                logger_usuario.error(f"USUARIO_NUEVO - Error de validación: {str(e)}")
                 messages.error(request, str(e))
             except Exception as e:
-                logger.error(f"USUARIO_NUEVO - Error inesperado: {str(e)}", exc_info=True)
+                logger_usuario.error(f"USUARIO_NUEVO - Error inesperado: {str(e)}", exc_info=True)
                 messages.error(request, f'Error al crear el usuario: {str(e)}')
         else:
-            logger.error(f"USUARIO_NUEVO - Formulario inválido: {form.errors}")
+            logger_usuario.error(f"USUARIO_NUEVO - Formulario inválido: {form.errors}")
             for field, errors in form.errors.items():
                 for error in errors:
                     messages.error(request, f'{field}: {error}')
@@ -1212,7 +1213,7 @@ def usuario_nuevo(request):
 
 @login_required
 def usuario_editar(request, id):
-    """Editar usuario existente (Admin) - SIN cambio de contraseña"""
+    """Editar usuario existente - SIN cambio de contraseña"""
     usuario = request.user
     usuario_editar = get_object_or_404(Usuario, id=id)
     
@@ -1221,14 +1222,13 @@ def usuario_editar(request, id):
         return redirect('core:usuarios_lista')
     
     if request.method == 'POST':
-        logger.info(f"USUARIO_EDITAR - POST para usuario {id}")
+        logger_usuario.info(f"USUARIO_EDITAR - POST para usuario {id}")
         form = UsuarioForm(request.POST, instance=usuario_editar, usuario=usuario)
         
         if form.is_valid():
             try:
-                logger.info(f"USUARIO_EDITAR - Actualizando usuario {id}...")
+                logger_usuario.info(f"USUARIO_EDITAR - Actualizando usuario {id}...")
                 
-                # Actualizar campos SIN contraseña
                 usuario_editar.username = form.cleaned_data['username']
                 usuario_editar.email = form.cleaned_data['email']
                 usuario_editar.first_name = form.cleaned_data['first_name']
@@ -1238,18 +1238,16 @@ def usuario_editar(request, id):
                 usuario_editar.es_cajero = form.cleaned_data['es_cajero']
                 usuario_editar.activo = form.cleaned_data['activo']
                 
-                # NOTA: No actualizamos contraseña aquí
-                
                 usuario_editar.save()
                 
                 messages.success(request, 'Usuario actualizado exitosamente')
-                logger.info(f"USUARIO_EDITAR - Usuario {id} actualizado")
+                logger_usuario.info(f"USUARIO_EDITAR - Usuario {id} actualizado")
                 return redirect('core:usuarios_lista')
             except Exception as e:
-                logger.error(f"USUARIO_EDITAR - Error: {str(e)}", exc_info=True)
+                logger_usuario.error(f"USUARIO_EDITAR - Error: {str(e)}", exc_info=True)
                 messages.error(request, f'Error al actualizar: {str(e)}')
         else:
-            logger.error(f"USUARIO_EDITAR - Formulario inválido: {form.errors}")
+            logger_usuario.error(f"USUARIO_EDITAR - Formulario inválido: {form.errors}")
     else:
         form = UsuarioForm(instance=usuario_editar, usuario=usuario)
     
@@ -1262,9 +1260,10 @@ def usuario_editar(request, id):
     
     return render(request, 'admin/usuario_form.html', contexto)
 
+
 @login_required
 def usuario_eliminar(request, id):
-    """Eliminar usuario (Admin)"""
+    """Eliminar usuario"""
     usuario = request.user
     usuario_eliminar = get_object_or_404(Usuario, id=id)
     
@@ -1274,18 +1273,19 @@ def usuario_eliminar(request, id):
     
     if request.method == 'POST':
         try:
-            logger.info(f"USUARIO_ELIMINAR - Eliminando usuario {id}")
+            logger_usuario.info(f"USUARIO_ELIMINAR - Eliminando usuario {id}")
             UsuarioService.eliminar_usuario(id)
             messages.success(request, f'Usuario {usuario_eliminar.username} eliminado exitosamente')
-            logger.info(f"USUARIO_ELIMINAR - Usuario {id} eliminado")
+            logger_usuario.info(f"USUARIO_ELIMINAR - Usuario {id} eliminado")
         except ValidationError as e:
-            logger.error(f"USUARIO_ELIMINAR - Error: {str(e)}")
+            logger_usuario.error(f"USUARIO_ELIMINAR - Error: {str(e)}")
             messages.error(request, str(e))
         except Exception as e:
-            logger.error(f"USUARIO_ELIMINAR - Error inesperado: {str(e)}", exc_info=True)
+            logger_usuario.error(f"USUARIO_ELIMINAR - Error inesperado: {str(e)}", exc_info=True)
             messages.error(request, f'Error al eliminar: {str(e)}')
     
     return redirect('core:usuarios_lista')
+
 
 # ==================== NOTIFICACIONES ====================
 @login_required
@@ -1376,7 +1376,7 @@ def reportes_unificados(request):
             'chart_data': [10500, 12300, 11800, 11080],
             'rutas_detalle': [{'ruta': 'Trujillo → Julcán', 'viajes': 60, 'pasajeros': 1080, 'ingresos': 27000, 'ocupacion': 75, 'rendimiento': 'Excelente'}]
         })
-    else: # Anual
+    else:
         contexto.update({
             'titulo_periodo': "Reporte Anual 2026",
             'total_ventas': 548160.00, 'total_viajes': 2880, 'total_pasajeros': 51072, 'premios_entregados': 216,
@@ -1441,6 +1441,7 @@ def chofer_cancelar_reserva(request, reserva_id):
 
 
 @login_required
+<<<<<<< HEAD
 def ver_boleto(request, venta_id):
     """Vista para mostrar el boleto"""
     # Datos simulados (tu compañero conectará a BD)
@@ -1454,11 +1455,22 @@ def ver_boleto(request, venta_id):
         'dia': timezone.now().strftime('%d'),
         'mes': timezone.now().strftime('%m'),
         'anio': timezone.now().strftime('%Y'),
+=======
+def descargar_ticket_pdf(request, ticket_id):
+    """Genera y descarga el ticket en PDF"""
+    
+    ticket_data = {
+        'id': ticket_id,
+        'numero': f"TK-{ticket_id:04d}",
+        'fecha_emision': timezone.now().strftime("%d/%m/%Y %H:%M"),
+        'ruta': 'Trujillo → Julcán',
+>>>>>>> 391b1f10d52ba72f9d5c32bb53cadead532c18ac
         'hora': '08:00 AM',
         'asiento': '03',
         'valor': '25.00',
         'es_premiado': False
     }
+<<<<<<< HEAD
     return render(request, 'ventas/boleto.html', {'boleto': boleto_data})
 
 def link_callback(uri, rel):
@@ -1529,12 +1541,58 @@ def descargar_boleto_pdf(request, boleto_id):
     if pdf.err:
         return HttpResponse("Error al generar el PDF", status=500)
  
+=======
+    
+    html_string = render_to_string('ventas/ticket_pdf.html', {'ticket': ticket_data})
+    
+    result = io.BytesIO()
+    if pisa:
+        pdf = pisa.CreatePDF(
+            io.BytesIO(html_string.encode("UTF-8")),
+            result,
+            encoding='UTF-8'
+        )
+        
+        if pdf.err:
+            return HttpResponse("Error al generar el PDF", status=500)
+    
+>>>>>>> 391b1f10d52ba72f9d5c32bb53cadead532c18ac
     response = HttpResponse(result.getvalue(), content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="boleto_{boleto_data["numero"]}.pdf"'
     return response
 
+<<<<<<< HEAD
 
 logger = logging.getLogger('core.viajes_views')
+=======
+@login_required
+def ver_ticket(request, venta_id):
+    ticket = get_object_or_404(Venta, id=venta_id)
+    return render(request, 'ventas/ticket.html', {'ticket': ticket})
+
+
+# ==================== ADMIN - ASIGNACIÓN DE VIAJES ====================
+
+# Función auxiliar para parsear duración (MISMA LÓGICA EN TODAS PARTES)
+def _parsear_duracion(duracion_texto):
+    """Parsea duración estimada y retorna (horas, minutos)"""
+    duracion_texto = str(duracion_texto).lower().strip()
+    horas = 0
+    minutos = 0
+    
+    # Regex para horas: acepta "1 hora", "2 horas", "1h", "2 h"
+    match_horas = re.search(r'(\d+)\s*(?:hora|horas|h)\b', duracion_texto)
+    if match_horas:
+        horas = int(match_horas.group(1))
+    
+    # Regex para minutos: acepta "30 min", "30 minutos", "30m", "30 m"
+    match_minutos = re.search(r'(\d+)\s*(?:min|minutos|m)\b', duracion_texto)
+    if match_minutos:
+        minutos = int(match_minutos.group(1))
+    
+    return horas, minutos
+
+>>>>>>> 391b1f10d52ba72f9d5c32bb53cadead532c18ac
 
 @login_required
 def asignacion_viajes(request):
@@ -1542,11 +1600,9 @@ def asignacion_viajes(request):
     usuario = request.user
     sede = usuario.sede
     
-    # Si es admin, ve todos los viajes
     if sede.nombre == 'Oficina Central' or usuario.is_superuser:
         viajes = Viaje.objects.all().select_related('ruta', 'vehiculo', 'sede_salida')
     else:
-        # Si es cajero, ve solo los viajes de su sede
         viajes = Viaje.objects.filter(sede_salida=sede).select_related('ruta', 'vehiculo')
     
     contexto = {
@@ -1562,7 +1618,7 @@ def asignacion_viajes(request):
 
 @login_required
 def viaje_nuevo(request):
-    """Crear nuevo viaje (Admin)"""
+    """Crear nuevo viaje (Admin) - Con cálculo automático de llegada"""
     usuario = request.user
     
     if not usuario.is_superuser and usuario.sede.nombre != 'Oficina Central':
@@ -1570,40 +1626,61 @@ def viaje_nuevo(request):
         return redirect('core:asignacion_viajes')
     
     if request.method == 'POST':
-        logger.info(f"VIAJE_NUEVO - POST recibido de {usuario.username}")
+        logger_viaje.info(f"VIAJE_NUEVO - POST recibido de {usuario.username}")
         form = ViajeForm(request.POST, usuario=usuario)
         
         if form.is_valid():
             try:
-                logger.info("VIAJE_NUEVO - Formulario válido, creando viaje...")
+                logger_viaje.info("VIAJE_NUEVO - Formulario válido, creando viaje...")
+                
+                ruta = form.cleaned_data['ruta']
+                fecha_salida = form.cleaned_data['fecha_salida']
+                hora_salida = form.cleaned_data['hora_salida']
+                
+                # Parsear duración con regex robusto (MISMA FUNCIÓN QUE EL SERVICIO)
+                horas, minutos = _parsear_duracion(ruta.duracion_estimada)
+                
+                # Calcular llegada
+                salida_dt = datetime.combine(fecha_salida, hora_salida)
+                llegada_dt = salida_dt + timedelta(hours=horas, minutes=minutos)
+                
+                fecha_llegada = llegada_dt.date()
+                hora_llegada = llegada_dt.time()
                 
                 viaje = ViajeService.crear_viaje(
-                    ruta=form.cleaned_data['ruta'],
+                    ruta=ruta,
                     vehiculo=form.cleaned_data['vehiculo'],
                     sede_salida=form.cleaned_data['sede_salida'],
-                    fecha_salida=form.cleaned_data['fecha_salida'],
-                    hora_salida=form.cleaned_data['hora_salida'],
-                    fecha_llegada=form.cleaned_data['fecha_llegada'],
-                    hora_llegada=form.cleaned_data['hora_llegada'],
+                    fecha_salida=fecha_salida,
+                    hora_salida=hora_salida,
+                    fecha_llegada=fecha_llegada,
+                    hora_llegada=hora_llegada,
                     creado_por=usuario
                 )
                 
                 messages.success(
                     request, 
-                    f'Viaje creado exitosamente. Se generaron {viaje.vehiculo.capacidad_asientos} asientos.'
+                    f'Viaje creado exitosamente. Llegada estimada: {hora_llegada.strftime("%H:%M")}'
                 )
-                logger.info(f"VIAJE_NUEVO - Viaje {viaje.id} creado exitosamente")
+                logger_viaje.info(f"VIAJE_NUEVO - Viaje {viaje.id} creado exitosamente")
                 
                 return redirect('core:asignacion_viajes')
                 
             except ValidationError as e:
-                logger.error(f"VIAJE_NUEVO - Error de validación: {str(e)}")
-                messages.error(request, str(e))
+                logger_viaje.error(f"VIAJE_NUEVO - Error de validación: {str(e)}")
+                
+                if 'pasado' in str(e).lower() or 'fecha' in str(e).lower():
+                    messages.error(
+                        request, 
+                        '⚠️ No se puede crear un viaje en el pasado. Por favor selecciona una fecha y hora futuras.'
+                    )
+                else:
+                    messages.error(request, str(e))
             except Exception as e:
-                logger.error(f"VIAJE_NUEVO - Error inesperado: {str(e)}", exc_info=True)
+                logger_viaje.error(f"VIAJE_NUEVO - Error inesperado: {str(e)}", exc_info=True)
                 messages.error(request, f'Error al crear el viaje: {str(e)}')
         else:
-            logger.error(f"VIAJE_NUEVO - Formulario inválido: {form.errors}")
+            logger_viaje.error(f"VIAJE_NUEVO - Formulario inválido: {form.errors}")
             for field, errors in form.errors.items():
                 for error in errors:
                     messages.error(request, f'{field}: {error}')
@@ -1621,7 +1698,7 @@ def viaje_nuevo(request):
 
 @login_required
 def viaje_editar(request, id):
-    """Editar viaje existente (Admin)"""
+    """Editar viaje existente (Admin) - Con recálculo automático de llegada"""
     usuario = request.user
     viaje = get_object_or_404(Viaje, id=id)
     
@@ -1630,21 +1707,39 @@ def viaje_editar(request, id):
         return redirect('core:asignacion_viajes')
     
     if request.method == 'POST':
-        logger.info(f"VIAJE_EDITAR - POST para viaje {id}")
+        logger_viaje.info(f"VIAJE_EDITAR - POST para viaje {id}")
         form = ViajeForm(request.POST, instance=viaje, usuario=usuario)
         
         if form.is_valid():
             try:
-                logger.info(f"VIAJE_EDITAR - Actualizando viaje {id}...")
+                logger_viaje.info(f"VIAJE_EDITAR - Actualizando viaje {id}...")
+                
+                # Solo recalcular si cambió hora_salida o ruta
+                if form.has_changed():
+                    ruta = form.cleaned_data['ruta']
+                    fecha_salida = form.cleaned_data['fecha_salida']
+                    hora_salida = form.cleaned_data['hora_salida']
+                    
+                    # Parsear duración con regex robusto (MISMA FUNCIÓN)
+                    horas, minutos = _parsear_duracion(ruta.duracion_estimada)
+                    
+                    # Calcular llegada
+                    salida_dt = datetime.combine(fecha_salida, hora_salida)
+                    llegada_dt = salida_dt + timedelta(hours=horas, minutes=minutos)
+                    
+                    # Actualizar instancia antes de guardar
+                    form.instance.fecha_llegada = llegada_dt.date()
+                    form.instance.hora_llegada = llegada_dt.time()
+                
                 form.save()
                 messages.success(request, 'Viaje actualizado exitosamente')
-                logger.info(f"VIAJE_EDITAR - Viaje {id} actualizado")
+                logger_viaje.info(f"VIAJE_EDITAR - Viaje {id} actualizado")
                 return redirect('core:asignacion_viajes')
             except Exception as e:
-                logger.error(f"VIAJE_EDITAR - Error: {str(e)}", exc_info=True)
+                logger_viaje.error(f"VIAJE_EDITAR - Error: {str(e)}", exc_info=True)
                 messages.error(request, f'Error al actualizar: {str(e)}')
         else:
-            logger.error(f"VIAJE_EDITAR - Formulario inválido: {form.errors}")
+            logger_viaje.error(f"VIAJE_EDITAR - Formulario inválido: {form.errors}")
     else:
         form = ViajeForm(instance=viaje, usuario=usuario)
     
@@ -1662,23 +1757,27 @@ def viaje_editar(request, id):
 def viaje_eliminar(request, id):
     """Eliminar viaje (Admin)"""
     usuario = request.user
-    viaje = get_object_or_404(Viaje, id=id)
     
     if not usuario.is_superuser and usuario.sede.nombre != 'Oficina Central':
         messages.error(request, 'No tienes permisos para eliminar viajes')
         return redirect('core:asignacion_viajes')
     
+    viaje = get_object_or_404(Viaje, id=id)
+    
     if request.method == 'POST':
         try:
-            logger.info(f"VIAJE_ELIMINAR - Eliminando viaje {id}")
-            ViajeService.eliminar_viaje(id)
-            messages.success(request, 'Viaje eliminado exitosamente')
-            logger.info(f"VIAJE_ELIMINAR - Viaje {id} eliminado")
-        except ValidationError as e:
-            logger.error(f"VIAJE_ELIMINAR - Error: {str(e)}")
-            messages.error(request, str(e))
+            logger_viaje.info(f"VIAJE_ELIMINAR - Eliminando viaje {id}")
+            
+            if viaje.ventas.exists():
+                messages.error(request, f'No se puede eliminar: El viaje tiene {viaje.ventas.count()} ventas registradas')
+                logger_viaje.error(f"VIAJE_ELIMINAR - No se puede eliminar, tiene ventas")
+            else:
+                viaje.delete()
+                messages.success(request, f'Viaje {viaje.ruta} del {viaje.fecha_salida} eliminado correctamente')
+                logger_viaje.info(f"VIAJE_ELIMINAR - Viaje {id} eliminado exitosamente")
+                
         except Exception as e:
-            logger.error(f"VIAJE_ELIMINAR - Error inesperado: {str(e)}", exc_info=True)
             messages.error(request, f'Error al eliminar: {str(e)}')
+            logger_viaje.error(f"VIAJE_ELIMINAR - Error: {str(e)}", exc_info=True)
     
     return redirect('core:asignacion_viajes')

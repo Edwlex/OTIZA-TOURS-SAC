@@ -2,6 +2,9 @@ import logging
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 from core.models import Viaje, AsientoViaje, Vehiculo, Ruta, Sede
+from datetime import datetime, timedelta
+from django.utils import timezone
+import re  
 
 logger = logging.getLogger('core.viaje_service')
 
@@ -14,30 +17,26 @@ class ViajeService:
                     fecha_llegada, hora_llegada, creado_por):
         """
         Crea un nuevo viaje y genera automáticamente los asientos disponibles
-        
-        Args:
-            ruta: Objeto Ruta
-            vehiculo: Objeto Vehiculo
-            sede_salida: Objeto Sede
-            fecha_salida: Date
-            hora_salida: Time
-            fecha_llegada: Date
-            hora_llegada: Time
-            creado_por: Usuario que crea el viaje
-            
-        Returns:
-            Viaje: El viaje creado con sus asientos
-            
-        Raises:
-            ValidationError: Si hay conflictos de horario o vehículo
+        La fecha y hora de llegada se calculan automáticamente desde la duración de la ruta
         """
+        
         logger.info("=" * 60)
         logger.info("CREAR_VIAJE - Iniciando creación de viaje")
         logger.info(f"  - Ruta: {ruta}")
         logger.info(f"  - Vehículo: {vehiculo}")
         logger.info(f"  - Sede salida: {sede_salida}")
         logger.info(f"  - Fecha/Hora salida: {fecha_salida} {hora_salida}")
+        logger.info(f"  - Duración ruta: {ruta.duracion_estimada}")
         logger.info(f"  - Creado por: {creado_por.username}")
+
+        # ===== VALIDACIÓN: NO VIAJES EN EL PASADO =====
+        ahora = timezone.now()
+        salida_dt = timezone.make_aware(datetime.combine(fecha_salida, hora_salida))
+        
+        if salida_dt < ahora:
+            logger.error(f"  - ERROR: Intento de crear viaje en el pasado: {salida_dt}")
+            raise ValidationError("No se puede programar un viaje en el pasado. Selecciona una fecha y hora futura.")
+        # ===============================================
         
         # 1. Validar que el vehículo esté activo
         if not vehiculo.activo:
@@ -64,7 +63,42 @@ class ViajeService:
                 f"El vehículo {vehiculo.placa} ya tiene un viaje programado para {fecha_salida}"
             )
         
-        # 4. Crear el viaje
+        # 4. Calcular fecha y hora de llegada automáticamente (PARSING CON REGEX ROBUSTO)
+        logger.info("  - Calculando hora de llegada...")
+        
+        duracion_texto = str(ruta.duracion_estimada).lower().strip()
+        horas = 0
+        minutos = 0
+        
+        # Regex para horas: acepta "1 hora", "2 horas", "1h", "2 h"
+        match_horas = re.search(r'(\d+)\s*(?:hora|horas|h)\b', duracion_texto)
+        if match_horas:
+            horas = int(match_horas.group(1))
+            logger.info(f"  - Horas extraídas: {horas}")
+        
+        # Regex para minutos: acepta "30 min", "30 minutos", "30m", "30 m"
+        match_minutos = re.search(r'(\d+)\s*(?:min|minutos|m)\b', duracion_texto)
+        if match_minutos:
+            minutos = int(match_minutos.group(1))
+            logger.info(f"  - Minutos extraídos: {minutos}")
+        
+        # Fallback: si no se encontró nada, usar 2 horas por defecto
+        if horas == 0 and minutos == 0:
+            logger.warning(f"  - WARNING: No se pudo parsear '{duracion_texto}', usando 2 horas por defecto")
+            horas = 2
+        
+        # Calcular llegada
+        duracion_total = timedelta(hours=horas, minutes=minutos)
+        datetime_salida = timezone.datetime.combine(fecha_salida, hora_salida)
+        datetime_llegada = datetime_salida + duracion_total
+        
+        fecha_llegada = datetime_llegada.date()
+        hora_llegada = datetime_llegada.time()
+        
+        logger.info(f"  - Duración parseada: {horas}h {minutos}min")
+        logger.info(f"  - Salida: {fecha_salida} {hora_salida} → Llegada: {fecha_llegada} {hora_llegada}")
+        
+        # 5. Crear el viaje con llegada calculada
         logger.info("  - Creando viaje en BD...")
         viaje = Viaje.objects.create(
             ruta=ruta,
@@ -72,14 +106,14 @@ class ViajeService:
             sede_salida=sede_salida,
             fecha_salida=fecha_salida,
             hora_salida=hora_salida,
-            fecha_llegada=fecha_llegada,
-            hora_llegada=hora_llegada,
+            fecha_llegada=fecha_llegada,  # ← Calculado automáticamente
+            hora_llegada=hora_llegada,    # ← Calculado automáticamente
             estado='programado'
         )
         
         logger.info(f"  - Viaje creado con ID: {viaje.id}")
         
-        # 5. Generar asientos automáticamente
+        # 6. Generar asientos automáticamente
         logger.info(f"  - Generando {vehiculo.capacidad_asientos} asientos...")
         asientos_creados = ViajeService._generar_asientos(viaje, vehiculo.capacidad_asientos, ruta.precio_base)
         
