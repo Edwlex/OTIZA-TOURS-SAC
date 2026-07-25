@@ -1,17 +1,14 @@
-import os       # <-- IMPORTANTE: Falta esta línea
+# ==================== IMPORTS ESTÁNDAR ====================
+import os
+import re
+import secrets
 import io
 import json
 import logging
 from datetime import datetime, timedelta
 
+# ==================== DJANGO CORE ====================
 from django.conf import settings
-from asgiref.server import logger
-# ==================== IMPORTS GLOBALES (AL INICIO) ====================
-
-import re
-import secrets
-
-
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
@@ -22,13 +19,13 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.utils import timezone
 
-# xhtml2pdf para tickets (si lo usas)
+# ==================== PDFs ====================
 try:
     from xhtml2pdf import pisa
 except ImportError:
     pisa = None
 
-# Servicios
+# ==================== SERVICIOS OTIZA ====================
 from core.services.auth_service import AuthService
 from core.services.chofer_service import ChoferService
 from core.services.dashboard_service import DashboardService
@@ -40,16 +37,7 @@ from core.services.venta_service import VentaService
 from core.services.vehiculo_service import VehiculoService
 from core.services.viaje_service import ViajeService
 
-<<<<<<< HEAD
-from django.shortcuts import render
-from django.http import HttpResponse
-from xhtml2pdf import pisa
-from django.template.loader import render_to_string
-from django.shortcuts import get_object_or_404
-
-
-=======
-# Formularios
+# ==================== FORMULARIOS ====================
 from core.forms.chofer_forms import ChoferForm
 from core.forms.incidencia_forms import IncidenciaForm
 from core.forms.login_forms import LoginForm
@@ -59,10 +47,10 @@ from core.forms.venta_forms import VentaFiltroForm
 from core.forms.vehiculo_forms import VehiculoForm
 from core.forms.viaje_forms import ViajeForm
 
-# Modelos
+# ==================== MODELOS ====================
 from core.models import Incidencia, Ruta, Sede, Usuario, Vehiculo, Viaje, Venta
 
-# ==================== CONFIGURACIÓN DE LOGGERS ====================
+# ==================== LOGGERS ====================
 logger = logging.getLogger('core.views')
 logger_auth = logging.getLogger('core.auth')
 logger_venta = logging.getLogger('core.venta_views')
@@ -73,7 +61,6 @@ logger_chofer = logging.getLogger('core.chofer_views')
 logger_ruta = logging.getLogger('core.ruta_views')
 logger_usuario = logging.getLogger('core.usuario_views')
 logger_viaje = logging.getLogger('core.viajes_views')
->>>>>>> 391b1f10d52ba72f9d5c32bb53cadead532c18ac
 
 
 # ==================== AUTH ====================
@@ -1439,15 +1426,14 @@ def chofer_cancelar_reserva(request, reserva_id):
     return redirect('core:chofer_reservar')
 
 
+# ==================== BOLETOS ====================
 
 @login_required
-<<<<<<< HEAD
 def ver_boleto(request, venta_id):
-    """Vista para mostrar el boleto"""
-    # Datos simulados (tu compañero conectará a BD)
+    """Vista para mostrar el boleto (vista previa HTML)"""
     boleto_data = {
         'id': venta_id,
-        'numero': f"{venta_id:06d}",  # Ej: 008972
+        'numero': f"{venta_id:06d}",
         'origen': 'TRUJILLO',
         'destino': 'JULCÁN',
         'pasajero': 'PÉREZ GARCÍA JUAN CARLOS',
@@ -1455,23 +1441,13 @@ def ver_boleto(request, venta_id):
         'dia': timezone.now().strftime('%d'),
         'mes': timezone.now().strftime('%m'),
         'anio': timezone.now().strftime('%Y'),
-=======
-def descargar_ticket_pdf(request, ticket_id):
-    """Genera y descarga el ticket en PDF"""
-    
-    ticket_data = {
-        'id': ticket_id,
-        'numero': f"TK-{ticket_id:04d}",
-        'fecha_emision': timezone.now().strftime("%d/%m/%Y %H:%M"),
-        'ruta': 'Trujillo → Julcán',
->>>>>>> 391b1f10d52ba72f9d5c32bb53cadead532c18ac
         'hora': '08:00 AM',
         'asiento': '03',
         'valor': '25.00',
         'es_premiado': False
     }
-<<<<<<< HEAD
     return render(request, 'ventas/boleto.html', {'boleto': boleto_data})
+
 
 def link_callback(uri, rel):
     """
@@ -1482,7 +1458,6 @@ def link_callback(uri, rel):
  
     if uri.startswith(settings.STATIC_URL):
         path = os.path.join(settings.STATIC_ROOT if settings.STATIC_ROOT else '', uri.replace(settings.STATIC_URL, ""))
-        # Si STATIC_ROOT no está configurado (modo desarrollo), busca en STATICFILES_DIRS
         if not os.path.isfile(path):
             for static_dir in getattr(settings, 'STATICFILES_DIRS', []):
                 posible = os.path.join(static_dir, uri.replace(settings.STATIC_URL, ""))
@@ -1495,14 +1470,12 @@ def link_callback(uri, rel):
         result = os.path.join(settings.MEDIA_ROOT, uri.replace(settings.MEDIA_URL, ""))
  
     else:
-        # Si ya es una ruta absoluta o algo que pisa puede resolver solo
         return uri
  
     if not os.path.isfile(result):
         raise Exception(
             f'[link_callback] No se encontró el archivo: {result} (uri original: {uri}). '
-            f'Verifica que el logo esté en esa carpeta y que hayas corrido "python manage.py collectstatic" '
-            f'si STATIC_ROOT está configurado.'
+            f'Verifica que el logo esté en esa carpeta.'
         )
     return result
  
@@ -1535,64 +1508,38 @@ def descargar_boleto_pdf(request, boleto_id):
         io.BytesIO(html_string.encode("UTF-8")),
         result,
         encoding='UTF-8',
-        link_callback=link_callback,   # <-- ESTA LÍNEA ES LA CLAVE, faltaba antes
+        link_callback=link_callback,
     )
  
     if pdf.err:
         return HttpResponse("Error al generar el PDF", status=500)
  
-=======
-    
-    html_string = render_to_string('ventas/ticket_pdf.html', {'ticket': ticket_data})
-    
-    result = io.BytesIO()
-    if pisa:
-        pdf = pisa.CreatePDF(
-            io.BytesIO(html_string.encode("UTF-8")),
-            result,
-            encoding='UTF-8'
-        )
-        
-        if pdf.err:
-            return HttpResponse("Error al generar el PDF", status=500)
-    
->>>>>>> 391b1f10d52ba72f9d5c32bb53cadead532c18ac
     response = HttpResponse(result.getvalue(), content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="boleto_{boleto_data["numero"]}.pdf"'
     return response
 
-<<<<<<< HEAD
-
-logger = logging.getLogger('core.viajes_views')
-=======
-@login_required
-def ver_ticket(request, venta_id):
-    ticket = get_object_or_404(Venta, id=venta_id)
-    return render(request, 'ventas/ticket.html', {'ticket': ticket})
-
 
 # ==================== ADMIN - ASIGNACIÓN DE VIAJES ====================
 
-# Función auxiliar para parsear duración (MISMA LÓGICA EN TODAS PARTES)
 def _parsear_duracion(duracion_texto):
     """Parsea duración estimada y retorna (horas, minutos)"""
     duracion_texto = str(duracion_texto).lower().strip()
     horas = 0
     minutos = 0
     
-    # Regex para horas: acepta "1 hora", "2 horas", "1h", "2 h"
     match_horas = re.search(r'(\d+)\s*(?:hora|horas|h)\b', duracion_texto)
     if match_horas:
         horas = int(match_horas.group(1))
     
-    # Regex para minutos: acepta "30 min", "30 minutos", "30m", "30 m"
     match_minutos = re.search(r'(\d+)\s*(?:min|minutos|m)\b', duracion_texto)
     if match_minutos:
         minutos = int(match_minutos.group(1))
     
     return horas, minutos
 
->>>>>>> 391b1f10d52ba72f9d5c32bb53cadead532c18ac
+
+# ==================== LOGGER ====================
+logger = logging.getLogger('core.viajes_views')
 
 @login_required
 def asignacion_viajes(request):

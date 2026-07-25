@@ -58,22 +58,23 @@ class Command(BaseCommand):
         for user_data in usuarios:
             sede = Sede.objects.get(nombre=user_data['sede'])
             
-            if user_data['es_superuser']:
-                Usuario.objects.create_superuser(
-                    username=user_data['username'],
-                    password=user_data['password'],
-                    email=user_data['email'],
-                    sede=sede,
-                    first_name=user_data['username'].title()
-                )
-            else:
-                Usuario.objects.create_user(
-                    username=user_data['username'],
-                    password=user_data['password'],
-                    email=user_data['email'],
-                    sede=sede,
-                    first_name=user_data['username'].title()
-                )
-            self.stdout.write(self.style.SUCCESS(f'Usuario {user_data["username"]} creado'))
-        
-        self.stdout.write(self.style.SUCCESS('\n✅ ¡Todos los datos iniciales creados!'))
+            # ✅ Usar get_or_create en lugar de create_user/create_superuser
+            user, creado = Usuario.objects.get_or_create(
+                username=user_data['username'],
+                defaults={
+                    'email': user_data['email'],
+                    'sede': sede,
+                    'first_name': user_data['username'].title(),
+                    'is_staff': user_data['es_superuser'],
+                    'is_superuser': user_data['es_superuser'],
+                    'es_cajero': not user_data['es_superuser'],
+                    'activo': True
+                }
+            )
+            
+            # ✅ Actualizar contraseña SIEMPRE (por si se resetea)
+            user.set_password(user_data['password'])
+            user.save()
+            
+            status = "creado" if creado else "actualizado"
+            self.stdout.write(self.style.SUCCESS(f'Usuario {user_data["username"]} {status}'))
