@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Hoja de Ruta - Otiza Tours</title>
+<style>
+    /* Configuración para el motor de PDF (A4 estándar en vertical) */
+    @page {
+        size: A4 portrait;
+        margin: 8mm 10mm;
+    }
+
+    body {
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 8pt;
+        color: #0d233a;
+        line-height: 1.15;
+        margin: 0;
+        padding: 0;
+        background-color: #f1f5f9; /* Fondo de pantalla para resaltar la hoja en el navegador */
+    }
+
+    /* Contenedor vista previa A4 centrada para navegador */
+    .hoja-a4 {
+        max-width: 210mm; /* Ancho real A4 */
+        margin: 15px auto;
+        padding: 10mm;
+        background: #ffffff;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        box-sizing: border-box;
+    }
+
+    .bold { font-weight: bold; }
+    .text-center { text-align: center; }
+    .text-right { text-align: right; }
+
+    /* Encabezado Principal */
+    table.header-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 4px;
+    }
+
+    .logo-img {
+        width: 115px;
+        height: auto;
+    }
+
+    .bus-img {
+        width: 105px;
+        height: auto;
+    }
+
+    .header-title {
+        font-size: 16pt;
+        font-weight: bold;
+        color: #0d233a;
+        letter-spacing: 1px;
+    }
+
+    .header-subtext {
+        font-size: 7.5pt;
+        color: #0d233a;
+        line-height: 1.2;
+    }
+
+    .num-hoja {
+        font-size: 14pt;
+        font-weight: bold;
+        color: #d90429; /* Rojo característico del talonario */
+        margin-top: 2px;
+    }
+
+    .resolucion {
+        font-size: 6.5pt;
+        font-weight: bold;
+        color: #333;
+        margin-top: 2px;
+    }
+
+    /* Tablas de Estructura */
+    table.table-bordered {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 5px;
+    }
+
+    table.table-bordered td, table.table-bordered th {
+        border: 1px solid #0d233a;
+        padding: 2.5px 5px;
+        vertical-align: middle;
+    }
+
+    .bg-header {
+        background-color: #e2e8f0;
+        font-weight: bold;
+        font-size: 7.5pt;
+    }
+
+    /* Banners de Secciones */
+    .section-title-banner {
+        background-color: #cbd5e1;
+        border: 1px solid #0d233a;
+        font-weight: bold;
+        font-size: 8pt;
+        padding: 3px 6px;
+        margin-top: 3px;
+        margin-bottom: 0px;
+    }
+
+    /* Sección Incidentes */
+    .incidente-block {
+        border: 1px solid #0d233a;
+        border-top: none;
+        padding: 4px 6px;
+        margin-bottom: 4px;
+    }
+
+    .linea-subraya {
+        border-bottom: 1px solid #0d233a;
+        width: 100%;
+        height: 14px;
+        margin-top: 2px;
+    }
+
+    table.firma-table {
+        width: 100%;
+        margin-top: 4px;
+        border-collapse: collapse;
+    }
+
+    table.firma-table td {
+        border: none !important;
+        padding: 0 !important;
+    }
+</style>
+</head>
+<body>
+
+<div class="hoja-a4">
+
+    <!-- 1. ENCABEZADO Y LOGOS -->
+    <table class="header-table">
+        <tr>
+            <!-- Logo Empresa Izquierda -->
+            <td style="width: 25%; vertical-align: top;">
+                <img src="{% static 'images/otiza.png' %}" class="logo-img" alt="Otiza Tours">
+            </td>
+
+            <!-- Texto Central -->
+            <td style="width: 50%; text-align: center; vertical-align: top;">
+                <div class="header-title">HOJA DE RUTA</div>
+                <div class="header-subtext">
+                    <b>JULCÁN:</b> Cal. La Cultura S/N &bull; 902430951<br>
+                    <b>MACHE:</b> Cal. Maravillas N° 102 &bull; 921700432<br>
+                    <b>TRUJILLO:</b> Prolong. Unión N° 1477 &bull; 929698732
+                </div>
+                <div class="num-hoja">
+                    001- N° 009505
+                </div>
+            </td>
+
+            <!-- Foto Vehículo / Carro Derecha -->
+            <td style="width: 25%; text-align: right; vertical-align: top;">
+                <img src="{% static 'images/carro.png' %}" class="bus-img" alt="Vehículo"><br>
+                <div class="resolucion">
+                    R.G.R. N° 259 - 2019-GR-LL/GRTC<br>
+                    R.G.R. N° 209 - 2021-GR-LL-GGR/GRTC
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <!-- 2. DATOS GENERALES DE LA EMPRESA Y VEHÍCULO -->
+    <table class="table-bordered">
+        <tr>
+            <td class="bg-header" style="width: 18%;">Razón Social:</td>
+            <td colspan="3" class="bold" style="font-size: 9pt;">OTIZA TOURS S.A.C.</td>
+        </tr>
+        <tr>
+            <td class="bg-header">Dirección:</td>
+            <td colspan="3">Prolong. Unión N°1477 - La Libertad - Trujillo - Trujillo</td>
+        </tr>
+        <tr>
+            <td class="bg-header">Correo Electrónico:</td>
+            <td style="width: 42%;">otizatourssac@gmail.com</td>
+            <td class="bg-header" style="width: 15%;">N° Telefónico:</td>
+            <td style="width: 25%;" class="bold">974 276 980</td>
+        </tr>
+        <tr>
+            <td class="bg-header">N° de Placa:</td>
+            <td class="bold">&nbsp;</td>
+            <td class="bg-header">Fecha de Inicio de Viaje:</td>
+            <td class="text-center">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; / &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; /</td>
+        </tr>
+        <tr>
+            <td class="bg-header" colspan="2">Modalidad del Servicio: <b>AUTO COLECTIVO</b></td>
+            <td class="bg-header">Fecha de Llegada del Viaje:</td>
+            <td class="text-center">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; / &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; /</td>
+        </tr>
+    </table>
+
+    <!-- 3. EMBARQUE Y DESEMBARQUE -->
+    <table class="table-bordered">
+        <tr>
+            <td style="width: 50%; vertical-align: top; height: 35px;">
+                <b>Lugar de Embarque:</b> ____________________________________<br><br>
+                <b>Hora de Salida:</b> ________________________________________
+            </td>
+            <td style="width: 50%; vertical-align: top; height: 35px;">
+                <b>Lugar de Desembarque:</b> ________________________________<br><br>
+                <b>Hora de Llegada:</b> ____________________________________
+            </td>
+        </tr>
+    </table>
+
+    <!-- 4. DATOS DE LOS CONDUCTORES -->
+    <div class="section-title-banner">Datos Generales de los Conductores y Turnos de Conducción:</div>
+    <table class="table-bordered" style="border-top: none;">
+        <tr class="bg-header text-center">
+            <td style="width: 42%;">NOMBRES Y APELLIDOS</td>
+            <td style="width: 24%;">N° LIC. DE CONDUCIR</td>
+            <td style="width: 17%;">H. DE INICIO / TÉRMINO</td>
+            <td style="width: 17%;">TURNOS DE CONDUCCIÓN</td>
+        </tr>
+        <tr>
+            <td style="height: 14px;">&nbsp;</td>
+            <td>&nbsp;</td>
+            <td class="text-center">H. DE INICIO:</td>
+            <td class="text-center">H. DE TÉRMINO:</td>
+        </tr>
+        <tr>
+            <td style="height: 14px;">&nbsp;</td>
+            <td>&nbsp;</td>
+            <td class="text-center">H. DE INICIO:</td>
+            <td class="text-center">H. DE TÉRMINO:</td>
+        </tr>
+        <tr>
+            <td style="height: 14px;">&nbsp;</td>
+            <td>&nbsp;</td>
+            <td class="text-center">H. DE INICIO:</td>
+            <td class="text-center">H. DE TÉRMINO:</td>
+        </tr>
+    </table>
+
+    <!-- 5. INCIDENTES DEL VIAJE -->
+    <div class="section-title-banner">Incidentes del Viaje</div>
+
+    <!-- Bloque 1 -->
+    <div class="incidente-block">
+        <table style="width: 100%;">
+            <tr>
+                <td style="width: 48%;"><b>NOMBRES Y APELLIDOS:</b> _______________________</td>
+                <td style="width: 6%; text-align: center;"><b>EN</b></td>
+                <td style="width: 46%;">___________________________________</td>
+            </tr>
+        </table>
+        <div style="margin-top: 2px;"><b>DEJO CONSTANCIA QUE:</b> ____________________________________________________________________________________</div>
+        <div class="linea-subraya"></div>
+        <div class="linea-subraya"></div>
+        
+        <table class="firma-table">
+            <tr>
+                <td style="width: 50%;"></td>
+                <td style="width: 30%; text-align: right;"><b>FIRMA:</b> ______________________</td>
+                <td style="width: 20%; text-align: right;"><b>N° DNI:</b> ____________</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Bloque 2 -->
+    <div class="incidente-block">
+        <table style="width: 100%;">
+            <tr>
+                <td style="width: 48%;"><b>NOMBRES Y APELLIDOS:</b> _______________________</td>
+                <td style="width: 6%; text-align: center;"><b>EN</b></td>
+                <td style="width: 46%;">___________________________________</td>
+            </tr>
+        </table>
+        <div style="margin-top: 2px;"><b>DEJO CONSTANCIA QUE:</b> ____________________________________________________________________________________</div>
+        <div class="linea-subraya"></div>
+        <div class="linea-subraya"></div>
+        
+        <table class="firma-table">
+            <tr>
+                <td style="width: 50%;"></td>
+                <td style="width: 30%; text-align: right;"><b>FIRMA:</b> ______________________</td>
+                <td style="width: 20%; text-align: right;"><b>N° DNI:</b> ____________</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Bloque 3 -->
+    <div class="incidente-block">
+        <table style="width: 100%;">
+            <tr>
+                <td style="width: 48%;"><b>NOMBRES Y APELLIDOS:</b> _______________________</td>
+                <td style="width: 6%; text-align: center;"><b>EN</b></td>
+                <td style="width: 46%;">___________________________________</td>
+            </tr>
+        </table>
+        <div style="margin-top: 2px;"><b>DEJO CONSTANCIA QUE:</b> ____________________________________________________________________________________</div>
+        <div class="linea-subraya"></div>
+        <div class="linea-subraya"></div>
+        
+        <table class="firma-table">
+            <tr>
+                <td style="width: 50%;"></td>
+                <td style="width: 30%; text-align: right;"><b>FIRMA:</b> ______________________</td>
+                <td style="width: 20%; text-align: right;"><b>N° DNI:</b> ____________</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Bloque 4 -->
+    <div class="incidente-block">
+        <table style="width: 100%;">
+            <tr>
+                <td style="width: 48%;"><b>NOMBRES Y APELLIDOS:</b> _______________________</td>
+                <td style="width: 6%; text-align: center;"><b>EN</b></td>
+                <td style="width: 46%;">___________________________________</td>
+            </tr>
+        </table>
+        <div style="margin-top: 2px;"><b>DEJO CONSTANCIA QUE:</b> ____________________________________________________________________________________</div>
+        <div class="linea-subraya"></div>
+        
+        <table class="firma-table">
+            <tr>
+                <td style="width: 50%;"></td>
+                <td style="width: 30%; text-align: right;"><b>FIRMA:</b> ______________________</td>
+                <td style="width: 20%; text-align: right;"><b>N° DNI:</b> ____________</td>
+            </tr>
+        </table>
+    </div>
+
+</div>
+
+</body>
+</html>

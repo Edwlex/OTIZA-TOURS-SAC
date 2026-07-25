@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Manifiesto de Usuarios - Otiza Tours</title>
+<style>
+    /* Configuración para Impresión en Hoja A4 estándar */
+    @page {
+        size: A4 portrait;
+        margin: 10mm;
+    }
+
+    body {
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 8.5pt;
+        color: #003366; /* Azul oscuro institucional tipo Excel */
+        margin: 0;
+        padding: 0;
+        background-color: #f1f5f9;
+    }
+
+    /* Contenedor Vista Previa A4 centrada para Navegador */
+    .hoja-a4 {
+        max-width: 210mm;
+        margin: 15px auto;
+        padding: 10mm;
+        background: #ffffff;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        box-sizing: border-box;
+    }
+
+    .bold { font-weight: bold; }
+    .text-center { text-align: center; }
+
+    /* Banner Superior Ruta */
+    .banner-ruta {
+        background-color: #fef08a; /* Amarillo suave igual a tu imagen */
+        border: 1px solid #003366;
+        text-align: center;
+        font-weight: bold;
+        font-size: 11pt;
+        padding: 4px;
+        color: #003366;
+        margin-bottom: 5px;
+    }
+
+    /* Encabezado Principal */
+    table.header-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 6px;
+    }
+
+    .logo-img {
+        width: 140px;
+        height: auto;
+    }
+
+    .box-titulo {
+        border: 1px solid #003366;
+        font-weight: bold;
+        font-size: 9pt;
+        padding: 4px 6px;
+        background-color: #e2e8f0;
+    }
+
+    .box-numero {
+        border: 1px solid #003366;
+        border-left: none;
+        font-weight: bold;
+        font-size: 10pt;
+        padding: 4px 10px;
+    }
+
+    .resolucion {
+        font-size: 7.5pt;
+        font-weight: bold;
+        color: #003366;
+    }
+
+    /* Tablas con Bordes Azules */
+    table.table-bordered {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 6px;
+    }
+
+    table.table-bordered td, table.table-bordered th {
+        border: 1px solid #003366;
+        padding: 4px 6px;
+        vertical-align: middle;
+    }
+
+    .bg-th {
+        background-color: #ffffff;
+        font-weight: bold;
+        color: #003366;
+        font-size: 8.5pt;
+    }
+
+    /* Tabla de Pasajeros / Usuarios */
+    table.tabla-pasajeros {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    table.tabla-pasajeros th {
+        border: 1px solid #003366;
+        padding: 5px;
+        font-size: 8.5pt;
+        color: #003366;
+        background-color: #ffffff;
+    }
+
+    table.tabla-pasajeros td {
+        border: 1px solid #003366;
+        padding: 4px 5px;
+        height: 18px; /* Altura cómoda para escritura o datos */
+    }
+
+    .col-num { width: 5%; text-align: center; font-weight: bold; }
+    .col-nombre { width: 50%; }
+    .col-dni { width: 22%; text-align: center; }
+    .col-destino { width: 23%; text-align: center; }
+
+</style>
+</head>
+<body>
+
+<div class="hoja-a4">
+
+    <!-- BANNER SUPERIOR DE RUTA -->
+    <div class="banner-ruta">
+        JULCÁN - FUNDO SANTO DOMINGO
+    </div>
+
+    <!-- ENCABEZADO -->
+    <table class="header-table">
+        <tr>
+            <!-- Logo Empresa (Ruta local directa para ver con doble clic en Windows) -->
+            <td style="width: 30%; vertical-align: middle;">
+                <img src="../static/images/otiza.png" class="logo-img" alt="Otiza Tours">
+                <!-- Cuando lo corras en Django, tu compañero habilitará esta línea de abajo: -->
+                <!-- <img src="{% static 'images/otiza.png' %}" class="logo-img" alt="Otiza Tours"> -->
+            </td>
+
+            <!-- Cuadro de Título y Correlativo -->
+            <td style="width: 35%; vertical-align: middle;">
+                <table style="border-collapse: collapse; margin: 0 auto;">
+                    <tr>
+                        <td class="box-titulo">MANIFIESTO DE USUARIOS</td>
+                        <td class="box-numero">001 - 01</td>
+                    </tr>
+                </table>
+                <div style="margin-top: 8px; font-weight: bold; font-size: 8.5pt;">
+                    FECHA:
+                </div>
+            </td>
+
+            <!-- Resoluciones Derecha -->
+            <td style="width: 35%; text-align: right; vertical-align: top;">
+                <div class="resolucion">
+                    R.G.R. N° 259 - 2019-GR-LL/GRTC<br>
+                    R.G.R. N° 209 - 2021-GR-LL-GGR/GRTC
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <!-- DATOS DEL CONDUCTOR Y VIAJE -->
+    <table class="table-bordered">
+        <tr>
+            <td style="width: 60%;" class="bold">CONDUCTOR :</td>
+            <td style="width: 40%;" class="bold">BREBETE: D -</td>
+        </tr>
+    </table>
+
+    <table class="table-bordered">
+        <tr>
+            <td style="width: 25%;" class="bold">N° DE PLACA :</td>
+            <td style="width: 20%;" class="bold">HORA:</td>
+            <td style="width: 27%;" class="bold">DESTINO DE: JULCÁN</td>
+            <td style="width: 28%;" class="bold">A: FUNDO SANTO DOMINGO</td>
+        </tr>
+    </table>
+
+    <!-- TABLA DE PASAJEROS (1 AL 15) -->
+    <table class="tabla-pasajeros">
+        <thead>
+            <tr>
+                <th class="col-num">N°</th>
+                <th class="col-nombre">NOMBRES Y APELLIDOS</th>
+                <th class="col-dni">DNI</th>
+                <th class="col-destino">DESTINO</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td class="col-num">1</td><td></td><td></td><td></td></tr>
+            <tr><td class="col-num">2</td><td></td><td></td><td></td></tr>
+            <tr><td class="col-num">3</td><td></td><td></td><td></td></tr>
+            <tr><td class="col-num">4</td><td></td><td></td><td></td></tr>
+            <tr><td class="col-num">5</td><td></td><td></td><td></td></tr>
+            <tr><td class="col-num">6</td><td></td><td></td><td></td></tr>
+            <tr><td class="col-num">7</td><td></td><td></td><td></td></tr>
+            <tr><td class="col-num">8</td><td></td><td></td><td></td></tr>
+            <tr><td class="col-num">9</td><td></td><td></td><td></td></tr>
+            <tr><td class="col-num">10</td><td></td><td></td><td></td></tr>
+            <tr><td class="col-num">11</td><td></td><td></td><td></td></tr>
+            <tr><td class="col-num">12</td><td></td><td></td><td></td></tr>
+            <tr><td class="col-num">13</td><td></td><td></td><td></td></tr>
+            <tr><td class="col-num">14</td><td></td><td></td><td></td></tr>
+            <tr><td class="col-num">15</td><td></td><td></td><td></td></tr>
+        </tbody>
+    </table>
+
+</div>
+
+</body>
+</html>
