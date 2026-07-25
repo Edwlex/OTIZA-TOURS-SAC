@@ -1,0 +1,159 @@
+{% extends 'base_cajero.html' %}
+{% load static %}
+{% block title %}Boleto - Otiza Tours{% endblock %}
+{% block content %}
+<div class="max-w-md mx-auto px-4 py-6">
+    <!-- BOLETO VISUAL -->
+    <div id="boletoContent" class="bg-white border-2 border-gray-300 rounded-lg p-6 font-mono text-sm shadow-lg">
+        <!-- Header -->
+        <div class="text-center border-b-2 border-blue-600 pb-3 mb-4">
+            <h2 class="text-xl font-bold text-blue-600 tracking-tight">OTIZA TOURS S.A.C.</h2>
+            <p class="text-xs mt-1">R.U.C. 20603076304</p>
+            <p class="text-xs font-semibold mt-2 text-blue-600">BOLETO N° {{ boleto.numero|default:"000001" }}</p>
+        </div>
+        
+        <!-- Pasajero -->
+        <div class="mb-3">
+            <p class="font-bold text-blue-600 text-xs border-b border-gray-300 mb-1">NOMBRE DEL PASAJERO</p>
+            <p class="font-semibold">{{ boleto.pasajero|default:"JUAN PEREZ GARCIA" }}</p>
+        </div>
+        
+        <!-- Ruta -->
+        <div class="grid grid-cols-2 gap-2 mb-3">
+            <div>
+                <p class="font-bold text-blue-600 text-xs border-b border-gray-300 mb-1">ORIGEN</p>
+                <p class="font-semibold">{{ boleto.origen|default:"TRUJILLO" }}</p>
+            </div>
+            <div>
+                <p class="font-bold text-blue-600 text-xs border-b border-gray-300 mb-1">DESTINO</p>
+                <p class="font-semibold">{{ boleto.destino|default:"JULCÁN" }}</p>
+            </div>
+        </div>
+        
+        <!-- Fecha y Hora -->
+        <div class="grid grid-cols-2 gap-2 mb-3">
+            <div>
+                <p class="font-bold text-blue-600 text-xs border-b border-gray-300 mb-1">FECHA</p>
+                <p class="font-semibold">{{ boleto.fecha_emision|default:"21/07/2026" }}</p>
+            </div>
+            <div>
+                <p class="font-bold text-blue-600 text-xs border-b border-gray-300 mb-1">HORA</p>
+                <p class="font-semibold">{{ boleto.hora|default:"08:00" }}</p>
+            </div>
+        </div>
+        
+        <!-- Asiento -->
+        <div class="mb-3">
+            <p class="font-bold text-blue-600 text-xs border-b border-gray-300 mb-1">ASIENTO</p>
+            <div class="text-center border-2 border-blue-600 rounded-lg py-2 text-2xl font-bold text-blue-600">
+                {{ boleto.asiento|default:"03" }}
+            </div>
+        </div>
+        
+        <!-- DNI -->
+        <div class="mb-3">
+            <p class="font-bold text-blue-600 text-xs border-b border-gray-300 mb-1">D.N.I.</p>
+            <p class="font-semibold">{{ boleto.dni|default:"12345678" }}</p>
+        </div>
+        
+        <!-- Total -->
+        <div class="border-2 border-blue-600 rounded-lg p-3 text-center bg-blue-50 mb-3">
+            <p class="text-xs text-blue-600 font-bold">VALOR (Soles)</p>
+            <p class="text-2xl font-bold">S/ {{ boleto.valor|default:"25.00" }}</p>
+        </div>
+        
+        <!-- Premio -->
+        {% if boleto.es_premiado == 'True' %}
+        <div class="bg-yellow-100 border-2 border-yellow-500 rounded p-3 mb-3 text-center">
+            <p class="text-sm font-bold text-yellow-800">🎉 ¡FELICIDADES!</p>
+            <p class="text-xs text-yellow-700">Ha completado 12 viajes</p>
+            <p class="text-xs font-bold text-yellow-800">ENTREGUE RASCA Y GANA</p>
+        </div>
+        {% endif %}
+        
+        <!-- Footer -->
+        <div class="text-center mt-4 text-xs text-gray-500 border-t border-gray-200 pt-3">
+            <p>¡Gracias por viajar con nosotros!</p>
+            <p class="mt-1 font-bold">OTIZA TOURS S.A.C.</p>
+        </div>
+    </div>
+    
+    <!-- BOTONES DE ACCIÓN -->
+    <div class="mt-6 grid grid-cols-1 gap-3">
+        <button onclick="window.print()" class="w-full bg-otiza-green hover:bg-otiza-dark text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition">
+            <i class="fas fa-print"></i> ️ Imprimir Boleto
+        </button>
+        <a href="{% url 'core:descargar_boleto_pdf' boleto.id %}" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition text-center">
+            <i class="fas fa-file-pdf"></i> Descargar Boleto PDF
+        </a>
+        <button onclick="enviarWhatsApp()" class="w-full bg-green-500 hover:bg-green-600 text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition">
+            <i class="fab fa-whatsapp"></i> 📱 Enviar por WhatsApp
+        </button>
+        <a href="{% url 'core:dashboard' %}" class="w-full bg-gray-500 hover:bg-gray-600 text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition text-center">
+            <i class="fas fa-arrow-left"></i> ← Volver
+        </a>
+    </div>
+</div>
+
+<style>
+@media print {
+    body * { visibility: hidden; }
+    #boletoContent, #boletoContent * { visibility: visible; }
+    #boletoContent {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 80mm;
+        font-size: 11px;
+        border: none;
+        box-shadow: none;
+        padding: 3mm;
+    }
+    .no-print { display: none !important; }
+}
+#boletoContent {
+    max-width: 320px;
+    margin: 0 auto;
+}
+</style>
+
+<script>
+function enviarWhatsApp() {
+    const boletoNum = "{{ boleto.numero|default:'000001' }}";
+    const origen = "{{ boleto.origen|default:'TRUJILLO' }}";
+    const destino = "{{ boleto.destino|default:'JULCÁN' }}";
+    const fecha = "{{ boleto.fecha_emision|default:'21/07/2026' }}";
+    const hora = "{{ boleto.hora|default:'08:00' }}";
+    const asiento = "{{ boleto.asiento|default:'03' }}";
+    const pasajero = "{{ boleto.pasajero|default:'JUAN PEREZ' }}";
+    const dni = "{{ boleto.dni|default:'12345678' }}";
+    const total = "S/ {{ boleto.valor|default:'25.00' }}";
+    
+    // URL REAL que genera el PDF
+    const pdfUrl = window.location.origin + "{% url 'core:descargar_boleto_pdf' boleto.id %}";
+    
+    const mensaje = `🚌 *OTIZA TOURS* - Boleto Oficial
+` +
+`🎫 Boleto: ${boletoNum}
+` +
+`👤 Pasajero: ${pasajero} (DNI: ${dni})
+` +
+`🚌 Ruta: ${origen} → ${destino}
+` +
+`📅 Fecha: ${fecha}
+` +
+` Hora: ${hora}
+` +
+` Asiento: ${asiento}
+` +
+`💰 Total: ${total}
+` +
+`📥 *Descarga tu boleto PDF aquí:*
+${pdfUrl}
+` +
+`¡Buen viaje! 🙏`;
+    
+    window.open(`https://wa.me/?text=${encodeURIComponent(mensaje)}`, '_blank');
+}
+</script>
+{% endblock %}

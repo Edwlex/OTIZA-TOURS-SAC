@@ -21,12 +21,10 @@ urlpatterns = [
     path('ventas/mapa-asientos/<int:viaje_id>/', views.mapa_asientos, name='mapa_asientos'),
     path('ventas/procesar/', views.procesar_venta, name='procesar_venta'),
     
-    # ==================== TICKETS ====================
-    # Redirige a descargar_ticket_pdf para que coincida con la función de views.py
-    path('ventas/ticket/<int:ticket_id>/', views.descargar_ticket_pdf, name='ver_ticket'),
-    path('tickets/<int:ticket_id>/pdf/', views.descargar_ticket_pdf, name='descargar_ticket_pdf'),
-    # Agrega al final de urlpatterns:
-    path('tickets/<int:venta_id>/pdf/', views.descargar_ticket_pdf, name='descargar_ticket_pdf'),
+    path('boletos/<int:boleto_id>/pdf/', views.descargar_boleto_pdf, name='descargar_boleto_pdf'),
+    path('boletos/<int:boleto_id>/', views.ver_boleto, name='ver_boleto'),  
+    # Debe coincidir EXACTAMENTE con el nombre en el template
+
 
     # ==================== CLIENTES Y FIDELIZACIÓN ====================
     path('clientes/historial/<str:dni>/', views.historial_cliente, name='cliente_historial'),

@@ -1,7 +1,10 @@
-from datetime import datetime, timedelta
+import os       # <-- IMPORTANTE: Falta esta línea
+import io
 import json
 import logging
+from datetime import datetime, timedelta
 
+from django.conf import settings
 from asgiref.server import logger
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
@@ -35,6 +38,13 @@ from core.services.vehiculo_service import VehiculoService
 from core.services.viaje_service import ViajeService
 from core.models import Sede
 from core.services.dashboard_service import DashboardService
+
+from django.shortcuts import render
+from django.http import HttpResponse
+from xhtml2pdf import pisa
+from django.template.loader import render_to_string
+from django.shortcuts import get_object_or_404
+
 
 
 
@@ -389,7 +399,7 @@ def ventas_lista_cajero(request, usuario, sede):
         'total_boletos': kpis['total_boletos'],
         'promedio_venta': kpis['promedio_venta'],
     }
-    return render(request, 'cajero/ventas_lista.html', contexto)
+    return render(request, 'ventas/lista.html', contexto)
 
 
 @login_required
@@ -1429,59 +1439,99 @@ def chofer_cancelar_reserva(request, reserva_id):
     return redirect('core:chofer_reservar')
 
 
-# ==================== IMPRESIÓN DE TICKETS ====================
+
 @login_required
-def descargar_ticket_pdf(request, ticket_id):  # ← ticket_id DEBE estar aquí
-    """Genera y descarga el ticket en PDF (Compatible con Windows)"""
-    from xhtml2pdf import pisa
-    import io
-    from django.http import HttpResponse
-    from django.template.loader import render_to_string
-    from django.utils import timezone
-    
-    # Datos simulados (tu compañero conectará a BD después)
-    ticket_data = {
-        'id': ticket_id,
-        'numero': f"TK-{ticket_id:04d}",
-        'fecha_emision': timezone.now().strftime("%d/%m/%Y %H:%M"),
-        'ruta': 'Trujillo → Julcán',
+def ver_boleto(request, venta_id):
+    """Vista para mostrar el boleto"""
+    # Datos simulados (tu compañero conectará a BD)
+    boleto_data = {
+        'id': venta_id,
+        'numero': f"{venta_id:06d}",  # Ej: 008972
+        'origen': 'TRUJILLO',
+        'destino': 'JULCÁN',
+        'pasajero': 'PÉREZ GARCÍA JUAN CARLOS',
+        'dni': '76543210',
+        'dia': timezone.now().strftime('%d'),
+        'mes': timezone.now().strftime('%m'),
+        'anio': timezone.now().strftime('%Y'),
         'hora': '08:00 AM',
-        'vehiculo': 'ABC-123',
-        'pasajero': 'JUAN PEREZ',
-        'dni': '12345678',
         'asiento': '03',
-        'monto': 25.00,
+        'valor': '25.00',
         'es_premiado': False
     }
-    
-    # Renderizar HTML
-    html_string = render_to_string('ventas/ticket_pdf.html', {'ticket': ticket_data})
-    
-    # Generar PDF en memoria
+    return render(request, 'ventas/boleto.html', {'boleto': boleto_data})
+
+def link_callback(uri, rel):
+    """
+    Convierte URIs de HTML a rutas absolutas del sistema de archivos
+    para que xhtml2pdf pueda encontrar e incrustar imágenes/estilos.
+    """
+    result = None
+ 
+    if uri.startswith(settings.STATIC_URL):
+        path = os.path.join(settings.STATIC_ROOT if settings.STATIC_ROOT else '', uri.replace(settings.STATIC_URL, ""))
+        # Si STATIC_ROOT no está configurado (modo desarrollo), busca en STATICFILES_DIRS
+        if not os.path.isfile(path):
+            for static_dir in getattr(settings, 'STATICFILES_DIRS', []):
+                posible = os.path.join(static_dir, uri.replace(settings.STATIC_URL, ""))
+                if os.path.isfile(posible):
+                    path = posible
+                    break
+        result = path
+ 
+    elif uri.startswith(settings.MEDIA_URL):
+        result = os.path.join(settings.MEDIA_ROOT, uri.replace(settings.MEDIA_URL, ""))
+ 
+    else:
+        # Si ya es una ruta absoluta o algo que pisa puede resolver solo
+        return uri
+ 
+    if not os.path.isfile(result):
+        raise Exception(
+            f'[link_callback] No se encontró el archivo: {result} (uri original: {uri}). '
+            f'Verifica que el logo esté en esa carpeta y que hayas corrido "python manage.py collectstatic" '
+            f'si STATIC_ROOT está configurado.'
+        )
+    return result
+ 
+
+@login_required
+def descargar_boleto_pdf(request, boleto_id):
+    """Genera y descarga el boleto en PDF (compatible con impresora térmica 80mm)"""
+    boleto_data = {
+        'id': boleto_id,
+        'numero': f"{boleto_id:06d}",
+        'fecha_emision': timezone.now().strftime("%d/%m/%Y %H:%M"),
+        'origen': 'TRUJILLO',
+        'destino': 'JULCÁN',
+        'dia': timezone.now().strftime("%d"),
+        'mes': timezone.now().strftime("%m"),
+        'anio': timezone.now().strftime("%Y"),
+        'hora': '08:00',
+        'pasajero': 'JUAN PEREZ GARCIA',
+        'dni': '12345678',
+        'ruc': '',
+        'asiento': '03',
+        'valor': 25.00,
+        'es_premiado': False
+    }
+ 
+    html_string = render_to_string('ventas/boleto_pdf.html', {'boleto': boleto_data})
+ 
     result = io.BytesIO()
     pdf = pisa.CreatePDF(
         io.BytesIO(html_string.encode("UTF-8")),
         result,
-        encoding='UTF-8'
+        encoding='UTF-8',
+        link_callback=link_callback,   # <-- ESTA LÍNEA ES LA CLAVE, faltaba antes
     )
-    
+ 
     if pdf.err:
         return HttpResponse("Error al generar el PDF", status=500)
-    
-    # Retornar archivo
+ 
     response = HttpResponse(result.getvalue(), content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="ticket_{ticket_data["numero"]}.pdf"'
+    response['Content-Disposition'] = f'attachment; filename="boleto_{boleto_data["numero"]}.pdf"'
     return response
-
-@login_required
-def ver_ticket(request, venta_id):
-    # Obtener datos de la venta desde BD
-    ticket = get_object_or_404(Venta, id=venta_id)
-    return render(request, 'ventas/ticket.html', {'ticket': ticket})
-
-
-
-
 
 
 logger = logging.getLogger('core.viajes_views')

@@ -333,26 +333,31 @@
                     <div>
                         <label class="block text-sm font-semibold text-slate-700 mb-2">Método de Pago *</label>
                         <div class="grid grid-cols-3 gap-3">
-                            <label class="cursor-pointer">
+                            <!-- Efectivo -->
+                            <label class="cursor-pointer block select-none" onclick="prevenirSalto(event)">
                                 <input type="radio" name="metodo_pago" value="efectivo" class="peer sr-only" checked>
                                 <div
-                                    class="p-3 rounded-xl border-2 border-slate-200 text-center peer-checked:bg-green-100 peer-checked:border-green-500 peer-checked:text-green-700 transition hover:bg-slate-50">
+                                    class="p-3 rounded-xl border-2 border-slate-200 text-center peer-checked:bg-green-100 peer-checked:border-green-500 peer-checked:text-green-700 transition hover:bg-slate-50 h-full flex flex-col items-center justify-center">
                                     <i class="fas fa-money-bill-wave text-2xl mb-1"></i>
                                     <p class="text-sm font-semibold">Efectivo</p>
                                 </div>
                             </label>
-                            <label class="cursor-pointer">
+
+                            <!-- Yape -->
+                            <label class="cursor-pointer block select-none" onclick="prevenirSalto(event)">
                                 <input type="radio" name="metodo_pago" value="yape" class="peer sr-only">
                                 <div
-                                    class="p-3 rounded-xl border-2 border-slate-200 text-center peer-checked:bg-purple-100 peer-checked:border-purple-500 peer-checked:text-purple-700 transition hover:bg-slate-50">
+                                    class="p-3 rounded-xl border-2 border-slate-200 text-center peer-checked:bg-purple-100 peer-checked:border-purple-500 peer-checked:text-purple-700 transition hover:bg-slate-50 h-full flex flex-col items-center justify-center">
                                     <i class="fas fa-mobile-alt text-2xl mb-1"></i>
                                     <p class="text-sm font-semibold">Yape</p>
                                 </div>
                             </label>
-                            <label class="cursor-pointer">
+
+                            <!-- Plin -->
+                            <label class="cursor-pointer block select-none" onclick="prevenirSalto(event)">
                                 <input type="radio" name="metodo_pago" value="plin" class="peer sr-only">
                                 <div
-                                    class="p-3 rounded-xl border-2 border-slate-200 text-center peer-checked:bg-teal-100 peer-checked:border-teal-500 peer-checked:text-teal-700 transition hover:bg-slate-50">
+                                    class="p-3 rounded-xl border-2 border-slate-200 text-center peer-checked:bg-teal-100 peer-checked:border-teal-500 peer-checked:text-teal-700 transition hover:bg-slate-50 h-full flex flex-col items-center justify-center">
                                     <i class="fas fa-wallet text-2xl mb-1"></i>
                                     <p class="text-sm font-semibold">Plin</p>
                                 </div>
@@ -475,14 +480,14 @@
             <a id="btnDescargarPDF" href="#"
                 class="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition shadow-lg flex items-center justify-center gap-2">
                 <i class="fas fa-file-pdf"></i>
-                <span>Descargar Ticket PDF</span>
+                <span>Descargar Boleto PDF</span>
             </a>
 
             <!-- Imprimir -->
             <button onclick="imprimirTicket()"
                 class="w-full px-6 py-3 bg-otiza-green hover:bg-otiza-dark text-white rounded-xl font-bold transition shadow-lg flex items-center justify-center gap-2">
                 <i class="fas fa-print"></i>
-                <span>Imprimir Ticket</span>
+                <span>Imprimir Boleto</span>
             </button>
 
             <!-- Cerrar -->
@@ -492,10 +497,6 @@
             </button>
         </div>
     </div>
-</div>
-
-
-</div>
 </div>
 
 {% endblock %}
@@ -549,7 +550,7 @@
 
     function seleccionarAsiento(numero, elemento) {
         if (elemento.classList.contains('ocupado')) {
-            alert('️ Este asiento ya está ocupado');
+            alert('⚠️ Este asiento ya está ocupado');
             return;
         }
 
@@ -557,14 +558,20 @@
         elemento.classList.add('seleccionado');
         asientoSeleccionado = numero;
 
-        // Actualizar formulario
+        // Formulario updates
         document.getElementById('inputAsientoNumero').value = numero;
         document.getElementById('asientoSeleccionadoDisplay').textContent = numero;
         document.getElementById('resumenAsiento').textContent = numero;
 
-        // Mostrar formulario
-        document.getElementById('pasoFormulario').classList.remove('hidden');
-        document.getElementById('pasoFormulario').scrollIntoView({ behavior: 'smooth' });
+        // Desplegar formulario de datos del cliente
+        const pasoFormulario = document.getElementById('pasoFormulario');
+        pasoFormulario.classList.remove('hidden');
+
+        // Scroll suave alineado al inicio del bloque
+        window.scrollTo({
+            top: pasoFormulario.offsetTop - 20,
+            behavior: 'smooth'
+        });
     }
 
     function volverAMapa() {
@@ -573,40 +580,28 @@
         asientoSeleccionado = null;
     }
 
-    // Función para enviar por WhatsApp
-    function enviarWhatsApp() {
-        const telefono = document.getElementById('telefonoPasajero').value.replace(/\D/g, '');
-        const asiento = document.getElementById('inputAsientoNumero').value;
-        const ruta = document.getElementById('selectRuta').options[document.getElementById('selectRuta').selectedIndex].text;
-        const fecha = document.getElementById('inputFecha').value;
-        const hora = document.getElementById('selectHorario').value;
-        const pasajero = document.querySelector('input[name="nombre_pasajero"]').value;
-        const fechaFormateada = fecha.split('-').reverse().join('/');
+    // FIX: prevenirSalto ahora vive en el scope global del script,
+    // no anidada dentro del listener de submit. Antes era inaccesible
+    // desde los onclick="prevenirSalto(event)" del HTML y tiraba
+    // "prevenirSalto is not defined".
+    function prevenirSalto(event) {
+        // Guarda la posición actual del scroll
+        const scrollActual = window.scrollY || document.documentElement.scrollTop;
 
-        const mensaje = `🚌 *OTIZA TOURS* - Confirmación de Reserva
-` +
-            `🎫 *Asiento:* ${asiento}
-` +
-            `🚌 *Ruta:* ${ruta}
-` +
-            `📅 *Fecha:* ${fechaFormateada}
-` +
-            `🕐 *Hora:* ${hora}
-` +
-            ` *Pasajero:* ${pasajero}
-` +
-            `💰 *Total:* S/ 25.00
-` +
-            `¡Gracias por viajar con nosotros! 🙏`;
-
-        const mensajeCodificado = encodeURIComponent(mensaje);
-        const whatsappURL = `https://wa.me/51${telefono}?text=${mensajeCodificado}`;
-        window.open(whatsappURL, '_blank');
+        // Espera a que se marque el radio button y restaura el scroll al instante
+        requestAnimationFrame(() => {
+            window.scrollTo({
+                top: scrollActual,
+                behavior: 'instant' // Evita la animación de movimiento
+            });
+        });
     }
 
-    // Función para imprimir ticket
+    // FIX: se eliminó la definición duplicada de imprimirTicket()
+    // (había dos: una con alert() y otra con window.print(), y la
+    // segunda pisaba a la primera). Queda una sola versión.
     function imprimirTicket() {
-        alert('🖨️ Imprimiendo ticket...\n(Tu compañero implementará la impresión térmica)');
+        window.print();
     }
 
     // Función para cerrar modal
@@ -614,11 +609,6 @@
         document.getElementById('modalConfirmacionVenta').classList.add('hidden');
         document.getElementById('formVenta').reset();
         volverAFiltros();
-    }
-
-    // Función para imprimir ticket
-    function imprimirTicket() {
-        window.print();
     }
 
     // Modificar el submit del formulario
@@ -633,9 +623,10 @@
         document.getElementById('ticketPasajero').textContent = document.querySelector('input[name="nombre_pasajero"]').value;
 
         // Configurar enlace de descarga PDF
-        // (Tu compañero debe implementar la vista que genere el PDF)
-        const ventaId = 1; // Esto vendría de la respuesta del backend
-        document.getElementById('btnDescargarPDF').href = `/tickets/${ventaId}/pdf/`;
+        // TODO: cuando procesar_venta() guarde la venta en BD y devuelva
+        // el ID real, reemplazar este valor fijo por el ID recibido del backend.
+        const ventaId = 1; // Por ahora fijo — pendiente de conectar con el backend real
+        document.getElementById('btnDescargarPDF').href = `/boletos/${ventaId}/pdf/`;
 
         // Mostrar modal
         document.getElementById('modalConfirmacionVenta').classList.remove('hidden');

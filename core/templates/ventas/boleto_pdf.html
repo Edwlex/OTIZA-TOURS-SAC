@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Boleto de Viaje - Otiza Tours</title>
+<style>
+    /* Configuración de página compatible con xhtml2pdf para tiras térmicas de 80mm */
+    @page { 
+        size: 80mm 160mm; 
+        margin: 2mm 3mm; 
+    }
+    
+    body {
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 8.5pt;
+        line-height: 1.15;
+        color: #1e3a8a;
+        margin: 0;
+        padding: 0;
+    }
+
+    /* Encabezado con Logo y Datos de la Empresa */
+    .header { 
+        text-align: center; 
+        border-bottom: 1.5px solid #1e3a8a; 
+        padding-bottom: 3px; 
+        margin-bottom: 4px; 
+    }
+    .header img { 
+        width: 75px; 
+        height: auto; 
+        margin-bottom: 2px; 
+    }
+    .header h1 { 
+        font-size: 11pt; 
+        margin: 2px 0 1px 0; 
+        color: #1e3a8a; 
+        font-weight: bold;
+    }
+    .header p { 
+        margin: 0; 
+        font-size: 6.5pt; 
+        color: #1e3a8a; 
+    }
+
+    /* Cuadro Número de Boleto */
+    .boleto-num-box {
+        border: 1.5px solid #1e3a8a;
+        text-align: center;
+        padding: 2px 0;
+        margin: 4px 0;
+    }
+    .boleto-num-box .label { 
+        font-size: 7.5pt; 
+        font-weight: bold; 
+        color: #1e3a8a; 
+    }
+    .boleto-num-box .num { 
+        font-size: 15pt; 
+        font-weight: bold; 
+        color: #dc2626; 
+    }
+
+    /* Secciones */
+    .section { 
+        margin-bottom: 4px; 
+    }
+    .section-title {
+        font-weight: bold;
+        background-color: #1e3a8a;
+        color: #ffffff;
+        padding: 1.5px 4px;
+        margin-bottom: 2px;
+        font-size: 7.5pt;
+    }
+
+    /* Tablas de Datos */
+    table.datos { 
+        width: 100%; 
+        border-collapse: collapse; 
+        font-size: 8pt; 
+    }
+    table.datos td { 
+        padding: 1px 0; 
+        vertical-align: middle; 
+    }
+    table.datos td.label { 
+        width: 45%; 
+        color: #1e3a8a; 
+        font-weight: bold; 
+    }
+    table.datos td.value { 
+        width: 55%; 
+        text-align: right; 
+        font-weight: bold; 
+        color: #000000; 
+    }
+
+    /* Asiento Destacado */
+    .asiento-destacado {
+        text-align: center;
+        margin: 4px 0;
+        padding: 2px 0;
+        border: 1.5px dashed #1e3a8a;
+    }
+    .asiento-destacado .label { 
+        font-size: 7.5pt; 
+        color: #1e3a8a; 
+        font-weight: bold;
+    }
+    .asiento-destacado .num { 
+        font-size: 18pt; 
+        font-weight: bold; 
+        color: #1e3a8a; 
+        line-height: 1;
+    }
+
+    /* Promoción / Rasca y Gana */
+    .promo {
+        background-color: #fff3cd;
+        border: 1px solid #d97706;
+        padding: 3px;
+        text-align: center;
+        margin: 4px 0;
+        font-weight: bold;
+        font-size: 7pt;
+        color: #7c2d12;
+    }
+
+    /* Total / Valor */
+    .total {
+        font-size: 12pt;
+        font-weight: bold;
+        text-align: center;
+        margin: 4px 0;
+        border-top: 1.5px solid #1e3a8a;
+        border-bottom: 1.5px solid #1e3a8a;
+        padding: 3px 0;
+        color: #1e3a8a;
+    }
+
+    /* Footer */
+    .footer { 
+        text-align: center; 
+        margin-top: 4px; 
+        font-size: 6.5pt; 
+        color: #1e3a8a; 
+    }
+    .footer p { 
+        margin: 1px 0; 
+    }
+    .footer .brand { 
+        font-weight: bold; 
+        text-transform: uppercase; 
+        letter-spacing: 0.5px; 
+    }
+</style>
+</head>
+<body>
+
+    <!-- LOGO Y DATOS DE LA EMPRESA -->
+    <div class="header">
+        <img src="{% static 'images/otiza.png' %}" alt="Otiza Tours">
+        <h1>OTIZA TOURS S.A.C.</h1>
+        <p>R.U.C. N° 20603076304</p>
+        <p>JULCÁN: Cal. La Cultura S/N &bull; 902430951</p>
+        <p>MACHE: Cal. Maravillas N° 102 &bull; 921700432</p>
+        <p>TRUJILLO: Prolong. Unión N° 1477 &bull; 929698732</p>
+    </div>
+
+    <!-- NÚMERO DE BOLETO -->
+    <div class="boleto-num-box">
+        <div class="label">BOLETO DE RUTA N°</div>
+        <div class="num">{{ boleto.numero }}</div>
+    </div>
+
+    <!-- DATOS DEL VIAJE -->
+    <div class="section">
+        <div class="section-title">DATOS DEL VIAJE</div>
+        <table class="datos">
+            <tr><td class="label">ORIGEN:</td><td class="value">{{ boleto.origen }}</td></tr>
+            <tr><td class="label">DESTINO:</td><td class="value">{{ boleto.destino }}</td></tr>
+            <tr><td class="label">FECHA DE VIAJE:</td><td class="value">{{ boleto.dia }}/{{ boleto.mes }}/{{ boleto.anio }}</td></tr>
+            <tr><td class="label">HORA DE SALIDA:</td><td class="value">{{ boleto.hora }}</td></tr>
+        </table>
+    </div>
+
+    <!-- DATOS DEL PASAJERO -->
+    <div class="section">
+        <div class="section-title">NOMBRES Y APELLIDOS DEL PASAJERO</div>
+        <table class="datos">
+            <tr><td class="label">PASAJERO:</td><td class="value">{{ boleto.pasajero }}</td></tr>
+            <tr><td class="label">D.N.I.:</td><td class="value">{{ boleto.dni }}</td></tr>
+            {% if boleto.ruc %}
+            <tr><td class="label">R.U.C.:</td><td class="value">{{ boleto.ruc }}</td></tr>
+            {% endif %}
+        </table>
+    </div>
+
+    <!-- ASIENTO DESTACADO -->
+    <div class="asiento-destacado">
+        <div class="label">ASIENTO</div>
+        <div class="num">{{ boleto.asiento }}</div>
+    </div>
+
+    {% if boleto.es_premiado %}
+    <div class="promo">
+        ¡FELICIDADES! HAS COMPLETADO 12 VIAJES<br>
+        PRESENTA ESTE BOLETO PARA TU RASCA Y GANA
+    </div>
+    {% endif %}
+
+    <!-- TOTAL -->
+    <div class="total">VALOR: S/ {{ boleto.valor|floatformat:2 }}</div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+        <p>Emitido: {{ boleto.fecha_emision }}</p>
+        <p>¡Gracias por viajar con nosotros!</p>
+        <p class="brand">Seguridad y Confianza</p>
+    </div>
+
+</body>
+</html>
