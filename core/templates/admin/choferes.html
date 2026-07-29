@@ -58,8 +58,8 @@
                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Nombre</th>
                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Licencia</th>
                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Categoría</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Rutas Asignadas</th>
                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Teléfono</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Sede</th>
                     <th class="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Estado</th>
                     <th class="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Acciones</th>
                 </tr>
@@ -85,8 +85,28 @@
                             {{ chofer.categoria_licencia }}
                         </span>
                     </td>
+                    
+                    <!-- AQUÍ ESTÁ EL CAMBIO: COLUMNA DE RUTAS -->
+                    <td class="px-6 py-4">
+                        {% if chofer.rutas_asignadas.all %}
+                        <div class="flex flex-wrap gap-1">
+                            {% for ruta in chofer.rutas_asignadas.all|slice:":2" %}
+                            <span class="px-2 py-1 bg-indigo-50 text-indigo-700 text-xs rounded-full font-medium border border-indigo-100">
+                                {{ ruta.origen|slice:":3" }} → {{ ruta.destino|slice:":3" }}
+                            </span>
+                            {% endfor %}
+                            {% if chofer.rutas_asignadas.count > 2 %}
+                            <span class="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full font-medium border border-gray-200">
+                                +{{ chofer.rutas_asignadas.count|add:"-2" }}
+                            </span>
+                            {% endif %}
+                        </div>
+                        {% else %}
+                        <span class="text-sm text-gray-400 italic">Sin rutas</span>
+                        {% endif %}
+                    </td>
+                    
                     <td class="px-6 py-4 text-gray-700">{{ chofer.telefono }}</td>
-                    <td class="px-6 py-4 text-gray-700">{{ chofer.sede }}</td>
                     <td class="px-6 py-4 text-center">
                         <span class="px-3 py-1 rounded-full text-xs font-semibold {% if chofer.activo %}bg-green-100 text-green-700{% else %}bg-red-100 text-red-700{% endif %}">
                             {% if chofer.activo %}Activo{% else %}Inactivo{% endif %}

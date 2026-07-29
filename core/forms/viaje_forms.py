@@ -1,6 +1,8 @@
 from django import forms
-from core.models import Viaje, Ruta, Vehiculo, Sede
-
+from django.core.exceptions import ValidationError
+from django.utils import timezone
+from core.models import Viaje, Ruta, Vehiculo, Sede, Usuario
+from datetime import date, datetime, time
 
 class ViajeForm(forms.ModelForm):
     """Formulario para crear/editar viajes"""
@@ -8,7 +10,7 @@ class ViajeForm(forms.ModelForm):
     class Meta:
         model = Viaje
         fields = [
-            'ruta', 'vehiculo', 'sede_salida',
+            'ruta', 'vehiculo', 'sede_salida', 'chofer_asignado',
             'fecha_salida', 'hora_salida'
         ]
         widgets = {
@@ -21,54 +23,92 @@ class ViajeForm(forms.ModelForm):
             'sede_salida': forms.Select(attrs={
                 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500'
             }),
+            'chofer_asignado': forms.Select(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500'
+            }),
             'fecha_salida': forms.DateInput(attrs={
                 'type': 'date',
-                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500'
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500',
+                'min': date.today().isoformat(),  # ← BLOQUEA FECHAS PASADAS EN EL CALENDARIO
             }),
             'hora_salida': forms.TimeInput(attrs={
                 'type': 'time',
-                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500'
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500',
             }),
         }
+        labels = {
+            'chofer_asignado': 'Chofer Asignado',
+        }
+        help_texts = {
+            'chofer_asignado': 'Selecciona el chofer que realizará este viaje',
+        }
 
-        def clean(self):
-            """Validación cruzada: Fecha y hora no pueden ser en el pasado"""
-            from django.utils import timezone
-            
-            cleaned_data = super().clean()
-            fecha_salida = cleaned_data.get('fecha_salida')
-            hora_salida = cleaned_data.get('hora_salida')
-            
-            if fecha_salida and hora_salida:
-                ahora = timezone.now()
-                salida_dt = timezone.make_aware(
-                    timezone.datetime.combine(fecha_salida, hora_salida)
-                )
-                
-                # Validar que no sea en el pasado
-                if salida_dt < ahora:
-                    raise ValidationError(
-                        "No se puede programar un viaje en el pasado. "
-                        "La fecha y hora de salida deben ser iguales o posteriores a la actual."
-                    )
-                
-                # Validar que no sea hoy con hora pasada
-                if fecha_salida == ahora.date() and hora_salida < ahora.time():
-                    raise ValidationError(
-                        f"No se puede programar un viaje para hoy antes de la hora actual ({ahora.strftime('%H:%M')})."
-                    )
-            
-            return cleaned_data
-    
     def __init__(self, *args, **kwargs):
         self.usuario = kwargs.pop('usuario', None)
         super().__init__(*args, **kwargs)
         
-        # Si hay un usuario, filtrar vehículos por su sede
-        if self.usuario and not self.usuario.is_superuser:
-            self.fields['vehiculo'].queryset = Vehiculo.objects.filter(
-                sede_asignada=self.usuario.sede,
-                activo=True
-            )
-            self.fields['sede_salida'].initial = self.usuario.sede
-            self.fields['sede_salida'].widget.attrs['readonly'] = True
+        if self.usuario:
+            # ✅ 1. Filtrar choferes disponibles
+            if self.usuario.is_superuser or self.usuario.sede.nombre == 'Oficina Central':
+                self.fields['chofer_asignado'].queryset = Usuario.objects.filter(
+                    es_chofer=True, activo=True
+                )
+            else:
+                self.fields['chofer_asignado'].queryset = Usuario.objects.filter(
+                    es_chofer=True, activo=True, sede=self.usuario.sede
+                )
+            
+            self.fields['chofer_asignado'].label_from_instance = lambda obj: f"{obj.get_full_name()} ({obj.username})"
+            
+            # ✅ 2. Filtrar vehículos y bloquear sede para cajeros/no-admins
+            if not self.usuario.is_superuser and self.usuario.sede.nombre != 'Oficina Central':
+                self.fields['vehiculo'].queryset = Vehiculo.objects.filter(
+                    sede_asignada=self.usuario.sede, activo=True
+                )
+                self.fields['sede_salida'].initial = self.usuario.sede
+                self.fields['sede_salida'].widget.attrs['readonly'] = True 
+
+    def clean(self):
+        cleaned_data = super().clean()
+        
+        ruta = cleaned_data.get('ruta')
+        sede_salida = cleaned_data.get('sede_salida')
+        fecha_salida = cleaned_data.get('fecha_salida')
+        hora_salida = cleaned_data.get('hora_salida')
+        
+        # ==========================================
+        # 1. VALIDACIÓN Y AUTO-ASIGNACIÓN DE SEDE
+        # ==========================================
+        if ruta:
+            try:
+                # Busca la sede cuyo nombre contenga el origen de la ruta
+                sede_origen = Sede.objects.get(nombre__icontains=ruta.origen.strip())
+            except Sede.DoesNotExist:
+                raise ValidationError(f"⚠️ No hay una sede registrada para '{ruta.origen}'. Configúrala primero en el panel.")
+
+            # Si no eligió sede, la asignamos automáticamente
+            if not sede_salida:
+                cleaned_data['sede_salida'] = sede_origen
+            # Si eligió una manualmente, validamos que COINCIDA con el origen
+            elif sede_salida.id != sede_origen.id:
+                raise ValidationError(
+                    f" La sede de salida DEBE ser '{sede_origen.nombre}' (origen de la ruta). "
+                    f"Seleccionaste '{sede_salida.nombre}'. Corrige la selección."
+                )
+        
+        # ==========================================
+        # 2. VALIDACIÓN DE FECHA/HORA (NO PASADO)
+        # ==========================================
+        if fecha_salida and hora_salida:
+            viaje_dt = datetime.combine(fecha_salida, hora_salida)
+            ahora_local = timezone.localtime(timezone.now())
+            ahora_naive = ahora_local.replace(tzinfo=None)
+            
+            if viaje_dt < ahora_naive:
+                raise ValidationError(
+                    f"⏳ No se puede programar un viaje en el pasado. "
+                    f"Ahora: {ahora_naive.strftime('%d/%m %H:%M')} | "
+                    f"Viaje: {viaje_dt.strftime('%d/%m %H:%M')}"
+                )
+        
+        return cleaned_data

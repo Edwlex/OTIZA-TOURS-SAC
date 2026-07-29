@@ -1,159 +1,311 @@
-{% extends 'base_cajero.html' %}
+<!DOCTYPE html>
 {% load static %}
-{% block title %}Boleto - Otiza Tours{% endblock %}
-{% block content %}
-<div class="max-w-md mx-auto px-4 py-6">
-    <!-- BOLETO VISUAL -->
-    <div id="boletoContent" class="bg-white border-2 border-gray-300 rounded-lg p-6 font-mono text-sm shadow-lg">
-        <!-- Header -->
-        <div class="text-center border-b-2 border-blue-600 pb-3 mb-4">
-            <h2 class="text-xl font-bold text-blue-600 tracking-tight">OTIZA TOURS S.A.C.</h2>
-            <p class="text-xs mt-1">R.U.C. 20603076304</p>
-            <p class="text-xs font-semibold mt-2 text-blue-600">BOLETO N° {{ boleto.numero|default:"000001" }}</p>
-        </div>
-        
-        <!-- Pasajero -->
-        <div class="mb-3">
-            <p class="font-bold text-blue-600 text-xs border-b border-gray-300 mb-1">NOMBRE DEL PASAJERO</p>
-            <p class="font-semibold">{{ boleto.pasajero|default:"JUAN PEREZ GARCIA" }}</p>
-        </div>
-        
-        <!-- Ruta -->
-        <div class="grid grid-cols-2 gap-2 mb-3">
-            <div>
-                <p class="font-bold text-blue-600 text-xs border-b border-gray-300 mb-1">ORIGEN</p>
-                <p class="font-semibold">{{ boleto.origen|default:"TRUJILLO" }}</p>
-            </div>
-            <div>
-                <p class="font-bold text-blue-600 text-xs border-b border-gray-300 mb-1">DESTINO</p>
-                <p class="font-semibold">{{ boleto.destino|default:"JULCÁN" }}</p>
-            </div>
-        </div>
-        
-        <!-- Fecha y Hora -->
-        <div class="grid grid-cols-2 gap-2 mb-3">
-            <div>
-                <p class="font-bold text-blue-600 text-xs border-b border-gray-300 mb-1">FECHA</p>
-                <p class="font-semibold">{{ boleto.fecha_emision|default:"21/07/2026" }}</p>
-            </div>
-            <div>
-                <p class="font-bold text-blue-600 text-xs border-b border-gray-300 mb-1">HORA</p>
-                <p class="font-semibold">{{ boleto.hora|default:"08:00" }}</p>
-            </div>
-        </div>
-        
-        <!-- Asiento -->
-        <div class="mb-3">
-            <p class="font-bold text-blue-600 text-xs border-b border-gray-300 mb-1">ASIENTO</p>
-            <div class="text-center border-2 border-blue-600 rounded-lg py-2 text-2xl font-bold text-blue-600">
-                {{ boleto.asiento|default:"03" }}
-            </div>
-        </div>
-        
-        <!-- DNI -->
-        <div class="mb-3">
-            <p class="font-bold text-blue-600 text-xs border-b border-gray-300 mb-1">D.N.I.</p>
-            <p class="font-semibold">{{ boleto.dni|default:"12345678" }}</p>
-        </div>
-        
-        <!-- Total -->
-        <div class="border-2 border-blue-600 rounded-lg p-3 text-center bg-blue-50 mb-3">
-            <p class="text-xs text-blue-600 font-bold">VALOR (Soles)</p>
-            <p class="text-2xl font-bold">S/ {{ boleto.valor|default:"25.00" }}</p>
-        </div>
-        
-        <!-- Premio -->
-        {% if boleto.es_premiado == 'True' %}
-        <div class="bg-yellow-100 border-2 border-yellow-500 rounded p-3 mb-3 text-center">
-            <p class="text-sm font-bold text-yellow-800">🎉 ¡FELICIDADES!</p>
-            <p class="text-xs text-yellow-700">Ha completado 12 viajes</p>
-            <p class="text-xs font-bold text-yellow-800">ENTREGUE RASCA Y GANA</p>
-        </div>
-        {% endif %}
-        
-        <!-- Footer -->
-        <div class="text-center mt-4 text-xs text-gray-500 border-t border-gray-200 pt-3">
-            <p>¡Gracias por viajar con nosotros!</p>
-            <p class="mt-1 font-bold">OTIZA TOURS S.A.C.</p>
-        </div>
-    </div>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Boleto de Ruta - Otiza Tours</title>
+<style>
+    @page { 
+        size: 80mm 165mm; 
+        margin: 2mm 3mm; 
+    }
     
-    <!-- BOTONES DE ACCIÓN -->
-    <div class="mt-6 grid grid-cols-1 gap-3">
-        <button onclick="window.print()" class="w-full bg-otiza-green hover:bg-otiza-dark text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition">
-            <i class="fas fa-print"></i> ️ Imprimir Boleto
-        </button>
-        <a href="{% url 'core:descargar_boleto_pdf' boleto.id %}" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition text-center">
-            <i class="fas fa-file-pdf"></i> Descargar Boleto PDF
-        </a>
-        <button onclick="enviarWhatsApp()" class="w-full bg-green-500 hover:bg-green-600 text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition">
-            <i class="fab fa-whatsapp"></i> 📱 Enviar por WhatsApp
-        </button>
-        <a href="{% url 'core:dashboard' %}" class="w-full bg-gray-500 hover:bg-gray-600 text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition text-center">
-            <i class="fas fa-arrow-left"></i> ← Volver
-        </a>
+    body {
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 7.5pt;
+        color: #0b2e83;
+        margin: 0;
+        padding: 0;
+    }
+
+    .ticket-container {
+        width: 100%;
+        border: 1.5px solid #0b2e83;
+        padding: 3px;
+        box-sizing: border-box;
+    }
+
+    /* ENCABEZADO CON LOGO Y DIRECCIONES */
+    .header-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 3px;
+    }
+    .logo-cell {
+        width: 35%;
+        text-align: center;
+        vertical-align: middle;
+    }
+    .logo-cell img {
+        width: 60px;
+        height: auto;
+    }
+    .company-cell {
+        width: 65%;
+        text-align: center;
+        vertical-align: middle;
+    }
+    .company-title {
+        font-size: 9pt;
+        font-weight: bold;
+        color: #0b2e83;
+        margin: 0;
+    }
+    .company-info {
+        font-size: 5.5pt;
+        color: #0b2e83;
+        line-height: 1.15;
+        margin-top: 1px;
+    }
+
+    /* RUC Y NUMERO BOLETO */
+    .ruc-box {
+        border: 1.5px solid #0b2e83;
+        text-align: center;
+        padding: 2px 0;
+        margin-bottom: 4px;
+        background-color: #ffffff;
+    }
+    .ruc-text {
+        font-size: 7pt;
+        font-weight: bold;
+        color: #0b2e83;
+    }
+    .boleto-tipo {
+        font-size: 8.5pt;
+        font-weight: bold;
+        color: #0b2e83;
+        margin: 1px 0;
+    }
+    .boleto-num {
+        font-size: 14pt;
+        font-weight: bold;
+        color: #dc2626;
+    }
+
+    /* CONTENEDORES DE CAMPOS CON ENCABEZADO AZUL */
+    .box-container {
+        border: 1px solid #0b2e83;
+        margin-bottom: 3px;
+        border-radius: 2px;
+        overflow: hidden;
+    }
+    .box-header {
+        background-color: #0b2e83;
+        color: #ffffff;
+        font-size: 6.5pt;
+        font-weight: bold;
+        text-align: center;
+        padding: 1.5px 0;
+        text-transform: uppercase;
+    }
+    .box-content {
+        min-height: 14px;
+        padding: 2px 3px;
+        font-size: 8pt;
+        font-weight: bold;
+        color: #000000;
+        text-align: center;
+        text-transform: uppercase;
+    }
+
+    /* TABLA FECHA DIVIDIDA */
+    table.fecha-table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: center;
+    }
+    table.fecha-table th {
+        background-color: #0b2e83;
+        color: #ffffff;
+        font-size: 5.5pt;
+        font-weight: bold;
+        padding: 1px 0;
+        border-right: 1px solid #ffffff;
+    }
+    table.fecha-table th:last-child {
+        border-right: none;
+    }
+    table.fecha-table td {
+        font-size: 8pt;
+        font-weight: bold;
+        color: #000000;
+        padding: 2px 0;
+        border-right: 1px solid #0b2e83;
+    }
+    table.fecha-table td:last-child {
+        border-right: none;
+    }
+
+    /* VALOR Y PROMOCION */
+    .promo-box {
+        border: 1px dashed #d97706;
+        background-color: #fff3cd;
+        color: #7c2d12;
+        padding: 3px;
+        text-align: center;
+        font-size: 6.5pt;
+        font-weight: bold;
+        margin-bottom: 3px;
+    }
+
+    /* FOOTER Y FIRMA */
+    .footer {
+        margin-top: 4px;
+        text-align: center;
+        font-size: 6pt;
+        color: #0b2e83;
+    }
+    .footer-line {
+        border-bottom: 1px solid #0b2e83;
+        margin-bottom: 3px;
+    }
+    .pasajero-firma {
+        color: #dc2626;
+        font-weight: bold;
+        font-size: 8pt;
+        margin-top: 4px;
+    }
+</style>
+</head>
+<body>
+
+<div class="ticket-container">
+    <!-- LOGO Y DATOS DE EMPRESA -->
+    <table class="header-table">
+        <tr>
+            <td class="logo-cell">
+                <img src="{% static 'images/otiza.png' %}" alt="Otiza Tours">
+            </td>
+            <td class="company-cell">
+                <div class="company-title">OTIZA TOURS S.A.C.</div>
+                <div class="company-info">
+                    JULCÁN: Cal. La Cultura S/N - 902430951<br>
+                    MACHE: Cal. Maravillas N° 102 - 921700432<br>
+                    TRUJILLO: Prolong. Unión N° 1477 - 929698732
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <!-- RUC Y NUMERO -->
+    <div class="ruc-box">
+        <div class="ruc-text">R.U.C. N° 20603076304</div>
+        <div class="boleto-tipo">BOLETO DE RUTA</div>
+        <div class="boleto-num">Nº {{ boleto.numero }}</div>
+    </div>
+
+    <!-- NOMBRE O RAZÓN SOCIAL -->
+    <div class="box-container">
+        <div class="box-header">NOMBRE O RAZÓN SOCIAL</div>
+        <div class="box-content">{% if boleto.razon_social %}{{ boleto.razon_social }}{% else %}&nbsp;{% endif %}</div>
+    </div>
+
+    <!-- NOMBRES Y APELLIDOS DEL PASAJERO -->
+    <div class="box-container">
+        <div class="box-header">NOMBRES Y APELLIDOS DEL PASAJERO</div>
+        <div class="box-content">{{ boleto.pasajero }}</div>
+    </div>
+
+    <!-- TABLA DE RUC Y DNI -->
+    <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+            <td style="width: 49%; padding-right: 1%;">
+                <div class="box-container">
+                    <div class="box-header">R.U.C.</div>
+                    <div class="box-content">{% if boleto.ruc %}{{ boleto.ruc }}{% else %}&nbsp;{% endif %}</div>
+                </div>
+            </td>
+            <td style="width: 50%; padding-left: 1%;">
+                <div class="box-container">
+                    <div class="box-header">D.N.I.</div>
+                    <div class="box-content">{{ boleto.dni }}</div>
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <!-- ORIGEN Y DESTINO -->
+    <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+            <td style="width: 49%; padding-right: 1%;">
+                <div class="box-container">
+                    <div class="box-header">ORIGEN</div>
+                    <div class="box-content" style="font-size: 8.5pt;">{{ boleto.origen }}</div>
+                </div>
+            </td>
+            <td style="width: 50%; padding-left: 1%;">
+                <div class="box-container">
+                    <div class="box-header">DESTINO</div>
+                    <div class="box-content" style="font-size: 8.5pt;">{{ boleto.destino }}</div>
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <!-- FECHA, HORA Y ASIENTO -->
+    <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+            <td style="width: 42%; padding-right: 1%;">
+                <div class="box-container">
+                    <div class="box-header">FECHA DE VIAJE</div>
+                    <table class="fecha-table">
+                        <tr>
+                            <th>DÍA</th>
+                            <th>MES</th>
+                            <th>AÑO</th>
+                        </tr>
+                        <tr>
+                            <td>{{ boleto.dia }}</td>
+                            <td>{{ boleto.mes }}</td>
+                            <td>{{ boleto.anio|slice:"-2:" }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </td>
+            <td style="width: 35%; padding-right: 1%; padding-left: 1%;">
+                <div class="box-container">
+                    <div class="box-header">HORA SALIDA</div>
+                    <div class="box-content">{{ boleto.hora }}</div>
+                </div>
+            </td>
+            <td style="width: 21%; padding-left: 1%;">
+                <div class="box-container">
+                    <div class="box-header">ASIENTO</div>
+                    <div class="box-content" style="font-size: 10pt; color: #0b2e83;">{{ boleto.asiento }}</div>
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    {% if boleto.es_premiado %}
+    <div class="promo-box">
+        ¡FELICIDADES! HAS COMPLETADO 12 VIAJES<br>
+        PRESENTA ESTE BOLETO PARA TU RASCA Y GANA
+    </div>
+    {% endif %}
+
+    <!-- VALOR -->
+    <div class="box-container" style="margin-top: 2px;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+                <td style="width: 30%; background-color: #0b2e83; color: white; font-weight: bold; font-size: 8pt; text-align: center; vertical-align: middle;">
+                    VALOR
+                </td>
+                <td style="width: 70%; font-size: 12pt; font-weight: bold; text-align: center; color: #000000; padding: 2px 0;">
+                    S/ {{ boleto.valor|floatformat:2 }}
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- FIRMA Y FOOTER -->
+    <div class="footer">
+        <div class="footer-line"></div>
+        <div>OTIZA TOURS S.A.C.</div>
+        <div class="pasajero-firma">PASAJERO</div>
     </div>
 </div>
 
-<style>
-@media print {
-    body * { visibility: hidden; }
-    #boletoContent, #boletoContent * { visibility: visible; }
-    #boletoContent {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 80mm;
-        font-size: 11px;
-        border: none;
-        box-shadow: none;
-        padding: 3mm;
-    }
-    .no-print { display: none !important; }
-}
-#boletoContent {
-    max-width: 320px;
-    margin: 0 auto;
-}
-</style>
-
-<script>
-function enviarWhatsApp() {
-    const boletoNum = "{{ boleto.numero|default:'000001' }}";
-    const origen = "{{ boleto.origen|default:'TRUJILLO' }}";
-    const destino = "{{ boleto.destino|default:'JULCÁN' }}";
-    const fecha = "{{ boleto.fecha_emision|default:'21/07/2026' }}";
-    const hora = "{{ boleto.hora|default:'08:00' }}";
-    const asiento = "{{ boleto.asiento|default:'03' }}";
-    const pasajero = "{{ boleto.pasajero|default:'JUAN PEREZ' }}";
-    const dni = "{{ boleto.dni|default:'12345678' }}";
-    const total = "S/ {{ boleto.valor|default:'25.00' }}";
-    
-    // URL REAL que genera el PDF
-    const pdfUrl = window.location.origin + "{% url 'core:descargar_boleto_pdf' boleto.id %}";
-    
-    const mensaje = `🚌 *OTIZA TOURS* - Boleto Oficial
-` +
-`🎫 Boleto: ${boletoNum}
-` +
-`👤 Pasajero: ${pasajero} (DNI: ${dni})
-` +
-`🚌 Ruta: ${origen} → ${destino}
-` +
-`📅 Fecha: ${fecha}
-` +
-` Hora: ${hora}
-` +
-` Asiento: ${asiento}
-` +
-`💰 Total: ${total}
-` +
-`📥 *Descarga tu boleto PDF aquí:*
-${pdfUrl}
-` +
-`¡Buen viaje! 🙏`;
-    
-    window.open(`https://wa.me/?text=${encodeURIComponent(mensaje)}`, '_blank');
-}
-</script>
-{% endblock %}
+</body>
+</html>

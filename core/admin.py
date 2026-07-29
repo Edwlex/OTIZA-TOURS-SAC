@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import Sede, Usuario, Vehiculo, Ruta, Viaje, AsientoViaje, Venta, Incidencia
+from .models import HorarioFijo, Sede, Usuario, Vehiculo, Ruta, Viaje, AsientoViaje, Venta, Incidencia
 
 # ==================== SEDE ====================
 @admin.register(Sede)
@@ -22,10 +22,15 @@ class UsuarioAdmin(UserAdmin):
 # ==================== VEHÍCULO ====================
 @admin.register(Vehiculo)
 class VehiculoAdmin(admin.ModelAdmin):
-    list_display = ('placa', 'marca', 'modelo', 'año', 'capacidad_asientos', 'sede_asignada', 'activo')
-    list_filter = ('sede_asignada', 'activo', 'marca')
-    search_fields = ('placa', 'marca', 'modelo')
-
+    list_display = ['placa', 'marca', 'modelo', 'año', 'capacidad_asientos', 'get_rutas_display', 'chofer_asignado', 'activo']
+    list_filter = ['activo', 'marca', 'rutas_asignadas', 'chofer_asignado']  # ✅ Cambiado de 'sede_asignada' a 'rutas_asignadas'
+    search_fields = ['placa', 'marca', 'modelo', 'chofer_asignado__username', 'chofer_asignado__first_name', 'chofer_asignado__last_name']
+    
+    def get_rutas_display(self, obj):
+        """Muestra las rutas asignadas"""
+        return obj.get_rutas_display()
+    get_rutas_display.short_description = 'Rutas'
+    
 # ==================== RUTA ====================
 @admin.register(Ruta)
 class RutaAdmin(admin.ModelAdmin):
@@ -63,3 +68,10 @@ class IncidenciaAdmin(admin.ModelAdmin):
     list_filter = ('tipo', 'estado', 'sede_reporte')
     search_fields = ('descripcion', 'reportado_por__username')
     date_hierarchy = 'fecha_reporte'
+
+
+@admin.register(HorarioFijo)
+class HorarioFijoAdmin(admin.ModelAdmin):
+    list_display = ['ruta', 'hora_salida', 'dias_semana', 'activa']
+    list_filter = ['activa', 'dias_semana']
+    search_fields = ['ruta__origen', 'ruta__destino']

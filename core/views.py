@@ -2,10 +2,11 @@
 import os
 import re
 import secrets
-import io
+from io import BytesIO
 import json
 import logging
-from datetime import datetime, timedelta
+import random 
+from datetime import datetime, timedelta,time   
 
 # ==================== DJANGO CORE ====================
 from django.conf import settings
@@ -13,8 +14,9 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
-from django.http import HttpResponse
-from django.db.models import Count, Q, Sum
+from django.http import HttpResponse, JsonResponse, HttpResponseRedirect
+from django.db.models import Count, Q, Sum, IntegerField
+from django.db.models.functions import ExtractHour, Cast
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.utils import timezone
@@ -48,7 +50,7 @@ from core.forms.vehiculo_forms import VehiculoForm
 from core.forms.viaje_forms import ViajeForm
 
 # ==================== MODELOS ====================
-from core.models import Incidencia, Ruta, Sede, Usuario, Vehiculo, Viaje, Venta
+from core.models import Incidencia, Ruta, Sede, Usuario, Vehiculo, Viaje, Venta, AsientoViaje, HorarioFijo
 
 # ==================== LOGGERS ====================
 logger = logging.getLogger('core.views')
@@ -173,153 +175,393 @@ def dashboard_view(request):
         return dashboard_cajero(request, usuario, sede)
 
 
+@login_required
 def dashboard_cajero(request, usuario, sede):
-    """Dashboard para cajeros de Trujillo, Julcán y Mache"""
+    """Dashboard para cajeros - CON DATOS REALES DE SU SEDE y FILTRO DE PASADOS"""
+    
     hoy = timezone.now().date()
-
-    # Datos hardcodeados (después serán consultas a BD)
-    ventas_hoy = 15
-    monto_total_hoy = 1540.00
-    viajes_completados_hoy = 8
-
-    proximos_viajes = [
-        {
-            'id': 1, 'hora_salida': '08:00', 'ruta': 'Trujillo → Julcán',
-            'vehiculo': {'placa': 'ABC-123', 'modelo': 'Toyota Hiace'},
-            'asientos_disponibles': 5, 'asientos_totales': 20,
-            'estado': 'Disponible', 'porcentaje_ocupacion': 75
-        },
-        {
-            'id': 2, 'hora_salida': '10:30', 'ruta': 'Trujillo → Mache',
-            'vehiculo': {'placa': 'XYZ-789', 'modelo': 'Nissan Urvan'},
-            'asientos_disponibles': 12, 'asientos_totales': 20,
-            'estado': 'Disponible', 'porcentaje_ocupacion': 40
-        },
-    ]
-
-    viajes_recientes = [
-        {
-            'fecha': '2026-07-14', 'hora': '08:00',
-            'ruta_origen': 'Trujillo', 'ruta_destino': 'Julcán',
-            'vehiculo': {'placa': 'ABC-123'},
-            'asientos_ocupados': 18, 'ingreso': 450.00, 'estado': 'Completado'
-        },
-    ]
-
+    ahora = timezone.localtime(timezone.now()).time()  # ← AGREGADO: Hora actual local
+    
+    # ==================== 1. KPIs DEL DÍA (Solo de esta sede) ====================
+    
+    # Ventas de hoy para esta sede
+    ventas_hoy_qs = Venta.objects.filter(
+        sede_venta=sede,
+        fecha_venta__date=hoy
+    )
+    ventas_hoy = ventas_hoy_qs.count()
+    monto_total_hoy = ventas_hoy_qs.aggregate(total=Sum('monto_total'))['total'] or 0
+    
+    # Viajes completados hoy para esta sede
+    viajes_completados_hoy = Viaje.objects.filter(
+        sede_salida=sede,
+        fecha_salida=hoy,
+        estado='finalizado'
+    ).count()
+    
+    # Pasajeros transportados hoy (1 venta = 1 pasajero)
+    total_pasajeros_hoy = ventas_hoy_qs.count()
+    
+    # ==================== 2. PRÓXIMOS VIAJES (Solo de esta sede) - CORREGIDO ✅ ====================
+    
+    # FILTRO CLAVE: Excluir viajes pasados (fecha < hoy O fecha=hoy y hora < ahora)
+    proximos_viajes_qs = Viaje.objects.filter(
+        sede_salida=sede,
+        fecha_salida=hoy,  # Solo hoy
+        estado__in=['programado', 'en_curso'],
+        hora_salida__gte=ahora  # ← SOLO viajes con hora >= ahora (excluye los pasados)
+    ).select_related('ruta', 'vehiculo').prefetch_related('asientos').order_by('hora_salida')[:5]
+    
+    proximos_viajes = []
+    for viaje in proximos_viajes_qs:
+        asientos = viaje.asientos.all()
+        total = asientos.count()
+        disponibles = asientos.filter(estado='disponible').count()
+        ocupacion = ((total - disponibles) / total * 100) if total > 0 else 0
+        
+        proximos_viajes.append({
+            'id': viaje.id,
+            'hora_salida': viaje.hora_salida.strftime('%H:%M'),
+            'ruta': f"{viaje.ruta.origen} → {viaje.ruta.destino}",
+            'vehiculo': {'placa': viaje.vehiculo.placa, 'modelo': viaje.vehiculo.modelo},
+            'asientos_disponibles': disponibles,
+            'asientos_totales': total,
+            'estado': viaje.get_estado_display(),
+            'porcentaje_ocupacion': round(ocupacion, 1)
+        })
+    
+    # ==================== 3. VIAJES RECIENTES (Últimos 3 días, esta sede) ====================
+    # (Este ya está bien, muestra viajes finalizados del pasado)
+    
+    viajes_recientes_qs = Viaje.objects.filter(
+        sede_salida=sede,
+        fecha_salida__gte=hoy - timedelta(days=3),
+        estado='finalizado'
+    ).select_related('ruta', 'vehiculo').order_by('-fecha_salida', '-hora_salida')[:5]
+    
+    viajes_recientes = []
+    for viaje in viajes_recientes_qs:
+        ingresos = viaje.ventas.aggregate(total=Sum('monto_total'))['total'] or 0
+        pasajeros = viaje.ventas.count()
+        
+        viajes_recientes.append({
+            'fecha': viaje.fecha_salida.strftime('%d/%m/%Y'),
+            'hora': viaje.hora_salida.strftime('%H:%M'),
+            'ruta_origen': viaje.ruta.origen,
+            'ruta_destino': viaje.ruta.destino,
+            'vehiculo': {'placa': viaje.vehiculo.placa},
+            'asientos_ocupados': pasajeros,
+            'ingreso': ingresos,
+            'estado': 'Completado'
+        })
+    
+    # ==================== 4. FIDELIZACIÓN ====================
+    clientes_cercanos = []
+    clientes_sede = FidelizacionService.obtener_progreso_clientes(filtro='cerca')
+    
+    for cliente in clientes_sede:
+        ventas_cliente_en_sede = Venta.objects.filter(
+            numero_documento=cliente['dni'],
+            sede_venta=sede
+        ).count()
+        
+        if ventas_cliente_en_sede > 0:
+            clientes_cercanos.append({
+                'dni': cliente['dni'],
+                'nombre': cliente['nombre'],
+                'viajes_en_sede': ventas_cliente_en_sede,
+                'faltan_para_premio': cliente['faltan']
+            })
+    
+    # ==================== 5. CONTEXTO BASE ====================
+    
+    contexto = {
+        'usuario': usuario,
+        'sede': sede,
+        'es_admin': False,
+        
+        # KPIs
+        'ventas_hoy': ventas_hoy,
+        'monto_total_hoy': monto_total_hoy,
+        'viajes_completados_hoy': viajes_completados_hoy,
+        'total_pasajeros_hoy': total_pasajeros_hoy,
+        
+        # Listas
+        'proximos_viajes': proximos_viajes,  # ← Ahora SIN viajes pasados
+        'viajes_recientes': viajes_recientes,
+        'clientes_cercanos': clientes_cercanos[:3],
+        
+        # Para búsqueda de cliente en fidelización
+        'cliente_busqueda': request.GET.get('dni_cliente', ''),
+    }
+    
+    # ==================== 6. DATOS PARA GRÁFICOS (Solo de esta sede) ====================
+    
+    # Gráfico 1: Ventas por hora (hoy)
+    ventas_por_hora = Venta.objects.filter(
+        sede_venta=sede,
+        fecha_venta__date=hoy
+    ).annotate(
+        hora=ExtractHour('fecha_venta')
+    ).values('hora').annotate(
+        total=Sum('monto_total')
+    ).order_by('hora')
+    
+    horas_labels = [f"{h:02d}:00" for h in range(6, 20)]
+    ventas_hora_data = [0] * 14
+    
+    for item in ventas_por_hora:
+        hora_idx = item['hora'] - 6
+        if 0 <= hora_idx < 14:
+            ventas_hora_data[hora_idx] = float(item['total'] or 0)
+    
+    # Gráfico 2: Ocupación por ruta (viajes de hoy) - CORREGIDO ✅
+    # Solo incluir viajes FUTUROS o EN CURSO (no pasados)
+    rutas_ocupacion = Viaje.objects.filter(
+        sede_salida=sede,
+        fecha_salida=hoy,
+        hora_salida__gte=ahora,  # ← Excluir viajes pasados
+        estado__in=['programado', 'en_curso']
+    ).select_related('ruta').prefetch_related('asientos')
+    
+    rutas_labels = []
+    rutas_data = []
+    colores_rutas = ['#10B981', '#3B82F6', '#F59E0B', '#8B5CF6', '#EF4444']
+    
+    for i, viaje in enumerate(rutas_ocupacion[:4]):
+        asientos = viaje.asientos.all()
+        total = asientos.count()
+        ocupados = asientos.filter(estado='vendido').count()
+        porcentaje = (ocupados / total * 100) if total > 0 else 0
+        
+        rutas_labels.append(f"{viaje.ruta.origen}→{viaje.ruta.destino}")
+        rutas_data.append(round(porcentaje, 1))
+    
+    if not rutas_labels:
+        rutas_labels = ['Sin datos']
+        rutas_data = [0]
+    
+    # ==================== CÁLCULOS PARA TARJETAS - CORREGIDO ✅ ====================
+    
+    # Calcular asientos disponibles SOLO de viajes futuros
     asientos_disponibles_total = sum(v['asientos_disponibles'] for v in proximos_viajes)
     asientos_totales_total = sum(v['asientos_totales'] for v in proximos_viajes)
-    porcentaje_disponibilidad = (asientos_disponibles_total / asientos_totales_total * 100) if asientos_totales_total > 0 else 0
-
-    cliente_busqueda = request.GET.get('dni_cliente', '')
-    alerta_fidelizacion = None
-
-    if cliente_busqueda:
-        viajes_totales = 11
-        viajes_restantes = 12 - (viajes_totales % 12)
-
-        if viajes_restantes == 0:
-            alerta_fidelizacion = {
-                'tipo': 'success',
-                'titulo': '🎉 ¡CLIENTE GANADOR!',
-                'mensaje': 'Ha completado 12 viajes. Entregue Rasca y Gana.',
-                'dni': cliente_busqueda
-            }
-        elif viajes_restantes == 1:
-            alerta_fidelizacion = {
-                'tipo': 'warning',
-                'titulo': '⚠️ ¡CASI LO LOGRA!',
-                'mensaje': 'Le falta 1 viaje para su Rasca y Gana.',
-                'dni': cliente_busqueda
-            }
-
-    contexto = {
-        'usuario': usuario, 'sede': sede, 'es_admin': False,
-        'ventas_hoy': ventas_hoy, 'monto_total_hoy': monto_total_hoy,
-        'viajes_completados_hoy': viajes_completados_hoy,
-        'proximos_viajes': proximos_viajes, 'viajes_recientes': viajes_recientes,
-        'asientos_disponibles_total': asientos_disponibles_total,
+    
+    contexto.update({
+        # Gráficos
+        'ventas_hora_labels': horas_labels,
+        'ventas_hora_data': ventas_hora_data,
+        'rutas_labels': rutas_labels,
+        'rutas_data': rutas_data,
+        'rutas_colores': colores_rutas[:len(rutas_labels)],
+        
+        # Cálculos para tarjetas (AHORA CORRECTOS)
+        'asientos_disponibles_total': asientos_disponibles_total,  # ← Será 0 si no hay viajes futuros
         'asientos_totales_total': asientos_totales_total,
-        'porcentaje_disponibilidad': porcentaje_disponibilidad,
-        'alerta_fidelizacion': alerta_fidelizacion,
-        'cliente_busqueda': cliente_busqueda
-    }
-
+        'porcentaje_disponibilidad': round(
+            (asientos_disponibles_total / asientos_totales_total * 100) 
+            if asientos_totales_total > 0 else 0, 1
+        ),
+    })
+    
     return render(request, 'dashboard/dashboard_cajero.html', contexto)
-
 
 @login_required
 def dashboard_admin_simple(request, usuario, sede):
-    """Dashboard COMPLETO para admin con filtros reales"""
+    """Dashboard COMPLETO para admin con datos REALES de BD"""
+    from core.models import Venta, Viaje, AsientoViaje, Ruta, Vehiculo, Incidencia
+    from django.db.models import Sum, Count, Q, Avg
+    from django.db.models.functions import TruncDate
+    import calendar
+    
     hoy = timezone.now().date()
     
+    # --- 1. PROCESAR FILTROS ---
     periodo = request.GET.get('periodo', 'hoy')
     sede_filtro = request.GET.get('sede', '')
     fecha_desde = request.GET.get('fecha_desde', '')
     fecha_hasta = request.GET.get('fecha_hasta', '')
     
+    # Definir rango de fechas según período
     if periodo == 'semana':
-        fecha_calculo = hoy - timedelta(days=hoy.weekday())
+        fecha_inicio = hoy - timedelta(days=hoy.weekday())
+        fecha_fin = hoy
     elif periodo == 'mes':
-        fecha_calculo = hoy.replace(day=1)
+        fecha_inicio = hoy.replace(day=1)
+        fecha_fin = hoy
     elif periodo == 'anio':
-        fecha_calculo = hoy.replace(month=1, day=1)
-    elif fecha_desde:
+        fecha_inicio = hoy.replace(month=1, day=1)
+        fecha_fin = hoy
+    elif fecha_desde and fecha_hasta:
         try:
-            fecha_calculo = timezone.datetime.strptime(fecha_desde, '%Y-%m-%d').date()
+            fecha_inicio = timezone.datetime.strptime(fecha_desde, '%Y-%m-%d').date()
+            fecha_fin = timezone.datetime.strptime(fecha_hasta, '%Y-%m-%d').date()
         except ValueError:
-            fecha_calculo = hoy
+            fecha_inicio = hoy
+            fecha_fin = hoy
     else:
-        fecha_calculo = hoy
+        fecha_inicio = hoy
+        fecha_fin = hoy
     
-    sede_para_filtro = None
-    if sede_filtro and sede_filtro != '':
-        sede_para_filtro = get_object_or_404(Sede, nombre=sede_filtro)
-    else:
-        sede_para_filtro = sede
+    # --- 2. FILTRO DE SEDE ---
+    filtro_sede = Q()
+    if sede_filtro and sede_filtro != 'Todas las sedes':
+        filtro_sede &= Q(sede_venta__nombre=sede_filtro)
     
-    data = DashboardService.obtener_datos_dashboard(
-        fecha=fecha_calculo,
-        es_admin=True,
-        sede=sede_para_filtro
+    # Filtro base de fechas
+    filtro_fecha = Q(fecha_venta__range=[fecha_inicio, fecha_fin + timedelta(days=1)])
+    
+    # --- 3. KPIs CON DATOS REALES ---
+    stats = Venta.objects.filter(filtro_fecha & filtro_sede).aggregate(
+        ingresos=Sum('monto_total'),
+        ventas=Count('id'),
+        pasajeros=Count('id')  # 1 venta = 1 pasajero
     )
     
+    ingresos_totales = stats['ingresos'] or 0
+    total_ventas = stats['ventas'] or 0
+    total_pasajeros = stats['pasajeros'] or 0
+    
+    # Ocupación promedio (ventas / asientos totales de viajes programados)
+    viajes_periodo = Viaje.objects.filter(
+        fecha_salida__range=[fecha_inicio, fecha_fin],
+        sede_salida=sede if not usuario.is_superuser else None
+    ).select_related('vehiculo').prefetch_related('asientos')
+    
+    asientos_totales = sum(v.vehiculo.capacidad_asientos for v in viajes_periodo)
+    asientos_vendidos = total_ventas
+    ocupacion_promedio = round((asientos_vendidos / asientos_totales * 100), 1) if asientos_totales > 0 else 0
+    
+    # --- 4. DATOS PARA GRÁFICA DE TENDENCIA ---
+    ventas_por_dia_qs = Venta.objects.filter(filtro_fecha & filtro_sede).annotate(
+        dia=TruncDate('fecha_venta')
+    ).values('dia').annotate(
+        total=Sum('monto_total')
+    ).order_by('dia')
+    
+    # Generar labels y datos para todos los días del período
+    chart_labels = []
+    chart_data = []
+    current_date = fecha_inicio
+    
+    while current_date <= fecha_fin:
+        chart_labels.append(current_date.strftime('%d/%m'))
+        # Buscar si hay venta para este día
+        venta_dia = next((v for v in ventas_por_dia_qs if v['dia'] == current_date), None)
+        chart_data.append(float(venta_dia['total']) if venta_dia else 0)
+        current_date += timedelta(days=1)
+    
+    # --- 5. DATOS PARA GRÁFICA POR SEDE (solo si es admin global) ---
+    if usuario.is_superuser or sede.nombre == 'Oficina Central':
+        ingresos_por_sede_qs = Venta.objects.filter(filtro_fecha).values(
+            'sede_venta__nombre'
+        ).annotate(
+            total=Sum('monto_total')
+        ).order_by('-total')
+        
+        sede_labels = [item['sede_venta__nombre'] or 'Sin sede' for item in ingresos_por_sede_qs]
+        sede_data = [float(item['total'] or 0) for item in ingresos_por_sede_qs]
+    else:
+        # Si no es admin global, solo muestra su sede
+        sede_labels = [sede.nombre]
+        sede_data = [ingresos_totales]
+    
+    # --- 6. TOP RUTAS ---
+    top_rutas_qs = Venta.objects.filter(filtro_fecha & filtro_sede).values(
+        'viaje__ruta__origen', 'viaje__ruta__destino'
+    ).annotate(
+        ventas=Count('id'),
+        ingresos=Sum('monto_total')
+    ).order_by('-ingresos')[:3]
+    
+    top_rutas = [
+        {
+            'ruta': f"{item['viaje__ruta__origen']} → {item['viaje__ruta__destino']}",
+            'ventas': item['ventas'],
+            'ingresos': item['ingresos'] or 0
+        } for item in top_rutas_qs
+    ]
+    
+    # --- 7. VEHÍCULOS ACTIVOS HOY ---
+    vehiculos_filter = Q(fecha_salida=hoy, estado__in=['programado', 'en_curso'])
+    if not usuario.is_superuser:
+        vehiculos_filter &= Q(sede_salida=sede)
+    
+    vehiculos_activos_qs = Viaje.objects.filter(vehiculos_filter).select_related(
+        'vehiculo', 'chofer_asignado'
+    )[:5]
+    
+    vehiculos_activos = [
+        {
+            'placa': v.vehiculo.placa,
+            'chofer': v.chofer_asignado.get_full_name() if v.chofer_asignado else 'Sin asignar',
+            'estado': 'En ruta' if v.estado == 'en_curso' else 'Disponible'
+        } for v in vehiculos_activos_qs
+    ]
+    
+    # --- 8. DETALLE DE VENTAS RECIENTES ---
+    detalle_ventas_qs = Venta.objects.filter(filtro_fecha & filtro_sede).select_related(
+        'viaje__ruta', 'viaje__vehiculo', 'viaje__chofer_asignado', 'sede_venta'
+    ).order_by('-fecha_venta')[:10]
+    
+    detalle_ventas = [
+        {
+            'fecha': v.fecha_venta.strftime('%d/%m/%Y'),
+            'hora': v.fecha_venta.strftime('%H:%M'),
+            'sede': v.sede_venta.nombre,
+            'ruta': f"{v.viaje.ruta.origen} → {v.viaje.ruta.destino}",
+            'vehiculo': v.viaje.vehiculo.placa,
+            'chofer': v.viaje.chofer_asignado.get_full_name() if v.viaje.chofer_asignado else '-',
+            'pasajeros': 1,
+            'ingreso': v.monto_total
+        } for v in detalle_ventas_qs
+    ]
+    
+    # --- 9. INCIDENCIAS PENDIENTES ---
+    incidencias_filter = Q(estado='pendiente')
+    if not usuario.is_superuser:
+        incidencias_filter &= Q(sede_reporte=sede)
+    
+    incidencias_pendientes = Incidencia.objects.filter(incidencias_filter).select_related(
+        'sede_reporte'
+    ).order_by('-fecha_reporte')[:5]
+    
+    # --- 10. CONTEXTO FINAL ---
     contexto = {
         'usuario': usuario,
         'sede': sede,
         'es_admin': True,
-        'fecha': fecha_calculo,
+        'fecha': hoy,
         'periodo': periodo,
         'sede_filtro': sede_filtro,
         'fecha_desde': fecha_desde,
         'fecha_hasta': fecha_hasta,
-        'ingresos_totales': data['ingresos_totales'],
-        'total_ventas': data['total_boletos'],
-        'total_pasajeros': data['total_pasajeros'],
-        'total_viajes': data['total_viajes'],
-        'ocupacion_promedio': data['ocupacion_promedio'],
-        'dias_semana': data['dias_semana'],
-        'ventas_por_dia': data['ventas_por_dia'],
-        'sedes': data['sedes'],
-        'ingresos_por_sede': data['ingresos_por_sede'],
-        'resumen_por_sede': [
-            {'nombre': s, 'ventas': 0, 'monto': m, 'porcentaje': 0} 
-            for s, m in zip(data['sedes'], data['ingresos_por_sede'])
-        ],
-        'actividad_reciente': [
-            {
-                'hora': v.fecha_venta.strftime('%H:%M'),
-                'cliente': v.nombre_cliente or 'Pax Anónimo',
-                'ruta': f"{v.viaje.ruta.origen} → {v.viaje.ruta.destino}",
-                'monto': v.monto_total
-            } for v in data['actividad_reciente']
-        ],
-        'incidencias_pendientes': [
-            {
-                'sede': inc.sede_reporte.nombre,
-                'descripcion': inc.descripcion[:60] + ('...' if len(inc.descripcion) > 60 else ''),
-                'fecha': inc.fecha_reporte
-            } for inc in data['incidencias_pendientes']
-        ],
+        
+        # KPIs
+        'ingresos_totales': ingresos_totales,
+        'total_ventas': total_ventas,
+        'total_pasajeros': total_pasajeros,
+        'ocupacion_promedio': ocupacion_promedio,
+        
+        # Gráficas
+        'chart_labels': chart_labels,
+        'chart_data': chart_data,
+        'sede_labels': sede_labels,
+        'sede_data': sede_data,
+        
+        # Secciones
+        'top_rutas': top_rutas,
+        'vehiculos_activos': vehiculos_activos,
+        'detalle_ventas': detalle_ventas,
+        'incidencias_pendientes': incidencias_pendientes,
+        
+        # Flags para mensajes vacíos
+        'hay_ventas': total_ventas > 0,
+        'hay_rutas': len(top_rutas) > 0,
+        'hay_vehiculos': len(vehiculos_activos) > 0,
+        'hay_incidencias': len(incidencias_pendientes) > 0,
+
+        'hay_filtros_activos': (periodo != 'hoy' or sede_filtro != '' or fecha_desde != '' or fecha_hasta != '')
     }
     
     return render(request, 'dashboard/dashboard_admin_simple.html', contexto)
@@ -342,40 +584,130 @@ def ventas_lista(request):
 @login_required
 def ventas_lista_admin(request, usuario, sede):
     """Lista de ventas para ADMIN (todas las sedes)"""
+    
     form = VentaFiltroForm(request.GET)
     filtros = form.cleaned_data if form.is_valid() else {}
     
+    # Obtener ventas y KPIs
     ventas = VentaService.obtener_ventas_filtradas(filtros, es_admin=True)
     kpis = VentaService.calcular_kpis(ventas)
     
+    # ✅ Obtener rutas activas ordenadas desde la BD
+    rutas_activas = Ruta.objects.filter(activa=True).order_by('origen', 'destino')
+    
+    # ✅ Detectar si hay filtros activos para el mensaje amigable
+    hay_filtros_activos = bool(request.GET)
+    
     contexto = {
-        'usuario': usuario, 'sede': sede, 'es_admin': True,
+        'usuario': usuario, 
+        'sede': sede, 
+        'es_admin': True,
         'ventas': ventas,
         'form': form,
+        'rutas_activas': rutas_activas,  # ← Rutas dinámicas
         'total_monto': kpis['total_monto'],
         'total_boletos': kpis['total_boletos'],
         'promedio_venta': kpis['promedio_venta'],
+        'hay_filtros_activos': hay_filtros_activos,  # ← Para el mensaje
     }
     return render(request, 'admin/ventas_lista.html', contexto)
 
 
 @login_required
 def ventas_lista_cajero(request, usuario, sede):
-    """Lista de ventas para CAJERO (solo su sede)"""
+    """Lista de ventas para CAJERO - AHORA COMPARTIDA ENTRE SEDES""" 
+    
     form = VentaFiltroForm(request.GET)
     filtros = form.cleaned_data if form.is_valid() else {}
     
+    # Obtener ventas y KPIs (el servicio YA no filtra por sede)
     ventas = VentaService.obtener_ventas_filtradas(filtros, es_admin=False, sede=sede)
     kpis = VentaService.calcular_kpis(ventas)
     
+    # ===== FECHA Y HORA ACTUAL LOCAL =====
+    ahora_local = timezone.localtime(timezone.now())
+    hoy = ahora_local.date()
+    ahora = ahora_local.time()
+    
+    # ===== QUERYSET DE VIAJES (sin cambios) =====
+    viajes_qs = Viaje.objects.filter(
+        estado__in=['programado', 'en_curso'],
+    ).filter(
+        Q(fecha_salida=hoy, hora_salida__gte=ahora) |
+        Q(fecha_salida__gt=hoy)
+    )
+    
+    
+    if filtros.get('ruta'):
+        viajes_qs = viajes_qs.filter(ruta_id=filtros['ruta'])
+    if filtros.get('buscador'):
+        buscador = filtros['buscador']
+        viajes_qs = viajes_qs.filter(
+            Q(ruta__origen__icontains=buscador) |
+            Q(ruta__destino__icontains=buscador) |
+            Q(vehiculo__placa__icontains=buscador)
+        )
+    
+    viajes_qs = viajes_qs.select_related('ruta', 'vehiculo', 'chofer_asignado') \
+                         .prefetch_related('asientos') \
+                         .order_by('fecha_salida', 'hora_salida')
+    
+    # Procesar viajes
+    viajes_disponibles = []
+    for viaje in viajes_qs:
+        asientos_lista = list(viaje.asientos.all())
+        total = len(asientos_lista)
+        disponibles = sum(1 for a in asientos_lista if a.estado == 'disponible')
+        
+        chofer_obj = viaje.chofer_asignado
+        nombre_chofer = chofer_obj.get_full_name() if chofer_obj else 'Por asignar'
+        
+        viajes_disponibles.append({
+            'id': viaje.id,
+            'hora_salida': viaje.hora_salida,
+            'ruta': viaje.ruta,
+            'vehiculo': viaje.vehiculo,
+            'chofer_nombre': nombre_chofer,
+            'asientos_totales': total,
+            'asientos_disponibles': disponibles,
+            'precio_base': viaje.ruta.precio_base,
+            'estado': viaje.estado,
+            'sede_salida_nombre': viaje.sede_salida.nombre if viaje.sede_salida else 'Global',
+        })
+    
+    # ===== DEBUG EXTREMO: Imprimir TODO =====
+    print(f"\n{'='*80}")
+    print(f"DEBUG EXTREMO - VENTAS_LISTA_CAJERO")
+    print(f"Usuario: {usuario.username} | Sede: {sede.nombre} (ID: {sede.id})")
+    print(f"¿Es admin? {usuario.is_superuser}")
+    print(f"Total ventas en queryset: {ventas.count()}")
+    
+    if ventas.count() > 0:
+        print("📋 Primeras 3 ventas:")
+        for v in ventas[:3]:
+            print(f"   • Ticket: {v.numero_ticket} | Cliente: {v.nombre_cliente} | Sede Venta: {v.sede_venta}")
+    else:
+        print("⚠️ NO HAY VENTAS EN EL QUERYSET. Posibles causas:")
+        print("   1. No hay ventas registradas en la BD")
+        print("   2. Los filtros de fecha/ruta están vaciando el queryset")
+        print("   3. Hay un filtro oculto en VentaService")
+    
+    print(f"{'='*80}\n")
+    
     contexto = {
-        'usuario': usuario, 'sede': sede, 'es_admin': False,
-        'ventas': ventas,
+        'usuario': usuario,
+        'sede': sede,
+        'es_admin': False,
+        'ventas': ventas,  # ← Ahora trae TODAS las ventas, sin filtro por sede
         'form': form,
         'total_monto': kpis['total_monto'],
         'total_boletos': kpis['total_boletos'],
         'promedio_venta': kpis['promedio_venta'],
+        'viajes_disponibles': viajes_disponibles,
+        'rutas_activas': Ruta.objects.filter(activa=True).order_by('origen', 'destino'),
+        'hay_filtros_activos': bool(request.GET),
     }
+    
     return render(request, 'ventas/lista.html', contexto)
 
 
@@ -415,20 +747,152 @@ def nueva_venta(request, viaje_id):
     }
     return render(request, 'ventas/mapa_asientos.html', {'viaje': viaje})
 
+
 @login_required
 def mapa_asientos(request, viaje_id):
-    """Paso 2: Mapa interactivo de asientos"""
-    return render(request, 'ventas/mapa_asientos.html')
+    """Mostrar mapa de asientos - CON VALIDACIÓN CORRECTA DE FECHA Y ORDEN NUMÉRICO"""
+    
+    usuario = request.user
+    viaje = get_object_or_404(Viaje, id=viaje_id)
+    
+    # ===== 1. VALIDACIÓN DE TIEMPO (CORREGIDA) =====
+    ahora = timezone.localtime(timezone.now())
+    hoy = ahora.date()
+    ahora_hora = ahora.time()
+    
+    #  Bloquear si la fecha es ANTERIOR a hoy
+    if viaje.fecha_salida < hoy:
+        messages.error(request, f'⚠️ Este viaje ({viaje.fecha_salida}) ya ha pasado')
+        return redirect('core:ventas_lista')
+    
+    #  Bloquear si es HOY pero la hora YA PASÓ
+    if viaje.fecha_salida == hoy and viaje.hora_salida < ahora_hora:
+        messages.error(request, f'⚠️ El viaje de hoy a las {viaje.hora_salida.strftime("%H:%M")} ya ha partido')
+        return redirect('core:ventas_lista')
+
+    # Verificar estado del viaje
+    if viaje.estado not in ['programado', 'en_curso']:
+        messages.error(request, 'Este viaje no está disponible para la venta')
+        return redirect('core:ventas_lista')
+    
+    # ===== 2. OBTENER ASIENTOS (TU LÓGICA DE ORDEN) =====
+    # Ordena numéricamente (1, 2, 3... 10) en lugar de alfabético (1, 10, 2)
+    asientos_qs = viaje.asientos.all().annotate(
+        num_asiento_int=Cast('numero_asiento', IntegerField())
+    ).order_by('num_asiento_int')
+    
+    # Convertir a lista para usar índices en el template [0], [1], [2]...
+    asientos = list(asientos_qs)
+    
+    asientos_libres = len([a for a in asientos if a.estado == 'disponible'])
+    
+    contexto = {
+        'usuario': usuario,
+        'viaje': viaje,
+        'asientos': asientos,  # ← Lista ordenada numéricamente
+        'asientos_libres': asientos_libres,
+        'precio_base': viaje.ruta.precio_base,
+        'puede_liberar_reservas': usuario.is_superuser or usuario.sede.nombre == 'Oficina Central',
+    }
+    
+    return render(request, 'ventas/mapa_asientos.html', contexto)
+
+    
+
+logger = logging.getLogger(__name__)
 
 @login_required
 def procesar_venta(request):
-    """Paso 3: Procesar venta y generar ticket"""
-    if request.method == 'POST':
-        messages.success(request, '✅ Venta registrada correctamente')
-        return redirect('core:dashboard')
-    return redirect('core:dashboard')
-
-
+    """Procesar la venta de un asiento"""
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=400)
+    
+    usuario = request.user
+    
+    # Obtener datos del formulario
+    viaje_id = request.POST.get('viaje_id')
+    asiento_numero = request.POST.get('asiento_numero')
+    dni_pasajero = request.POST.get('dni_pasajero')
+    nombre_pasajero = request.POST.get('nombre_pasajero')
+    telefono_pasajero = request.POST.get('telefono_pasajero')
+    email_pasajero = request.POST.get('email_pasajero', '')
+    ruc_cliente = request.POST.get('ruc_cliente', '')
+    razon_social = request.POST.get('razon_social', '')
+    metodo_pago = request.POST.get('metodo_pago', 'efectivo')
+    
+    # Validar datos obligatorios
+    if not all([viaje_id, asiento_numero, dni_pasajero, nombre_pasajero]):
+        return JsonResponse({'success': False, 'error': 'Faltan datos obligatorios'}, status=400)
+    
+    # Obtener objetos
+    viaje = get_object_or_404(Viaje, id=viaje_id)
+    asiento = get_object_or_404(AsientoViaje, numero_asiento=asiento_numero, viaje=viaje)
+    
+    # ===== ✅ VALIDACIÓN CORREGIDA: Usar hora LOCAL =====
+    ahora_local = timezone.localtime(timezone.now())
+    hoy_local = ahora_local.date()
+    hora_local = ahora_local.time()
+    
+    # Combinar fecha y hora del viaje para comparar
+    viaje_dt = datetime.combine(viaje.fecha_salida, viaje.hora_salida)
+    if timezone.is_naive(viaje_dt):
+        viaje_dt = timezone.make_aware(viaje_dt)
+    
+    # ✅ Solo bloquear si el viaje YA PASÓ (fecha y hora local)
+    if viaje_dt < ahora_local:
+        return JsonResponse({
+            'success': False, 
+            'error': f'El viaje del {viaje.fecha_salida.strftime("%d/%m")} a las {viaje.hora_salida.strftime("%H:%M")} ya ha partido'
+        }, status=400)
+    
+    # Verificar que el asiento esté disponible
+    if asiento.estado != 'disponible':
+        return JsonResponse({'success': False, 'error': 'Este asiento ya no está disponible'}, status=409)
+    
+    try:
+        # Generar número de ticket
+        ticket_numero = f"TKT-{timezone.now().strftime('%y%m%d')}-{random.randint(1000, 9999)}"
+        
+        # Crear venta
+        venta = Venta.objects.create(
+            viaje=viaje,
+            asiento=asiento,
+            sede_venta=usuario.sede,
+            cajero=usuario,
+            numero_documento=dni_pasajero,
+            nombre_cliente=nombre_pasajero,
+            telefono_cliente=telefono_pasajero,
+            email_cliente=email_pasajero,
+            ruc_cliente=ruc_cliente,
+            razon_social=razon_social,
+            metodo_pago=metodo_pago,
+            monto_total=viaje.ruta.precio_base,
+            numero_ticket=ticket_numero,
+            fecha_venta=timezone.now()
+        )
+        
+        # Marcar asiento como vendido
+        asiento.estado = 'vendido'
+        asiento.save()
+        
+        # ✅ Devolver JSON exitoso CON 'tipo'
+        return JsonResponse({
+            'success': True,
+            'venta_id': venta.id,
+            'asiento': venta.asiento.numero_asiento,
+            'ruta': f"{venta.viaje.ruta.origen} → {venta.viaje.ruta.destino}",
+            'fecha': venta.viaje.fecha_salida.strftime('%d/%m/%Y'),
+            'hora': venta.viaje.hora_salida.strftime('%H:%M'),
+            'pasajero': venta.nombre_cliente,
+            'total': str(venta.monto_total),
+            'tipo': 'venta',  # ← ✅ AGREGADO: Para que el JS sepa qué color poner
+        })
+        
+    except Exception as e:
+        logger.error(f"Error al procesar venta: {str(e)}", exc_info=True)
+        return JsonResponse({'success': False, 'error': f'Error al registrar: {str(e)}'}, status=500)
+    
 # ==================== CLIENTES Y FIDELIZACIÓN ====================
 @login_required
 def historial_cliente(request, dni):
@@ -623,26 +1087,29 @@ def fidelizacion_admin(request):
 
 @login_required
 def vehiculos_lista(request):
-    """Lista de vehículos"""
+    """Lista de vehículos - CON RUTAS Y CHOFER"""
     usuario = request.user
-    sede = usuario.sede
     
-    if sede.nombre == 'Oficina Central' or usuario.is_superuser:
-        vehiculos = Vehiculo.objects.all().select_related('sede_asignada')
-        total_vehiculos = vehiculos.count()
-        activos = vehiculos.filter(activo=True).count()
+    # QuerySet base con prefetch para ManyToMany
+    if usuario.is_superuser or usuario.sede.nombre == 'Oficina Central':
+        # Admin: ve todos los vehículos con sus rutas y chofer
+        vehiculos_qs = Vehiculo.objects.all().prefetch_related('rutas_asignadas', 'chofer_asignado')
     else:
-        vehiculos = Vehiculo.objects.filter(sede_asignada=sede).select_related('sede_asignada')
-        total_vehiculos = vehiculos.count()
-        activos = vehiculos.filter(activo=True).count()
+        # Cajero: ve vehículos de rutas de su sede (lógica adaptable)
+        # Opcional: filtrar por rutas que pasan por su sede
+        vehiculos_qs = Vehiculo.objects.filter(
+            rutas_asignadas__origen__icontains=usuario.sede.nombre.split()[-1]
+        ).prefetch_related('rutas_asignadas', 'chofer_asignado').distinct()
+    
+    total_vehiculos = vehiculos_qs.count()
+    activos = vehiculos_qs.filter(activo=True).count()
     
     contexto = {
         'usuario': usuario,
-        'sede': sede,
-        'es_admin': usuario.is_superuser or sede.nombre == 'Oficina Central',
-        'vehiculos': vehiculos,
+        'vehiculos': vehiculos_qs,
         'total_vehiculos': total_vehiculos,
         'activos': activos,
+        'es_admin': usuario.is_superuser or usuario.sede.nombre == 'Oficina Central',
     }
     
     return render(request, 'admin/vehiculos.html', contexto)
@@ -758,8 +1225,9 @@ def vehiculo_eliminar(request, id):
     
     if request.method == 'POST':
         try:
-            logger_vehiculo.info(f"VEHICULO_ELIMINAR - Eliminando vehículo {id}")
+            logger_vehiculo.info(f"VEHICULO_ELIMINAR - Eliminando vehículo {id} ({vehiculo.placa})")
             
+            # Verificar si tiene viajes asociados
             if vehiculo.viajes.exists():
                 num_viajes = vehiculo.viajes.count()
                 messages.error(
@@ -770,7 +1238,7 @@ def vehiculo_eliminar(request, id):
             else:
                 vehiculo.delete()
                 messages.success(request, f'Vehículo {vehiculo.placa} eliminado correctamente')
-                logger_vehiculo.info(f"VEHICULO_ELIMINAR - Vehículo {id} eliminado exitosamente")
+                logger_vehiculo.info(f"VEHICULO_ELIMINAR - Vehículo {id} eliminado")
                 
         except Exception as e:
             messages.error(request, f'Error al eliminar: {str(e)}')
@@ -810,7 +1278,7 @@ def choferes_lista(request):
 
 @login_required
 def chofer_nuevo(request):
-    """Crear nuevo chofer - SIN contraseña manual"""
+    """Crear nuevo chofer"""
     usuario = request.user
     
     if not usuario.is_superuser and usuario.sede.nombre != 'Oficina Central':
@@ -825,6 +1293,7 @@ def chofer_nuevo(request):
             try:
                 logger_chofer.info("CHOFER_NUEVO - Formulario válido, creando chofer...")
                 
+                # Generar contraseña temporal
                 password_temporal = secrets.token_urlsafe(8)
                 
                 chofer = ChoferService.crear_chofer(
@@ -837,8 +1306,9 @@ def chofer_nuevo(request):
                     licencia_conducir=form.cleaned_data['licencia_conducir'],
                     categoria_licencia=form.cleaned_data['categoria_licencia'],
                     fecha_vencimiento_licencia=form.cleaned_data['fecha_vencimiento_licencia'],
-                    telefono=form.cleaned_data['telefono'],
-                    sede_asignada=form.cleaned_data['sede'],
+                    telefono=form.cleaned_data.get('telefono', ''),
+                    # ✅ CAMBIO: Usar rutas_asignadas en lugar de sede_asignada
+                    rutas_asignadas=form.cleaned_data.get('rutas_asignadas', []),
                     creado_por=usuario
                 )
                 
@@ -887,16 +1357,22 @@ def chofer_editar(request, id):
             try:
                 logger_chofer.info(f"CHOFER_EDITAR - Actualizando chofer {id}...")
                 
+                # Actualizar datos básicos
+                chofer.username = form.cleaned_data['username']
                 chofer.email = form.cleaned_data['email']
                 chofer.first_name = form.cleaned_data['first_name']
                 chofer.last_name = form.cleaned_data['last_name']
+                chofer.telefono = form.cleaned_data.get('telefono', '')
                 chofer.licencia_conducir = form.cleaned_data['licencia_conducir']
                 chofer.categoria_licencia = form.cleaned_data['categoria_licencia']
                 chofer.fecha_vencimiento_licencia = form.cleaned_data['fecha_vencimiento_licencia']
-                chofer.telefono = form.cleaned_data['telefono']
-                chofer.sede = form.cleaned_data['sede']
                 chofer.activo = form.cleaned_data['activo']
                 
+                # ✅ CAMBIO: Actualizar rutas asignadas en lugar de sede
+                if 'rutas_asignadas' in form.cleaned_data:
+                    chofer.rutas_asignadas.set(form.cleaned_data['rutas_asignadas'])
+                
+                # Si hay contraseña nueva
                 if form.cleaned_data.get('password'):
                     chofer.set_password(form.cleaned_data['password'])
                 
@@ -1113,23 +1589,25 @@ def ruta_eliminar(request, id):
 
 @login_required
 def usuarios_lista(request):
-    """Lista de usuarios/cajeros"""
+    """Lista de usuarios/cajeros - EXCLUYE CHOFERES"""
     usuario = request.user
     sede = usuario.sede
+    es_admin = usuario.is_superuser or sede.nombre == 'Oficina Central'
     
-    if sede.nombre == 'Oficina Central' or usuario.is_superuser:
-        usuarios = Usuario.objects.all().select_related('sede')
-        total_usuarios = usuarios.count()
-        activos = usuarios.filter(activo=True).count()
+    if es_admin:
+        # ✅ Solo usuarios que NO son choferes
+        usuarios = Usuario.objects.filter(es_chofer=False).select_related('sede')
     else:
-        usuarios = Usuario.objects.filter(sede=sede).select_related('sede')
-        total_usuarios = usuarios.count()
-        activos = usuarios.filter(activo=True).count()
+        # ✅ Solo de su sede y que NO son choferes
+        usuarios = Usuario.objects.filter(sede=sede, es_chofer=False).select_related('sede')
+        
+    total_usuarios = usuarios.count()
+    activos = usuarios.filter(activo=True).count()
     
     contexto = {
         'usuario': usuario,
         'sede': sede,
-        'es_admin': usuario.is_superuser or sede.nombre == 'Oficina Central',
+        'es_admin': es_admin,
         'usuarios': usuarios,
         'total_usuarios': total_usuarios,
         'activos': activos,
@@ -1429,24 +1907,36 @@ def chofer_cancelar_reserva(request, reserva_id):
 # ==================== BOLETOS ====================
 
 @login_required
-def ver_boleto(request, venta_id):
-    """Vista para mostrar el boleto (vista previa HTML)"""
-    boleto_data = {
-        'id': venta_id,
-        'numero': f"{venta_id:06d}",
-        'origen': 'TRUJILLO',
-        'destino': 'JULCÁN',
-        'pasajero': 'PÉREZ GARCÍA JUAN CARLOS',
-        'dni': '76543210',
-        'dia': timezone.now().strftime('%d'),
-        'mes': timezone.now().strftime('%m'),
-        'anio': timezone.now().strftime('%Y'),
-        'hora': '08:00 AM',
-        'asiento': '03',
-        'valor': '25.00',
-        'es_premiado': False
+def ver_boleto(request, boleto_id):  # ← DEBE ser 'boleto_id' para coincidir con la URL
+    """Muestra el boleto con modal de confirmación"""
+    
+    # Obtener la venta
+    venta = get_object_or_404(Venta, id=boleto_id)
+    
+    # Preparar datos del boleto para el template
+    boleto = {
+        'numero': venta.numero_ticket,
+        'pasajero': venta.nombre_cliente,
+        'dni': venta.numero_documento,
+        'ruc': getattr(venta, 'ruc_cliente', '') or '',  # Si no existe, devuelve vacío
+        'razon_social': getattr(venta, 'razon_social', '') or '',
+        'origen': venta.viaje.ruta.origen,
+        'destino': venta.viaje.ruta.destino,
+        'dia': venta.viaje.fecha_salida.strftime('%d'),
+        'mes': venta.viaje.fecha_salida.strftime('%m'),
+        'anio': venta.viaje.fecha_salida.strftime('%Y'),
+        'hora': venta.viaje.hora_salida.strftime('%H:%M'),
+        'asiento': venta.asiento.numero_asiento,
+        'valor': venta.monto_total,
+        'es_premiado': False,  # Aquí iría lógica de fidelización después
     }
-    return render(request, 'ventas/boleto.html', {'boleto': boleto_data})
+    
+    contexto = {
+        'venta': venta,
+        'boleto': boleto,  # ← Datos formateados para el template
+    }
+    
+    return render(request, 'ventas/boleto.html', contexto)
 
 
 def link_callback(uri, rel):
@@ -1481,43 +1971,68 @@ def link_callback(uri, rel):
  
 
 @login_required
-def descargar_boleto_pdf(request, boleto_id):
-    """Genera y descarga el boleto en PDF (compatible con impresora térmica 80mm)"""
-    boleto_data = {
-        'id': boleto_id,
-        'numero': f"{boleto_id:06d}",
-        'fecha_emision': timezone.now().strftime("%d/%m/%Y %H:%M"),
-        'origen': 'TRUJILLO',
-        'destino': 'JULCÁN',
-        'dia': timezone.now().strftime("%d"),
-        'mes': timezone.now().strftime("%m"),
-        'anio': timezone.now().strftime("%Y"),
-        'hora': '08:00',
-        'pasajero': 'JUAN PEREZ GARCIA',
-        'dni': '12345678',
-        'ruc': '',
-        'asiento': '03',
-        'valor': 25.00,
-        'es_premiado': False
-    }
- 
-    html_string = render_to_string('ventas/boleto_pdf.html', {'boleto': boleto_data})
- 
-    result = io.BytesIO()
-    pdf = pisa.CreatePDF(
-        io.BytesIO(html_string.encode("UTF-8")),
-        result,
-        encoding='UTF-8',
-        link_callback=link_callback,
-    )
- 
-    if pdf.err:
-        return HttpResponse("Error al generar el PDF", status=500)
- 
-    response = HttpResponse(result.getvalue(), content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="boleto_{boleto_data["numero"]}.pdf"'
-    return response
+def ver_ticket(request, venta_id):
+    """Muestra la vista previa HTML del boleto"""
+    venta = get_object_or_404(Venta, id=venta_id)
+    return render(request, 'ventas/boleto.html', {'venta': venta})
 
+@login_required
+def descargar_boleto_pdf(request, boleto_id):
+    """Genera y descarga el PDF del boleto con datos formateados"""
+    
+    # ✅ IMPORTAR DENTRO DE LA FUNCIÓN (evita errores de caché)
+    try:
+        from xhtml2pdf import pisa
+    except ImportError:
+        return HttpResponse("Error: Librería xhtml2pdf no instalada. Ejecuta: pip install xhtml2pdf", status=500)
+    
+    from io import BytesIO
+    from django.template.loader import render_to_string
+    from django.http import HttpResponse
+    from django.shortcuts import get_object_or_404
+    from core.models import Venta
+    
+    # Obtener venta
+    venta = get_object_or_404(Venta, id=boleto_id)
+    
+    # Preparar datos formateados
+    boleto = {
+        'numero': venta.numero_ticket,
+        'pasajero': venta.nombre_cliente,
+        'dni': venta.numero_documento,
+        'telefono': venta.telefono_cliente,
+        'ruc': venta.ruc_cliente or '',
+        'razon_social': venta.razon_social or '',
+        'origen': venta.viaje.ruta.origen,
+        'destino': venta.viaje.ruta.destino,
+        'dia': venta.viaje.fecha_salida.strftime('%d'),
+        'mes': venta.viaje.fecha_salida.strftime('%m'),
+        'anio': venta.viaje.fecha_salida.strftime('%Y'),
+        'hora': venta.viaje.hora_salida.strftime('%H:%M'),
+        'asiento': venta.asiento.numero_asiento,
+        'valor': venta.monto_total,
+        'es_premiado': False,
+    }
+    
+    # Renderizar HTML
+    html_string = render_to_string('ventas/boleto_pdf.html', {'boleto': boleto})
+    
+    # Crear PDF
+    result = BytesIO()
+    
+    # ✅ VERIFICAR QUE pisa EXISTE ANTES DE USARLO
+    if pisa is None:
+        return HttpResponse("Error crítico: xhtml2pdf no cargó correctamente", status=500)
+    
+    pdf = pisa.CreatePDF(BytesIO(html_string.encode("UTF-8")), result, encoding="UTF-8")
+    
+    if pdf.err:
+        return HttpResponse("Error al generar PDF", status=500)
+    
+    response = HttpResponse(result.getvalue(), content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="boleto_{venta.numero_ticket}.pdf"'
+    
+    return response
 
 # ==================== ADMIN - ASIGNACIÓN DE VIAJES ====================
 
@@ -1541,23 +2056,81 @@ def _parsear_duracion(duracion_texto):
 # ==================== LOGGER ====================
 logger = logging.getLogger('core.viajes_views')
 
+
 @login_required
 def asignacion_viajes(request):
-    """Lista de viajes para Admin (todas las sedes)"""
+    """Lista de viajes para Admin/Cajeros - CON KPIs y comparación CORRECTA de fecha/hora (LOCAL)"""
+    
     usuario = request.user
     sede = usuario.sede
     
-    if sede.nombre == 'Oficina Central' or usuario.is_superuser:
-        viajes = Viaje.objects.all().select_related('ruta', 'vehiculo', 'sede_salida')
-    else:
-        viajes = Viaje.objects.filter(sede_salida=sede).select_related('ruta', 'vehiculo')
+    # ✅ FECHAS Y HORAS LOCALES (Lima) - Corrección del desfase UTC
+    ahora_local = timezone.localtime(timezone.now())
+    hoy = ahora_local.date()
+    hora_actual = ahora_local.time()
     
+    # ===== FILTRO DE FECHAS =====
+    fecha_inicio_str = request.GET.get('fecha_inicio', hoy.strftime('%Y-%m-%d'))
+    fecha_fin_str = request.GET.get('fecha_fin', (hoy + timedelta(days=7)).strftime('%Y-%m-%d'))
+    
+    try:
+        fecha_inicio = datetime.strptime(fecha_inicio_str, '%Y-%m-%d').date()
+        fecha_fin = datetime.strptime(fecha_fin_str, '%Y-%m-%d').date()
+    except ValueError:
+        fecha_inicio = hoy
+        fecha_fin = hoy + timedelta(days=7)
+    
+    # ===== QUERYSET BASE (CORREGIDO: Todos ven todos los viajes) =====
+    # Se eliminó el filtro `sede_salida=sede` para que cajeros vean la operación completa
+    viajes_qs = Viaje.objects.filter(
+        fecha_salida__range=[fecha_inicio, fecha_fin]
+    ).select_related('ruta', 'vehiculo', 'chofer_asignado')
+    
+    # ===== KPIs (Usando hora local para comparaciones correctas) =====
+    kpis_qs = viajes_qs.filter(estado='programado').filter(
+        Q(fecha_salida__gt=hoy) | 
+        Q(fecha_salida=hoy, hora_salida__gte=hora_actual)
+    )
+    viajes_programados = kpis_qs.count()
+    asientos_disponibles = AsientoViaje.objects.filter(viaje__in=kpis_qs, estado='disponible').count()
+    viajes_agotados = kpis_qs.annotate(libres=Count('asientos', filter=Q(asientos__estado='disponible'))).filter(libres=0).count()
+    
+    # ===== CALCULAR ESTADO VISUAL =====
+    viajes_list = list(viajes_qs.order_by('-fecha_salida', '-hora_salida'))
+    
+    for viaje in viajes_list:
+        fecha_hora_salida = datetime.combine(viaje.fecha_salida, viaje.hora_salida)
+        if timezone.is_naive(fecha_hora_salida):
+            fecha_hora_salida = timezone.make_aware(fecha_hora_salida)
+            
+        # Determinar estado visual comparando con la hora LOCAL
+        if viaje.estado == 'cancelado':
+            viaje.estado_display = 'cancelado'
+        elif fecha_hora_salida < ahora_local:
+            viaje.estado_display = 'finalizado'
+        elif viaje.estado == 'en_curso':
+            viaje.estado_display = 'en_curso'
+        else:
+            viaje.estado_display = 'programado'
+
+    # ===== CONTEXTO =====
     contexto = {
         'usuario': usuario,
         'sede': sede,
-        'es_admin': usuario.is_superuser or sede.nombre == 'Oficina Central',
-        'viajes': viajes,
-        'total_viajes': viajes.count(),
+        'es_admin': usuario.is_superuser or (sede and sede.nombre == 'Oficina Central'),
+        
+        'viajes': viajes_list, 
+        'total_viajes': len(viajes_list),
+        
+        'fecha_inicio': fecha_inicio,
+        'fecha_fin': fecha_fin,
+        'hoy': hoy,
+        'ahora': hora_actual,
+        
+        'viajes_programados': viajes_programados,
+        'asientos_disponibles': asientos_disponibles,
+        'viajes_agotados': viajes_agotados,
+        'horarios_count': HorarioFijo.objects.filter(activa=True).count(),
     }
     
     return render(request, 'admin/asignacion_viajes.html', contexto)
@@ -1565,7 +2138,7 @@ def asignacion_viajes(request):
 
 @login_required
 def viaje_nuevo(request):
-    """Crear nuevo viaje (Admin) - Con cálculo automático de llegada"""
+    """Crear nuevo viaje (Admin) - CON CORRECCIÓN DE TIMEZONE"""
     usuario = request.user
     
     if not usuario.is_superuser and usuario.sede.nombre != 'Oficina Central':
@@ -1580,52 +2153,67 @@ def viaje_nuevo(request):
             try:
                 logger_viaje.info("VIAJE_NUEVO - Formulario válido, creando viaje...")
                 
+                # Obtener datos limpios
                 ruta = form.cleaned_data['ruta']
+                vehiculo = form.cleaned_data['vehiculo']
+                sede_salida = form.cleaned_data['sede_salida']
                 fecha_salida = form.cleaned_data['fecha_salida']
                 hora_salida = form.cleaned_data['hora_salida']
+                chofer_asignado = form.cleaned_data.get('chofer_asignado')
                 
-                # Parsear duración con regex robusto (MISMA FUNCIÓN QUE EL SERVICIO)
+                # ✅ CORRECCIÓN: Comparar datetime completos en zona local (naive)
+                ahora_local = timezone.localtime(timezone.now())  # Convierte UTC → America/Lima
+                
+                # Crear datetime completo del viaje (naive)
+                viaje_dt = datetime.combine(fecha_salida, hora_salida)
+                
+                # Convertir ahora_local a naive para comparar correctamente
+                ahora_naive = ahora_local.replace(tzinfo=None)
+                
+                logger_viaje.info(f"VIAJE_NUEVO - Ahora (naive): {ahora_naive}")
+                logger_viaje.info(f"VIAJE_NUEVO - Viaje dt (naive): {viaje_dt}")
+                
+                # Validar que no sea en el pasado
+                if viaje_dt < ahora_naive:
+                    messages.error(
+                        request, 
+                        f' No puedes crear un viaje en el pasado. '
+                        f'Ahora: {ahora_naive.strftime("%d/%m %H:%M")} | '
+                        f'Viaje: {viaje_dt.strftime("%d/%m %H:%M")}'
+                    )
+                    return render(request, 'admin/viaje_form.html', {
+                        'form': form, 
+                        'usuario': usuario, 
+                        'es_admin': True,
+                        'choferes_por_ruta': json.dumps(_obtener_choferes_por_ruta())
+                    })
+                
+                # Calcular hora de llegada
                 horas, minutos = _parsear_duracion(ruta.duracion_estimada)
-                
-                # Calcular llegada
                 salida_dt = datetime.combine(fecha_salida, hora_salida)
                 llegada_dt = salida_dt + timedelta(hours=horas, minutes=minutos)
                 
-                fecha_llegada = llegada_dt.date()
-                hora_llegada = llegada_dt.time()
-                
+                # Crear viaje
                 viaje = ViajeService.crear_viaje(
                     ruta=ruta,
-                    vehiculo=form.cleaned_data['vehiculo'],
-                    sede_salida=form.cleaned_data['sede_salida'],
+                    vehiculo=vehiculo,
+                    sede_salida=sede_salida,
+                    chofer_asignado=chofer_asignado,
                     fecha_salida=fecha_salida,
                     hora_salida=hora_salida,
-                    fecha_llegada=fecha_llegada,
-                    hora_llegada=hora_llegada,
+                    fecha_llegada=llegada_dt.date(),
+                    hora_llegada=llegada_dt.time(),
                     creado_por=usuario
                 )
                 
-                messages.success(
-                    request, 
-                    f'Viaje creado exitosamente. Llegada estimada: {hora_llegada.strftime("%H:%M")}'
-                )
-                logger_viaje.info(f"VIAJE_NUEVO - Viaje {viaje.id} creado exitosamente")
+                messages.success(request, f'✅ Viaje creado exitosamente. ID: {viaje.id}')
+                logger_viaje.info(f"VIAJE_NUEVO - Viaje {viaje.id} creado")
                 
                 return redirect('core:asignacion_viajes')
                 
-            except ValidationError as e:
-                logger_viaje.error(f"VIAJE_NUEVO - Error de validación: {str(e)}")
-                
-                if 'pasado' in str(e).lower() or 'fecha' in str(e).lower():
-                    messages.error(
-                        request, 
-                        '⚠️ No se puede crear un viaje en el pasado. Por favor selecciona una fecha y hora futuras.'
-                    )
-                else:
-                    messages.error(request, str(e))
             except Exception as e:
-                logger_viaje.error(f"VIAJE_NUEVO - Error inesperado: {str(e)}", exc_info=True)
-                messages.error(request, f'Error al crear el viaje: {str(e)}')
+                logger_viaje.error(f"VIAJE_NUEVO - Error: {str(e)}", exc_info=True)
+                messages.error(request, f'❌ Error al crear: {str(e)}')
         else:
             logger_viaje.error(f"VIAJE_NUEVO - Formulario inválido: {form.errors}")
             for field, errors in form.errors.items():
@@ -1634,18 +2222,45 @@ def viaje_nuevo(request):
     else:
         form = ViajeForm(usuario=usuario)
     
+    # Preparar datos para filtrar choferes por ruta
     contexto = {
         'usuario': usuario,
         'form': form,
         'es_admin': True,
+        'choferes_por_ruta': json.dumps(_obtener_choferes_por_ruta()),
     }
     
     return render(request, 'admin/viaje_form.html', contexto)
 
 
+def _obtener_choferes_por_ruta():
+    """
+    Retorna un diccionario con la estructura:
+    {ruta_id: [{'id': chofer_id, 'nombre': 'Nombre Chofer'}, ...]}
+    """
+    
+    choferes_data = {}
+    
+    for ruta in Ruta.objects.filter(activa=True):
+        # Obtener choferes que tienen ESTA ruta en sus rutas_asignadas
+        choferes_ruta = Usuario.objects.filter(
+            es_chofer=True, 
+            activo=True, 
+            rutas_asignadas=ruta
+        ).distinct()
+        
+        choferes_data[str(ruta.id)] = [
+            {'id': c.id, 'nombre': f"{c.first_name} {c.last_name} ({c.username})"} 
+            for c in choferes_ruta
+        ]
+    
+    return choferes_data
+
+
 @login_required
 def viaje_editar(request, id):
-    """Editar viaje existente (Admin) - Con recálculo automático de llegada"""
+    """Editar viaje existente (Admin) - CON VALIDACIÓN CORREGIDA DE FECHA+HORA"""
+    
     usuario = request.user
     viaje = get_object_or_404(Viaje, id=id)
     
@@ -1659,46 +2274,79 @@ def viaje_editar(request, id):
         
         if form.is_valid():
             try:
-                logger_viaje.info(f"VIAJE_EDITAR - Actualizando viaje {id}...")
+                logger_viaje.info(f"VIAJE_EDITAR - Formulario válido, actualizando...")
                 
-                # Solo recalcular si cambió hora_salida o ruta
+                # Obtener datos
+                ruta = form.cleaned_data['ruta']
+                fecha_salida = form.cleaned_data['fecha_salida']
+                hora_salida = form.cleaned_data['hora_salida']
+                chofer_asignado = form.cleaned_data.get('chofer_asignado')
+                
+                # ✅ VALIDACIÓN CORREGIDA: Comparar fecha + hora completos
+                ahora_local = timezone.localtime(timezone.now())
+                ahora_naive = ahora_local.replace(tzinfo=None)
+                
+                # Combinar fecha y hora del viaje para comparar
+                viaje_dt = datetime.combine(fecha_salida, hora_salida)
+                
+                # Validar que no sea en el pasado
+                if viaje_dt < ahora_naive:
+                    messages.error(
+                        request, 
+                        f'❌ No puedes editar un viaje en el pasado. '
+                        f'Ahora: {ahora_naive.strftime("%d/%m %H:%M")} | '
+                        f'Viaje: {viaje_dt.strftime("%d/%m %H:%M")}'
+                    )
+                    return render(request, 'admin/viaje_form.html', {
+                        'form': form, 
+                        'usuario': usuario, 
+                        'viaje': viaje, 
+                        'es_admin': True,
+                        'choferes_por_ruta': json.dumps(_obtener_choferes_por_ruta())
+                    })
+                
+                # Calcular nueva hora de llegada si cambió
                 if form.has_changed():
-                    ruta = form.cleaned_data['ruta']
-                    fecha_salida = form.cleaned_data['fecha_salida']
-                    hora_salida = form.cleaned_data['hora_salida']
-                    
-                    # Parsear duración con regex robusto (MISMA FUNCIÓN)
                     horas, minutos = _parsear_duracion(ruta.duracion_estimada)
-                    
-                    # Calcular llegada
                     salida_dt = datetime.combine(fecha_salida, hora_salida)
                     llegada_dt = salida_dt + timedelta(hours=horas, minutes=minutos)
                     
-                    # Actualizar instancia antes de guardar
                     form.instance.fecha_llegada = llegada_dt.date()
                     form.instance.hora_llegada = llegada_dt.time()
                 
+                # Actualizar chofer si cambió
+                if 'chofer_asignado' in form.changed_data:
+                    form.instance.chofer_asignado = chofer_asignado
+                
+                # Guardar cambios
                 form.save()
-                messages.success(request, 'Viaje actualizado exitosamente')
+                
+                messages.success(request, f'✅ Viaje {id} actualizado correctamente')
                 logger_viaje.info(f"VIAJE_EDITAR - Viaje {id} actualizado")
+                
                 return redirect('core:asignacion_viajes')
+                
             except Exception as e:
                 logger_viaje.error(f"VIAJE_EDITAR - Error: {str(e)}", exc_info=True)
-                messages.error(request, f'Error al actualizar: {str(e)}')
+                messages.error(request, f'❌ Error al actualizar: {str(e)}')
         else:
             logger_viaje.error(f"VIAJE_EDITAR - Formulario inválido: {form.errors}")
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f'{field}: {error}')
     else:
         form = ViajeForm(instance=viaje, usuario=usuario)
     
+    # Preparar datos para filtrar choferes por ruta
     contexto = {
         'usuario': usuario,
         'form': form,
         'viaje': viaje,
         'es_admin': True,
+        'choferes_por_ruta': json.dumps(_obtener_choferes_por_ruta()),
     }
     
     return render(request, 'admin/viaje_form.html', contexto)
-
 
 @login_required
 def viaje_eliminar(request, id):
@@ -1728,3 +2376,470 @@ def viaje_eliminar(request, id):
             logger_viaje.error(f"VIAJE_ELIMINAR - Error: {str(e)}", exc_info=True)
     
     return redirect('core:asignacion_viajes')
+
+@login_required
+def generar_proximos_7_dias(request):
+    """
+    Genera viajes para los PRÓXIMOS 7 DÍAS desde HOY.
+    Simple, directo y sin complicaciones.
+    """
+    
+    if request.method != 'POST':
+        messages.error(request, 'Método no permitido')
+        return redirect('core:asignacion_viajes')
+    
+    if not (request.user.is_superuser or request.user.sede.nombre == 'Oficina Central'):
+        messages.error(request, 'No tienes permisos')
+        return redirect('core:asignacion_viajes')
+    
+    # ===== CONFIGURACIÓN =====
+    hoy = timezone.now().date()
+    dias_a_generar = 7
+    viajes_creados = 0
+    viajes_saltados = 0
+    errores = []
+    
+    # ===== OBTENER HORARIOS FIJOS ACTIVOS =====
+    horarios = HorarioFijo.objects.filter(activa=True).select_related('ruta', 'vehiculo')
+    
+    if not horarios.exists():
+        messages.error(request, '⚠️ No hay horarios fijos configurados. Ve a "Horarios Fijos" para crear uno.')
+        return redirect('core:asignacion_viajes')
+    
+    # ===== GENERAR PARA CADA DÍA (HOY + 6 DÍAS) =====
+    for i in range(dias_a_generar):
+        fecha_objetivo = hoy + timedelta(days=i)
+        dia_semana = fecha_objetivo.weekday() + 1  # 1=Lun, 7=Dom
+        
+        for horario in horarios:
+            # ¿Este horario aplica para este día de la semana?
+            if str(dia_semana) not in horario.dias_semana:
+                continue
+            
+            # ✅ VALIDACIÓN CORREGIDA: Verificar que la ruta tenga origen válido
+            if not horario.ruta.origen:
+                errores.append(f"Ruta {horario.ruta} no tiene origen definido")
+                continue
+            
+            # Determinar sede_salida buscando por nombre de origen
+            try:
+                sede_salida = Sede.objects.get(nombre__icontains=horario.ruta.origen)
+            except Sede.DoesNotExist:
+                # Fallback: usar la sede del usuario o la primera disponible
+                sede_salida = request.user.sede if hasattr(request.user, 'sede') else Sede.objects.first()
+                if not sede_salida:
+                    errores.append(f"No se pudo determinar sede para {horario.ruta.origen}")
+                    continue
+            
+            # ¿Ya existe este viaje?
+            existe = Viaje.objects.filter(
+                ruta=horario.ruta,
+                vehiculo=horario.vehiculo,
+                fecha_salida=fecha_objetivo,
+                hora_salida=horario.hora_salida
+            ).exists()
+            
+            if existe:
+                viajes_saltados += 1
+                continue
+            
+            try:
+                # Calcular hora de llegada (simple: +2 horas por defecto)
+                duracion_texto = str(horario.ruta.duracion_estimada).lower()
+                horas_duracion = 2
+                if 'h' in duracion_texto:
+                    try:
+                        horas_duracion = int(duracion_texto.split('h')[0].strip())
+                    except:
+                        pass
+                
+                salida_dt = datetime.combine(fecha_objetivo, horario.hora_salida)
+                llegada_dt = salida_dt + timedelta(hours=horas_duracion)
+                
+                # ✅ Crear viaje con sede_salida determinada
+                viaje = Viaje.objects.create(
+                    ruta=horario.ruta,
+                    vehiculo=horario.vehiculo,
+                    sede_salida=sede_salida,  # ← Determinada dinámicamente
+                    fecha_salida=fecha_objetivo,
+                    hora_salida=horario.hora_salida,
+                    fecha_llegada=llegada_dt.date(),
+                    hora_llegada=llegada_dt.time(),
+                    estado='programado'
+                )
+                
+                # Generar asientos automáticamente
+                capacidad = horario.vehiculo.capacidad_asientos or 20
+                for num in range(1, capacidad + 1):
+                    AsientoViaje.objects.create(
+                        viaje=viaje,
+                        numero_asiento=str(num),
+                        estado='disponible',
+                        precio=horario.ruta.precio_base or 50
+                    )
+                
+                viajes_creados += 1
+                
+            except Exception as e:
+                errores.append(f"Error al crear viaje: {str(e)}")
+    
+    # ===== MOSTRAR RESULTADOS =====
+    if viajes_creados > 0:
+        messages.success(request, f'✅ Se crearon {viajes_creados} viajes para los próximos 7 días')
+    
+    if viajes_saltados > 0:
+        messages.info(request, f'ℹ️ Se omitieron {viajes_saltados} viajes que ya existían')
+    
+    if errores:
+        for error in errores[:3]:  # Mostrar solo los primeros 3
+            messages.error(request, f'❌ {error}')
+    
+    return redirect('core:asignacion_viajes')
+
+@login_required
+def horarios_fijos_lista(request):
+    """Lista y crea horarios fijos"""
+    if not (request.user.is_superuser or request.user.sede.nombre == 'Oficina Central'):
+        messages.error(request, 'No tienes permisos')
+        return redirect('core:dashboard')
+    
+    horarios = HorarioFijo.objects.select_related('ruta', 'vehiculo').all()
+    
+    if request.method == 'POST':
+        ruta_id = request.POST.get('ruta')
+        vehiculo_id = request.POST.get('vehiculo')
+        hora_salida = request.POST.get('hora_salida')
+        dias_semana = request.POST.get('dias_semana', '1,2,3,4,5,6,7')
+        
+        try:
+            HorarioFijo.objects.create(
+                ruta_id=ruta_id,
+                vehiculo_id=vehiculo_id,
+                hora_salida=hora_salida,
+                dias_semana=dias_semana,
+                activa=True
+            )
+            messages.success(request, '✅ Horario fijo creado')
+        except Exception as e:
+            messages.error(request, f'Error: {str(e)}')
+        
+        return redirect('core:horarios_fijos_lista')
+    
+    contexto = {
+        'usuario': request.user,
+        'horarios': horarios,
+        'rutas': Ruta.objects.filter(activa=True),
+        'vehiculos': Vehiculo.objects.filter(activo=True),
+    }
+    return render(request, 'admin/horarios_fijos.html', contexto)
+
+@login_required
+def horario_fijo_editar(request, id):
+    """Edita un horario fijo"""
+    if not (request.user.is_superuser or request.user.sede.nombre == 'Oficina Central'):
+        messages.error(request, 'No tienes permisos')
+        return redirect('core:dashboard')
+    
+    horario = get_object_or_404(HorarioFijo, id=id)
+    
+    if request.method == 'POST':
+        horario.ruta_id = request.POST.get('ruta')
+        horario.vehiculo_id = request.POST.get('vehiculo')
+        horario.hora_salida = request.POST.get('hora_salida')
+        horario.dias_semana = request.POST.get('dias_semana', '1,2,3,4,5,6,7')
+        horario.save()
+        messages.success(request, '✅ Horario actualizado')
+        return redirect('core:horarios_fijos_lista')
+    
+    contexto = {
+        'usuario': request.user,
+        'horario': horario,
+        'rutas': Ruta.objects.filter(activa=True),
+        'vehiculos': Vehiculo.objects.filter(activo=True),
+    }
+    return render(request, 'admin/horario_fijo_editar.html', contexto)
+
+
+@login_required
+def horario_fijo_eliminar(request, id):
+    """Elimina un horario fijo"""
+    if not (request.user.is_superuser or request.user.sede.nombre == 'Oficina Central'):
+        messages.error(request, 'No tienes permisos')
+        return redirect('core:dashboard')
+    
+    if request.method == 'POST':
+        try:
+            horario = HorarioFijo.objects.get(id=id)
+            horario.delete()
+            messages.success(request, '✅ Horario eliminado')
+        except:
+            messages.error(request, 'Error al eliminar')
+    
+    return redirect('core:horarios_fijos_lista')
+
+@login_required
+def crear_viaje_regreso(request, viaje_id):
+    """
+    Crea automáticamente un viaje de regreso basado en un viaje existente.
+    Ej: Si vino Trujillo→Julcán, crea Julcán→Trujillo con el mismo vehículo.
+    """
+    
+    if request.method != 'POST':
+        messages.error(request, 'Método no permitido')
+        return redirect('core:asignacion_viajes')
+    
+    # Obtener viaje original
+    viaje_origen = get_object_or_404(Viaje, id=viaje_id)
+    
+    # Buscar ruta inversa
+    try:
+        ruta_regreso = Ruta.objects.get(
+            origen=viaje_origen.ruta.destino,
+            destino=viaje_origen.ruta.origen
+        )
+    except Ruta.DoesNotExist:
+        messages.error(request, f'No existe ruta de regreso: {viaje_origen.ruta.destino} → {viaje_origen.ruta.origen}')
+        return redirect('core:asignacion_viajes')
+    
+    # Calcular hora de salida (30 min después de la llegada, configurable)
+    hora_llegada = datetime.combine(viaje_origen.fecha_salida, viaje_origen.hora_llegada)
+    hora_salida_regreso = (hora_llegada + timedelta(minutes=30)).time()
+    
+    # Determinar sede de salida (la sede de destino del viaje original)
+    try:
+        sede_salida = Sede.objects.get(nombre__icontains=viaje_origen.ruta.destino)
+    except Sede.DoesNotExist:
+        sede_salida = request.user.sede
+    
+    # Verificar si ya existe
+    existe = Viaje.objects.filter(
+        ruta=ruta_regreso,
+        vehiculo=viaje_origen.vehiculo,
+        fecha_salida=viaje_origen.fecha_salida,
+        hora_salida=hora_salida_regreso
+    ).exists()
+    
+    if existe:
+        messages.warning(request, 'Ya existe un viaje de regreso para esta fecha/hora')
+        return redirect('core:asignacion_viajes')
+    
+    # Calcular hora de llegada del regreso
+    duracion_texto = str(ruta_regreso.duracion_estimada).lower()
+    horas_duracion = 2
+    if 'h' in duracion_texto:
+        try:
+            horas_duracion = int(duracion_texto.split('h')[0].strip())
+        except:
+            pass
+    
+    salida_dt = datetime.combine(viaje_origen.fecha_salida, hora_salida_regreso)
+    llegada_dt = salida_dt + timedelta(hours=horas_duracion)
+    
+    # Crear viaje de regreso
+    viaje_regreso = Viaje.objects.create(
+        ruta=ruta_regreso,
+        vehiculo=viaje_origen.vehiculo,
+        sede_salida=sede_salida,
+        fecha_salida=viaje_origen.fecha_salida,
+        hora_salida=hora_salida_regreso,
+        fecha_llegada=llegada_dt.date(),
+        hora_llegada=llegada_dt.time(),
+        estado='programado'
+    )
+    
+    # Generar asientos automáticamente
+    capacidad = viaje_origen.vehiculo.capacidad_asientos or 20
+    for num in range(1, capacidad + 1):
+        AsientoViaje.objects.create(
+            viaje=viaje_regreso,
+            numero_asiento=str(num),
+            estado='disponible',
+            precio=ruta_regreso.precio_base or 50
+        )
+    
+    messages.success(request, f'✅ Viaje de regreso creado: {ruta_regreso} a las {hora_salida_regreso.strftime("%H:%M")}')
+    return redirect('core:asignacion_viajes')
+
+
+@login_required
+def procesar_reserva_pago(request, asiento_id):
+    """Convierte una reserva en venta confirmada"""
+    
+    asiento = get_object_or_404(AsientoViaje, id=asiento_id, estado='reservado')
+    
+    # Verificar permisos
+    if request.user.sede != asiento.viaje.sede_salida and not request.user.is_superuser:
+        messages.error(request, 'No tienes permisos para confirmar esta reserva')
+        return redirect('core:venta_pasajes')
+    
+    # Cambiar estado a vendido
+    asiento.estado = 'vendido'
+    asiento.save()
+    
+    # Crear venta (puedes reutilizar tu lógica existente)
+    Venta.objects.create(
+        viaje=asiento.viaje,
+        asiento=asiento,
+        sede_venta=request.user.sede,
+        cajero=request.user,
+        nombre_cliente=asiento.nombre_reserva,
+        telefono_cliente=asiento.telefono_reserva,
+        monto_total=asiento.viaje.ruta.precio_base,
+        metodo_pago='efectivo',  # O pedir que elijan
+        numero_ticket=f"RES-{asiento.viaje.id}-{asiento.numero_asiento}"
+    )
+    
+    messages.success(request, f'✅ Reserva del asiento {asiento.numero_asiento} confirmada como venta')
+    return redirect('core:venta_pasajes')
+
+@login_required
+def procesar_reserva(request):
+    """
+    Procesa la RESERVA de un asiento (sin pago inmediato) - VERSIÓN AJAX/JSON
+    El asiento cambia a estado 'reservado' (Morado).
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=400)
+    
+    # Obtener datos del formulario
+    viaje_id = request.POST.get('viaje_id')
+    asiento_numero = request.POST.get('asiento_numero')
+    nombre = request.POST.get('nombre_pasajero')
+    telefono = request.POST.get('telefono_pasajero')
+    
+    # Validar datos obligatorios
+    if not all([viaje_id, asiento_numero, nombre]):
+        return JsonResponse({'success': False, 'error': 'Faltan datos para reservar'}, status=400)
+    
+    try:
+        # 1. Buscar el viaje y el asiento
+        viaje = get_object_or_404(Viaje, id=viaje_id)
+        asiento = get_object_or_404(AsientoViaje, viaje=viaje, numero_asiento=asiento_numero)
+        
+        # 2. Verificar que esté disponible
+        if asiento.estado != 'disponible':
+            return JsonResponse({'success': False, 'error': f'El asiento {asiento_numero} ya no está disponible'}, status=409)
+        
+        # 3. ✅ Actualizar a RESERVADO (NO vendido)
+        asiento.estado = 'reservado'
+        asiento.nombre_reserva = nombre
+        asiento.telefono_reserva = telefono
+        asiento.fecha_reserva = timezone.now()
+        asiento.save()
+        
+        # ✅ Devolver JSON exitoso con datos para el frontend
+        return JsonResponse({
+            'success': True,
+            'asiento': asiento.numero_asiento,
+            'tipo': 'reserva',  # ← Clave para que el JS pinte morado
+            'nombre': nombre,   # ← Para mostrar en el mensaje
+            'message': f'Asiento {asiento.numero_asiento} reservado correctamente'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error al procesar reserva: {str(e)}", exc_info=True)
+        return JsonResponse({'success': False, 'error': f'Error al reservar: {str(e)}'}, status=500)
+    
+
+@login_required
+def liberar_reserva(request, asiento_id):
+    """Libera un asiento reservado (solo admin o sede central)"""
+    
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=400)
+    
+    asiento = get_object_or_404(AsientoViaje, id=asiento_id, estado='reservado')
+    
+    # Solo admin o sede central puede liberar
+    if not (request.user.is_superuser or request.user.sede.nombre == 'Oficina Central'):
+        return JsonResponse({'error': 'No tienes permisos'}, status=403)
+    
+    # Liberar asiento
+    asiento.estado = 'disponible'
+    asiento.nombre_reserva = None
+    asiento.telefono_reserva = None
+    asiento.fecha_reserva = None
+    asiento.nota_reserva = None
+    asiento.save()
+    
+    return JsonResponse({'success': True, 'message': 'Asiento liberado'})
+
+@login_required
+def confirmacion_venta(request, venta_id):
+    """Muestra la confirmación de venta con resumen y botones"""
+    
+    venta = get_object_or_404(Venta, id=venta_id)
+    
+    # Preparar datos del boleto para impresión
+    boleto = {
+        'numero': venta.numero_ticket,
+        'pasajero': venta.nombre_cliente,
+        'dni': venta.numero_documento,
+        'ruc': venta.ruc_cliente or '',
+        'razon_social': venta.razon_social or '',
+        'origen': venta.viaje.ruta.origen,
+        'destino': venta.viaje.ruta.destino,
+        'dia': venta.viaje.fecha_salida.strftime('%d'),
+        'mes': venta.viaje.fecha_salida.strftime('%m'),
+        'anio': venta.viaje.fecha_salida.strftime('%Y'),
+        'hora': venta.viaje.hora_salida.strftime('%H:%M'),
+        'asiento': venta.asiento.numero_asiento,
+        'valor': venta.monto_total,
+        'es_premiado': False,
+    }
+    
+    contexto = {
+        'venta': venta,
+        'boleto': boleto,
+    }
+    
+    return render(request, 'ventas/confirmacion_venta.html', contexto)
+
+@login_required
+def confirmar_pago_reserva(request, asiento_id):
+    """Convierte una reserva en venta (cuando el cliente llega)"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=400)
+    
+    import random
+    
+    try:
+        asiento = get_object_or_404(AsientoViaje, id=asiento_id)
+        
+        if asiento.estado != 'reservado':
+            return JsonResponse({'success': False, 'error': 'El asiento no está reservado'}, status=400)
+        
+        # Crear la venta
+        venta = Venta.objects.create(
+            viaje=asiento.viaje,
+            asiento=asiento,
+            sede_venta=request.user.sede,
+            cajero=request.user,
+            numero_documento='',  # Se puede completar después
+            nombre_cliente=asiento.nombre_reserva,
+            telefono_cliente=asiento.telefono_reserva,
+            metodo_pago='efectivo',  # Por defecto
+            monto_total=asiento.viaje.ruta.precio_base,
+            numero_ticket=f"TKT-{timezone.now().strftime('%y%m%d')}-{random.randint(1000, 9999)}",
+            fecha_venta=timezone.now()
+        )
+        
+        # Marcar como vendido
+        asiento.estado = 'vendido'
+        asiento.save()
+        
+        return JsonResponse({
+            'success': True,
+            'venta_id': venta.id,
+            'asiento': venta.asiento.numero_asiento,
+            'ruta': f"{venta.viaje.ruta.origen} → {venta.viaje.ruta.destino}",
+            'fecha': venta.viaje.fecha_salida.strftime('%d/%m/%Y'),
+            'hora': venta.viaje.hora_salida.strftime('%H:%M'),
+            'pasajero': venta.nombre_cliente,
+            'total': str(venta.monto_total),
+            'tipo': 'venta'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error al confirmar pago: {str(e)}", exc_info=True)
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

@@ -10,38 +10,65 @@
 
 {% block content %}
 
-<!-- 1. FILTROS -->
+<!-- ==================== 1. FILTROS (CON BOTÓN EXPLÍCITO) ==================== -->
 <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
-    <form method="get" class="flex flex-wrap items-center gap-3">
-        <select name="sede" onchange="this.form.submit()" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm">
-            <option value="">🏢 Todas las sedes</option>
-            {% for s in sedes %}
-            <option value="{{ s.nombre }}" {% if sede_filtro == s.nombre %}selected{% endif %}>{{ s.nombre }}</option>
-            {% endfor %}
-        </select>
+    <form method="get" class="flex flex-wrap items-end gap-4">
         
-        <select name="tipo" onchange="this.form.submit()" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm">
-            <option value="">📋 Todos los tipos</option>
-            <option value="reclamo" {% if tipo_filtro == 'reclamo' %}selected{% endif %}>Reclamo</option>
-            <option value="sugerencia" {% if tipo_filtro == 'sugerencia' %}selected{% endif %}>Sugerencia</option>
-            <option value="incidente" {% if tipo_filtro == 'incidente' %}selected{% endif %}>Incidente</option>
-            <option value="otro" {% if tipo_filtro == 'otro' %}selected{% endif %}>Otro</option>
-        </select>
+        <!-- Filtro: Sede -->
+        <div class="flex-1 min-w-[180px]">
+            <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">🏢 Sede</label>
+            <select name="sede" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm">
+                <option value="">Todas las sedes</option>
+                {% for s in sedes %}
+                <option value="{{ s.nombre }}" {% if sede_filtro == s.nombre %}selected{% endif %}>
+                    {{ s.nombre }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
         
-        <select name="estado" onchange="this.form.submit()" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm">
-            <option value="">🔄 Todos los estados</option>
-            <option value="pendiente" {% if estado_filtro == 'pendiente' %}selected{% endif %}>Pendiente</option>
-            <option value="en_proceso" {% if estado_filtro == 'en_proceso' %}selected{% endif %}>En Proceso</option>
-            <option value="resuelta" {% if estado_filtro == 'resuelta' %}selected{% endif %}>Resuelta</option>
-        </select>
+        <!-- Filtro: Tipo -->
+        <div class="flex-1 min-w-[180px]">
+            <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">📋 Tipo</label>
+            <select name="tipo" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm">
+                <option value="">Todos los tipos</option>
+                <option value="reclamo" {% if tipo_filtro == 'reclamo' %}selected{% endif %}>Reclamo</option>
+                <option value="sugerencia" {% if tipo_filtro == 'sugerencia' %}selected{% endif %}>Sugerencia</option>
+                <option value="incidente" {% if tipo_filtro == 'incidente' %}selected{% endif %}>Incidente</option>
+                <option value="otro" {% if tipo_filtro == 'otro' %}selected{% endif %}>Otro</option>
+            </select>
+        </div>
         
-        <a href="{% url 'core:incidencias_lista' %}" class="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition" title="Limpiar filtros">
-            <i class="fas fa-times"></i>
-        </a>
+        <!-- Filtro: Estado -->
+        <div class="flex-1 min-w-[180px]">
+            <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">🔄 Estado</label>
+            <select name="estado" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm">
+                <option value="">Todos los estados</option>
+                <option value="pendiente" {% if estado_filtro == 'pendiente' %}selected{% endif %}>Pendiente</option>
+                <option value="en_proceso" {% if estado_filtro == 'en_proceso' %}selected{% endif %}>En Proceso</option>
+                <option value="resuelta" {% if estado_filtro == 'resuelta' %}selected{% endif %}>Resuelta</option>
+            </select>
+        </div>
+        
+        <!-- Botones de Acción (ALINEADOS ABAJO) -->
+        <div class="flex items-end gap-2 pb-2.5">
+            <!-- Botón Filtrar -->
+            <button type="submit" class="px-5 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm font-medium flex items-center gap-2 shadow-md">
+                <i class="fas fa-filter"></i> Filtrar
+            </button>
+            
+            <!-- Botón Limpiar -->
+            <a href="{% url 'core:incidencias_lista' %}" 
+               class="px-4 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition text-sm font-medium flex items-center gap-2"
+               title="Limpiar filtros">
+                <i class="fas fa-times"></i>
+            </a>
+        </div>
+        
     </form>
 </div>
 
-<!-- 2. KPIs -->
+<!-- ==================== 2. KPIs ==================== -->
 <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
     <div class="bg-gradient-to-br from-red-500 to-red-600 rounded-xl p-6 text-white shadow-lg">
         <p class="text-sm opacity-90">Total Incidencias</p>
@@ -61,22 +88,24 @@
     </div>
 </div>
 
-<!-- 3. BOTÓN NUEVA INCIDENCIA (Alineado a la izquierda, como en Rutas) -->
+<!-- ==================== 3. BOTÓN NUEVA INCIDENCIA ==================== -->
 <div class="mb-6">
     <a href="{% url 'core:incidencia_nuevo' %}" class="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-semibold shadow-lg inline-flex items-center">
         <i class="fas fa-plus-circle mr-2"></i>Nueva Incidencia
     </a>
 </div>
 
-<!-- 4. TABLA -->
+<!-- ==================== 4. TABLA DE INCIDENCIAS ==================== -->
 <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-    <div class="p-6 border-b border-gray-200">
+    <div class="p-6 border-b border-gray-200 flex justify-between items-center">
         <h3 class="text-lg font-bold text-gray-800">Listado de Incidencias</h3>
+        <span class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+            {{ incidencias|length }} registros
+        </span>
     </div>
     
     <div class="overflow-x-auto">
         <table class="table-admin w-full">
-            <!-- ... (El contenido de la tabla se mantiene igual) ... -->
             <thead class="bg-gray-50">
                 <tr>
                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Fecha</th>
@@ -102,8 +131,12 @@
                             {{ inc.get_tipo_display }}
                         </span>
                     </td>
-                    <td class="px-6 py-4 text-sm text-gray-700 max-w-xs truncate">{{ inc.descripcion }}</td>
-                    <td class="px-6 py-4 text-sm text-gray-700">{{ inc.reportado_por.get_full_name|default:inc.reportado_por.username }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-700 max-w-xs truncate" title="{{ inc.descripcion }}">
+                        {{ inc.descripcion|truncatechars:50 }}
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-700">
+                        {{ inc.reportado_por.get_full_name|default:inc.reportado_por.username }}
+                    </td>
                     <td class="px-6 py-4 text-center">
                         <span class="px-3 py-1 rounded-full text-xs font-semibold 
                             {% if inc.estado == 'pendiente' %}bg-yellow-100 text-yellow-700
@@ -112,27 +145,36 @@
                             {{ inc.get_estado_display }}
                         </span>
                     </td>
-                    <td class="px-6 py-4 text-center space-x-2">
-                        {% if inc.estado != 'resuelta' %}
-                        <button onclick="abrirModalEstado({{ inc.id }}, '{{ inc.estado }}')" class="text-green-600 hover:text-green-800" title="Cambiar estado">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        {% endif %}
-                        <button onclick="verDetalle({{ inc.id }})" class="text-blue-600 hover:text-blue-800" title="Ver detalle">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                        {% if es_admin %}
-                        <a href="{% url 'core:incidencia_eliminar' inc.id %}" class="text-red-600 hover:text-red-800" onclick="return confirm('¿Eliminar esta incidencia?')">
-                            <i class="fas fa-trash"></i>
-                        </a>
-                        {% endif %}
+                    <td class="px-6 py-4 text-center">
+                        <div class="flex items-center justify-center gap-2">
+                            {% if inc.estado != 'resuelta' %}
+                            <button onclick="abrirModalEstado({{ inc.id }}, '{{ inc.estado }}')" 
+                                    class="p-2 text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition" 
+                                    title="Cambiar estado">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            {% endif %}
+                            <button onclick="verDetalle({{ inc.id }})" 
+                                    class="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition" 
+                                    title="Ver detalle">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            {% if es_admin %}
+                            <a href="{% url 'core:incidencia_eliminar' inc.id %}" 
+                               class="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition" 
+                               onclick="return confirm('¿Eliminar esta incidencia?')"
+                               title="Eliminar">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                            {% endif %}
+                        </div>
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="7" class="px-6 py-8 text-center text-gray-500">
+                    <td colspan="7" class="px-6 py-12 text-center text-gray-500">
                         <div class="flex flex-col items-center">
-                            <i class="fas fa-inbox text-4xl mb-2 text-gray-300"></i>
+                            <i class="fas fa-inbox text-4xl mb-3 text-gray-300"></i>
                             <p class="font-medium">No hay incidencias registradas</p>
                             <p class="text-sm text-gray-400 mt-1">Haz clic en "Nueva Incidencia" para comenzar</p>
                         </div>
@@ -144,18 +186,17 @@
     </div>
 </div>
 
-
-<!-- Modal Cambiar Estado -->
+<!-- ==================== MODAL CAMBIAR ESTADO ==================== -->
 <div id="modalEstado" class="fixed inset-0 z-50 hidden">
     <div class="absolute inset-0 bg-black/50" onclick="cerrarModalEstado()"></div>
-    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 m-4">
         <h3 class="text-lg font-bold text-gray-800 mb-4">Cambiar Estado de Incidencia</h3>
         <form id="formEstado" method="post" action="">
             {% csrf_token %}
             <div class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Nuevo Estado</label>
-                    <select name="estado" id="selectEstado" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                    <select name="estado" id="selectEstado" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" onchange="toggleSolucion()">
                         <option value="pendiente">Pendiente</option>
                         <option value="en_proceso">En Proceso</option>
                         <option value="resuelta">Resuelta</option>
@@ -166,9 +207,9 @@
                     <textarea name="solucion" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="Detalle cómo se resolvió..."></textarea>
                 </div>
             </div>
-            <div class="flex justify-end space-x-3 mt-6">
+            <div class="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
                 <button type="button" onclick="cerrarModalEstado()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">Cancelar</button>
-                <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">Guardar</button>
+                <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium">Guardar Cambios</button>
             </div>
         </form>
     </div>
@@ -192,13 +233,21 @@ function cerrarModalEstado() {
 function toggleSolucion() {
     const estado = document.getElementById('selectEstado').value;
     const campo = document.getElementById('campoSolucion');
-    campo.classList.toggle('hidden', estado !== 'resuelta');
+    if (campo) {
+        campo.classList.toggle('hidden', estado !== 'resuelta');
+    }
 }
-
-document.getElementById('selectEstado')?.addEventListener('change', toggleSolucion);
 
 function verDetalle(id) {
-    alert('Detalle de incidencia #' + id + '\n(Aquí puedes abrir un modal con descripción completa y solución)');
+    // Aquí puedes abrir un modal con más detalle o redirigir
+    alert('📋 Detalle de incidencia #' + id + '\n\n(Aquí puedes implementar un modal con la descripción completa)');
 }
+
+// Cerrar modal con tecla Escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        cerrarModalEstado();
+    }
+});
 </script>
 {% endblock %}

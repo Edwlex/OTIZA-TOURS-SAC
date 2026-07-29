@@ -60,19 +60,37 @@
                     <p class="text-red-500 text-xs mt-1">{{ form.capacidad_asientos.errors.0 }}</p>
                     {% endif %}
                 </div>
-                
-                <!-- Sede Asignada -->
+
+                <!-- Campo de Rutas (ManyToMany) -->
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">
+                        {{ form.rutas_asignadas.label }}
+                        <span class="text-xs text-slate-400">(Mantén presionado Ctrl para seleccionar múltiples)</span>
+                    </label>
+                    <div class="border border-slate-300 rounded-lg p-3 bg-white max-h-48 overflow-y-auto">
+                        {{ form.rutas_asignadas }}
+                    </div>
+                    {% if form.rutas_asignadas.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ form.rutas_asignadas.errors.0 }}</p>
+                    {% endif %}
+                    <p class="text-xs text-slate-500 mt-1">{{ form.rutas_asignadas.help_text }}</p>
+                </div>
+
+                <!-- Campo de Chofer -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Sede Asignada</label>
-                    {{ form.sede_asignada }}
-                    {% if form.sede_asignada.errors %}
-                    <p class="text-red-500 text-xs mt-1">{{ form.sede_asignada.errors.0 }}</p>
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">
+                        {{ form.chofer_asignado.label }}
+                        <span class="text-xs text-slate-400">(Opcional)</span>
+                    </label>
+                    {{ form.chofer_asignado }}
+                    {% if form.chofer_asignado.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ form.chofer_asignado.errors.0 }}</p>
                     {% endif %}
                 </div>
                 
                 <!-- Activo -->
                 <div class="md:col-span-2">
-                    <label class="flex items-center space-x-2">
+                    <label class="flex items-center space-x-2 cursor-pointer">
                         {{ form.activo }}
                         <span class="text-sm font-medium text-gray-700">Vehículo Activo</span>
                     </label>

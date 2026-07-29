@@ -52,61 +52,129 @@
     
     <div class="overflow-x-auto">
         <table class="table-admin w-full">
-            <thead class="bg-gray-50">
-                <tr>
-                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Placa</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Marca</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Modelo</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Año</th>
-                    <th class="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Asientos</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Sede</th>
-                    <th class="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Estado</th>
-                    <th class="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Acciones</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200">
-                {% for vehiculo in vehiculos %}
-                <tr class="hover:bg-gray-50 transition">
-                    <td class="px-6 py-4 font-semibold text-gray-800">{{ vehiculo.placa }}</td>
-                    <td class="px-6 py-4 text-gray-700">{{ vehiculo.marca }}</td>
-                    <td class="px-6 py-4 text-gray-700">{{ vehiculo.modelo }}</td>
-                    <td class="px-6 py-4 text-gray-700">{{ vehiculo.año }}</td>
-                    <td class="px-6 py-4 text-center font-semibold text-blue-600">{{ vehiculo.capacidad_asientos }}</td>
-                    <td class="px-6 py-4 text-gray-700">{{ vehiculo.sede_asignada }}</td>
-                    <td class="px-6 py-4 text-center">
-                        <span class="px-3 py-1 rounded-full text-xs font-semibold {% if vehiculo.activo %}bg-green-100 text-green-700{% else %}bg-red-100 text-red-700{% endif %}">
-                            {% if vehiculo.activo %}Activo{% else %}Inactivo{% endif %}
+            <!-- Encabezado de la tabla -->
+        <thead class="bg-slate-50">
+            <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">PLACA</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">MODELO</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">CAPACIDAD</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">RUTAS</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">CHOFER</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">ESTADO</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">ACCIONES</th>
+            </tr>
+        </thead>
+
+        <!-- Cuerpo de la tabla -->
+        <tbody class="divide-y divide-slate-200">
+            {% for vehiculo in vehiculos %}
+            <tr class="hover:bg-slate-50 transition">
+                <td class="px-6 py-4">
+                    <span class="font-mono font-bold text-slate-800">{{ vehiculo.placa }}</span>
+                </td>
+                <td class="px-6 py-4">
+                    <div>
+                        <p class="text-sm font-semibold text-slate-900">{{ vehiculo.marca }} {{ vehiculo.modelo }}</p>
+                        <p class="text-xs text-slate-500">{{ vehiculo.año }}</p>
+                    </div>
+                </td>
+                <td class="px-6 py-4">
+                    <span class="px-2 py-1 bg-slate-100 text-slate-700 text-xs rounded-full font-medium">
+                        {{ vehiculo.capacidad_asientos }} asientos
+                    </span>
+                </td>
+                <td class="px-6 py-4">
+                    {% if vehiculo.rutas_asignadas.all %}
+                    <div class="flex flex-wrap gap-1">
+                        {% for ruta in vehiculo.rutas_asignadas.all|slice:":2" %}
+                        <span class="px-2 py-1 bg-indigo-50 text-indigo-700 text-xs rounded-full">
+                            {{ ruta.origen|slice:":3" }}→{{ ruta.destino|slice:":3" }}
                         </span>
-                    </td>
-                    <td class="px-6 py-4 text-center space-x-2">
-                        <a href="{% url 'core:vehiculo_editar' vehiculo.id %}" class="text-yellow-600 hover:text-yellow-800" title="Editar">
+                        {% endfor %}
+                        {% if vehiculo.rutas_asignadas.count > 2 %}
+                        <span class="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-full">
+                            +{{ vehiculo.rutas_asignadas.count|add:"-2" }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <span class="text-sm text-slate-400 italic">Sin rutas</span>
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4">
+                    {% if vehiculo.chofer_asignado %}
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-600">
+                            {{ vehiculo.chofer_asignado.first_name|default:"C"|slice:":1" }}{{ vehiculo.chofer_asignado.last_name|default:""|slice:":1" }}
+                        </div>
+                        <span class="text-sm text-slate-700">{{ vehiculo.chofer_asignado.get_full_name }}</span>
+                    </div>
+                    {% else %}
+                    <span class="text-sm text-slate-400 italic">Sin asignar</span>
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4">
+                    {% if vehiculo.activo %}
+                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">Activo</span>
+                    {% else %}
+                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">Inactivo</span>
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4">  
+                    <div class="flex items-center gap-2">
+                        <!-- Botón Editar (ícono) -->
+                        <a href="{% url 'core:vehiculo_editar' vehiculo.id %}" 
+                        class="p-2 text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50 rounded-lg transition"
+                        title="Editar vehículo">
                             <i class="fas fa-edit"></i>
                         </a>
-                        <form action="{% url 'core:vehiculo_eliminar' vehiculo.id %}" 
-                            method="POST" 
-                            class="inline" 
-                            onsubmit="return confirm('¿Estás seguro de eliminar este vehículo? Esta acción no se puede deshacer.')">
-                            {% csrf_token %}
-                            <button type="submit" class="text-red-600 hover:text-red-800" title="Eliminar">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </form>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="8" class="px-6 py-8 text-center text-gray-500">
-                        <div class="flex flex-col items-center">
-                            <i class="fas fa-bus text-4xl mb-2 text-gray-300"></i>
-                            <p class="font-medium">No hay vehículos registrados</p>
-                            <p class="text-sm text-gray-400 mt-1">Haz clic en "Nuevo Vehículo" para comenzar</p>
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
+                        
+                        <!-- Botón Eliminar (ícono) -->
+                        <button type="button"
+                                onclick="confirmarEliminacion({{ vehiculo.id }}, '{{ vehiculo.placa }}')"
+                                class="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition"
+                                title="Eliminar vehículo">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" class="px-6 py-12 text-center text-slate-500">
+                    <div class="flex flex-col items-center">
+                        <i class="fas fa-bus text-4xl mb-3 text-slate-300"></i>
+                        <p class="font-medium">No hay vehículos registrados</p>
+                        <a href="{% url 'core:vehiculo_nuevo' %}" class="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
+                            + Agregar Vehículo
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
         </table>
     </div>
 </div>
+<script>
+function confirmarEliminacion(vehiculoId, placa) {
+    if (confirm(`¿Estás seguro de eliminar el vehículo ${placa}?\n\nEsta acción no se puede deshacer.`)) {
+        // Crear formulario dinámico para eliminar
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/panel-admin/vehiculos/eliminar/${vehiculoId}/`;
+        
+        // Agregar CSRF token
+        const csrfToken = document.createElement('input');
+        csrfToken.type = 'hidden';
+        csrfToken.name = 'csrfmiddlewaretoken';
+        csrfToken.value = '{{ csrf_token }}';
+        form.appendChild(csrfToken);
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
 
 {% endblock %}

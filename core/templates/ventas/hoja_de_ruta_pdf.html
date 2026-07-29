@@ -5,27 +5,25 @@
 <meta charset="UTF-8">
 <title>Hoja de Ruta - Otiza Tours</title>
 <style>
-    /* Configuración para el motor de PDF (A4 estándar en vertical) */
     @page {
         size: A4 portrait;
-        margin: 8mm 10mm;
+        margin: 6mm 8mm;
     }
 
     body {
         font-family: Arial, Helvetica, sans-serif;
-        font-size: 8pt;
-        color: #0d233a;
+        font-size: 7.5pt;
+        color: #0b2e83; /* Azul marino oficial */
         line-height: 1.15;
         margin: 0;
         padding: 0;
-        background-color: #f1f5f9; /* Fondo de pantalla para resaltar la hoja en el navegador */
+        background-color: #f1f5f9;
     }
 
-    /* Contenedor vista previa A4 centrada para navegador */
     .hoja-a4 {
-        max-width: 210mm; /* Ancho real A4 */
-        margin: 15px auto;
-        padding: 10mm;
+        max-width: 210mm;
+        margin: 10px auto;
+        padding: 8mm;
         background: #ffffff;
         box-shadow: 0 4px 10px rgba(0,0,0,0.15);
         box-sizing: border-box;
@@ -35,104 +33,88 @@
     .text-center { text-align: center; }
     .text-right { text-align: right; }
 
-    /* Encabezado Principal */
+    /* ENCABEZADO */
     table.header-table {
         width: 100%;
         border-collapse: collapse;
-        margin-bottom: 4px;
+        margin-bottom: 2px;
     }
 
     .logo-img {
-        width: 115px;
+        width: 125px;
         height: auto;
     }
 
     .bus-img {
-        width: 105px;
+        width: 110px;
         height: auto;
     }
 
     .header-title {
-        font-size: 16pt;
-        font-weight: bold;
-        color: #0d233a;
-        letter-spacing: 1px;
+        font-size: 17pt;
+        font-weight: 900;
+        color: #0b2e83;
+        letter-spacing: 0.5px;
     }
 
     .header-subtext {
-        font-size: 7.5pt;
-        color: #0d233a;
-        line-height: 1.2;
+        font-size: 7pt;
+        color: #0b2e83;
+        line-height: 1.25;
+        font-weight: bold;
     }
 
     .num-hoja {
-        font-size: 14pt;
-        font-weight: bold;
-        color: #d90429; /* Rojo característico del talonario */
-        margin-top: 2px;
+        font-size: 15pt;
+        font-weight: 900;
+        color: #dc2626;
+        margin-top: 1px;
+        letter-spacing: 1px;
     }
 
     .resolucion {
-        font-size: 6.5pt;
+        font-size: 6pt;
         font-weight: bold;
-        color: #333;
+        color: #0b2e83;
         margin-top: 2px;
+        line-height: 1.1;
     }
 
-    /* Tablas de Estructura */
+    /* BORDES Y TABLAS */
     table.table-bordered {
         width: 100%;
         border-collapse: collapse;
-        margin-bottom: 5px;
-    }
-
-    table.table-bordered td, table.table-bordered th {
-        border: 1px solid #0d233a;
-        padding: 2.5px 5px;
-        vertical-align: middle;
-    }
-
-    .bg-header {
-        background-color: #e2e8f0;
-        font-weight: bold;
-        font-size: 7.5pt;
-    }
-
-    /* Banners de Secciones */
-    .section-title-banner {
-        background-color: #cbd5e1;
-        border: 1px solid #0d233a;
-        font-weight: bold;
-        font-size: 8pt;
-        padding: 3px 6px;
-        margin-top: 3px;
-        margin-bottom: 0px;
-    }
-
-    /* Sección Incidentes */
-    .incidente-block {
-        border: 1px solid #0d233a;
-        border-top: none;
-        padding: 4px 6px;
         margin-bottom: 4px;
     }
 
-    .linea-subraya {
-        border-bottom: 1px solid #0d233a;
-        width: 100%;
-        height: 14px;
-        margin-top: 2px;
+    table.table-bordered td, table.table-bordered th {
+        border: 1px solid #0b2e83;
+        padding: 2px 4px;
+        vertical-align: middle;
+        color: #0b2e83;
     }
 
-    table.firma-table {
-        width: 100%;
-        margin-top: 4px;
-        border-collapse: collapse;
+    /* BANNERS DE SECCION */
+    .section-banner {
+        border: 1px solid #0b2e83;
+        font-weight: bold;
+        font-size: 7.5pt;
+        padding: 2px 5px;
+        color: #0b2e83;
+        background-color: #ffffff;
     }
 
-    table.firma-table td {
-        border: none !important;
-        padding: 0 !important;
+    /* BLOQUE DE INCIDENTES */
+    .incidente-box {
+        border: 1px solid #0b2e83;
+        border-top: none;
+        padding: 3px 5px;
+    }
+
+    .linea-llena {
+        border-bottom: 1px solid #0b2e83;
+        width: 100%;
+        height: 12px;
     }
 </style>
 </head>
@@ -143,25 +125,22 @@
     <!-- 1. ENCABEZADO Y LOGOS -->
     <table class="header-table">
         <tr>
-            <!-- Logo Empresa Izquierda -->
             <td style="width: 25%; vertical-align: top;">
                 <img src="{% static 'images/otiza.png' %}" class="logo-img" alt="Otiza Tours">
             </td>
 
-            <!-- Texto Central -->
             <td style="width: 50%; text-align: center; vertical-align: top;">
                 <div class="header-title">HOJA DE RUTA</div>
                 <div class="header-subtext">
-                    <b>JULCÁN:</b> Cal. La Cultura S/N &bull; 902430951<br>
-                    <b>MACHE:</b> Cal. Maravillas N° 102 &bull; 921700432<br>
-                    <b>TRUJILLO:</b> Prolong. Unión N° 1477 &bull; 929698732
+                    JULCAN: Cal. La Cultura S/N &bull; 902430951<br>
+                    MACHE: Cal. Maravillas N° 102 &bull; 921700432<br>
+                    TRUJILLO: Prolong. Unión N° 1477 &bull; 929698732
                 </div>
                 <div class="num-hoja">
-                    001- N° 009505
+                    001- Nº 009505
                 </div>
             </td>
 
-            <!-- Foto Vehículo / Carro Derecha -->
             <td style="width: 25%; text-align: right; vertical-align: top;">
                 <img src="{% static 'images/carro.png' %}" class="bus-img" alt="Vehículo"><br>
                 <div class="resolucion">
@@ -172,164 +151,245 @@
         </tr>
     </table>
 
-    <!-- 2. DATOS GENERALES DE LA EMPRESA Y VEHÍCULO -->
-    <table class="table-bordered">
+    <!-- 2. DATOS DE LA EMPRESA Y VEHÍCULO -->
+    <table class="table-bordered" style="width: 100%; border-collapse: collapse;">
         <tr>
-            <td class="bg-header" style="width: 18%;">Razón Social:</td>
-            <td colspan="3" class="bold" style="font-size: 9pt;">OTIZA TOURS S.A.C.</td>
+            <td style="width: 14%;" class="bold">Razón Social:</td>
+            <td colspan="5" class="bold" style="font-size: 8.5pt;">OTIZA TOURS S.A.C.</td>
         </tr>
         <tr>
-            <td class="bg-header">Dirección:</td>
-            <td colspan="3">Prolong. Unión N°1477 - La Libertad - Trujillo - Trujillo</td>
+            <td class="bold">Dirección:</td>
+            <td colspan="5">Prolog. Unión N°1477 - La Libertad - Trujillo - Trujillo</td>
         </tr>
         <tr>
-            <td class="bg-header">Correo Electrónico:</td>
-            <td style="width: 42%;">otizatourssac@gmail.com</td>
-            <td class="bg-header" style="width: 15%;">N° Telefónico:</td>
-            <td style="width: 25%;" class="bold">974 276 980</td>
+            <td class="bold">Correo Electrónico:</td>
+            <td colspan="3">otizatourssac@gmail.com</td>
+            <td style="width: 15%; text-align: center;" class="bold">N° Telefónico</td>
+            <td style="width: 20%; text-align: center;" class="bold">974 276 980</td>
         </tr>
         <tr>
-            <td class="bg-header">N° de Placa:</td>
-            <td class="bold">&nbsp;</td>
-            <td class="bg-header">Fecha de Inicio de Viaje:</td>
-            <td class="text-center">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; / &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; /</td>
+            <td class="bold" style="white-space: nowrap;">N° de Placa:</td>
+            <!-- Casillas limpias para los 6 dígitos de la placa -->
+            <td style="padding: 0; width: 18%;">
+                <table style="width: 100%; border-collapse: collapse; height: 18px; text-align: center;">
+                    <tr class="bold" style="font-size: 8pt;">
+                        <td style="border: none; border-right: 1px solid #0b2e83; width: 16.6%;">&nbsp;</td>
+                        <td style="border: none; border-right: 1px solid #0b2e83; width: 16.6%;">&nbsp;</td>
+                        <td style="border: none; border-right: 1px solid #0b2e83; width: 16.6%;">&nbsp;</td>
+                        <td style="border: none; border-right: 1px solid #0b2e83; width: 16.6%;">&nbsp;</td>
+                        <td style="border: none; border-right: 1px solid #0b2e83; width: 16.6%;">&nbsp;</td>
+                        <td style="border: none; width: 16.6%;">&nbsp;</td>
+                    </tr>
+                </table>
+            </td>
+            <td class="bold" style="white-space: nowrap; font-size: 7pt; width: 20%;">Fecha de Inicio de Viaje:</td>
+            <td class="text-center bold" style="white-space: nowrap; width: 13%;">&nbsp;&nbsp;&nbsp;&nbsp; / &nbsp;&nbsp;&nbsp;&nbsp; /</td>
+            <td class="bold" style="white-space: nowrap; font-size: 7pt; width: 22%;">Fecha de Llegada del Viaje:</td>
+            <td class="text-center bold" style="white-space: nowrap; width: 13%;">&nbsp;&nbsp;&nbsp;&nbsp; / &nbsp;&nbsp;&nbsp;&nbsp; /</td>
         </tr>
         <tr>
-            <td class="bg-header" colspan="2">Modalidad del Servicio: <b>AUTO COLECTIVO</b></td>
-            <td class="bg-header">Fecha de Llegada del Viaje:</td>
-            <td class="text-center">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; / &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; /</td>
+            <td colspan="6" class="bold" style="padding: 3px 5px;">
+                Modalidad del Servicio: AUTO COLECTIVO
+            </td>
         </tr>
     </table>
 
-    <!-- 3. EMBARQUE Y DESEMBARQUE -->
+    <!-- 3. LUGAR DE EMBARQUE Y DESEMBARQUE -->
     <table class="table-bordered">
         <tr>
-            <td style="width: 50%; vertical-align: top; height: 35px;">
-                <b>Lugar de Embarque:</b> ____________________________________<br><br>
-                <b>Hora de Salida:</b> ________________________________________
+            <td style="width: 50%; vertical-align: top; padding: 4px;">
+                <b style="display:inline-block; width: 90px;">Lugar de Embarque</b> ____________________________________<br><br>
+                <b style="display:inline-block; width: 90px;">Hora de Salida</b> ____________________________________
             </td>
-            <td style="width: 50%; vertical-align: top; height: 35px;">
-                <b>Lugar de Desembarque:</b> ________________________________<br><br>
-                <b>Hora de Llegada:</b> ____________________________________
+            <td style="width: 50%; vertical-align: top; padding: 4px;">
+                <b style="display:inline-block; width: 110px;">Lugar de Desembarque</b> ________________________________<br><br>
+                <b style="display:inline-block; width: 110px;">Hora de Llegada</b> ________________________________
             </td>
         </tr>
     </table>
 
-    <!-- 4. DATOS DE LOS CONDUCTORES -->
-    <div class="section-title-banner">Datos Generales de los Conductores y Turnos de Conducción:</div>
+    <!-- 4. CONDUCTORES Y TURNOS -->
+    <div class="section-banner">Datos Generales de los Conductores y Turnos de Conducción:</div>
     <table class="table-bordered" style="border-top: none;">
-        <tr class="bg-header text-center">
-            <td style="width: 42%;">NOMBRES Y APELLIDOS</td>
-            <td style="width: 24%;">N° LIC. DE CONDUCIR</td>
-            <td style="width: 17%;">H. DE INICIO / TÉRMINO</td>
-            <td style="width: 17%;">TURNOS DE CONDUCCIÓN</td>
-        </tr>
+        <!-- Fila 1 -->
         <tr>
-            <td style="height: 14px;">&nbsp;</td>
-            <td>&nbsp;</td>
-            <td class="text-center">H. DE INICIO:</td>
-            <td class="text-center">H. DE TÉRMINO:</td>
+            <td style="width: 45%; height: 20px; vertical-align: bottom;">
+                ________________________________________________<br>
+                <div class="text-center bold" style="font-size: 6.5pt; margin-top: 1px;">NOMBRES Y APELLIDOS</div>
+            </td>
+            <td style="width: 23%; vertical-align: bottom;">
+                ________________________<br>
+                <div class="text-center bold" style="font-size: 6.5pt; margin-top: 1px;">N° LIC. DE CONDUCIR</div>
+            </td>
+            <td style="width: 32%; vertical-align: top; padding: 1px 3px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 6.5pt;" class="bold">
+                    <tr>
+                        <td style="border:none; padding:0;">H. DE INICIO: ________</td>
+                        <td style="border:none; padding:0; text-align:right;">H. DE TERMINO: ________</td>
+                    </tr>
+                    <tr>
+                        <td colspan="2" style="border:none; padding:1px 0 0 0; text-align:center;">TURNOS DE CONDUCCIÓN</td>
+                    </tr>
+                </table>
+            </td>
         </tr>
+        <!-- Fila 2 -->
         <tr>
-            <td style="height: 14px;">&nbsp;</td>
-            <td>&nbsp;</td>
-            <td class="text-center">H. DE INICIO:</td>
-            <td class="text-center">H. DE TÉRMINO:</td>
+            <td style="height: 20px; vertical-align: bottom;">
+                ________________________________________________<br>
+                <div class="text-center bold" style="font-size: 6.5pt; margin-top: 1px;">NOMBRES Y APELLIDOS</div>
+            </td>
+            <td style="vertical-align: bottom;">
+                ________________________<br>
+                <div class="text-center bold" style="font-size: 6.5pt; margin-top: 1px;">N° LIC. DE CONDUCIR</div>
+            </td>
+            <td style="vertical-align: top; padding: 1px 3px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 6.5pt;" class="bold">
+                    <tr>
+                        <td style="border:none; padding:0;">H. DE INICIO: ________</td>
+                        <td style="border:none; padding:0; text-align:right;">H. DE TERMINO: ________</td>
+                    </tr>
+                    <tr>
+                        <td colspan="2" style="border:none; padding:1px 0 0 0; text-align:center;">TURNOS DE CONDUCCIÓN</td>
+                    </tr>
+                </table>
+            </td>
         </tr>
+        <!-- Fila 3 -->
         <tr>
-            <td style="height: 14px;">&nbsp;</td>
-            <td>&nbsp;</td>
-            <td class="text-center">H. DE INICIO:</td>
-            <td class="text-center">H. DE TÉRMINO:</td>
+            <td style="height: 20px; vertical-align: bottom;">
+                ________________________________________________<br>
+                <div class="text-center bold" style="font-size: 6.5pt; margin-top: 1px;">NOMBRES Y APELLIDOS</div>
+            </td>
+            <td style="vertical-align: bottom;">
+                ________________________<br>
+                <div class="text-center bold" style="font-size: 6.5pt; margin-top: 1px;">N° LIC. DE CONDUCIR</div>
+            </td>
+            <td style="vertical-align: top; padding: 1px 3px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 6.5pt;" class="bold">
+                    <tr>
+                        <td style="border:none; padding:0;">H. DE INICIO: ________</td>
+                        <td style="border:none; padding:0; text-align:right;">H. DE TERMINO: ________</td>
+                    </tr>
+                    <tr>
+                        <td colspan="2" style="border:none; padding:1px 0 0 0; text-align:center;">TURNOS DE CONDUCCIÓN</td>
+                    </tr>
+                </table>
+            </td>
         </tr>
     </table>
 
     <!-- 5. INCIDENTES DEL VIAJE -->
-    <div class="section-title-banner">Incidentes del Viaje</div>
+    <div class="section-banner">Incidentes del Viaje</div>
 
-    <!-- Bloque 1 -->
-    <div class="incidente-block">
-        <table style="width: 100%;">
+    <!-- BLOQUE 1 -->
+    <div class="incidente-box">
+        <table style="width: 100%; border-collapse: collapse; font-size: 7.5pt;" class="bold">
             <tr>
-                <td style="width: 48%;"><b>NOMBRES Y APELLIDOS:</b> _______________________</td>
-                <td style="width: 6%; text-align: center;"><b>EN</b></td>
-                <td style="width: 46%;">___________________________________</td>
+                <td style="width: 45%;">_______________________________________</td>
+                <td style="width: 6%; text-align: center;">EN</td>
+                <td style="width: 49%;">_________________________________________________</td>
+            </tr>
+            <tr style="font-size: 6.5pt;">
+                <td class="text-center">NOMBRES Y APELLIDOS</td>
+                <td></td>
+                <td class="text-center">NOMBRES Y APELLIDOS</td>
             </tr>
         </table>
-        <div style="margin-top: 2px;"><b>DEJO CONSTANCIA QUE:</b> ____________________________________________________________________________________</div>
-        <div class="linea-subraya"></div>
-        <div class="linea-subraya"></div>
-        
-        <table class="firma-table">
+        <div style="margin-top: 1px;" class="bold">
+            DEJO CONSTANCIA QUE ____________________________________________________________________________________
+        </div>
+        <div class="linea-llena"></div>
+        <div class="linea-llena"></div>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 2px; font-size: 7.5pt;" class="bold">
             <tr>
-                <td style="width: 50%;"></td>
-                <td style="width: 30%; text-align: right;"><b>FIRMA:</b> ______________________</td>
-                <td style="width: 20%; text-align: right;"><b>N° DNI:</b> ____________</td>
+                <td style="width: 55%;"></td>
+                <td style="width: 25%; text-align: right;">FIRMA __________________</td>
+                <td style="width: 20%; text-align: right;">N° DNI ____________</td>
             </tr>
         </table>
     </div>
 
-    <!-- Bloque 2 -->
-    <div class="incidente-block">
-        <table style="width: 100%;">
+    <!-- BLOQUE 2 -->
+    <div class="incidente-box">
+        <table style="width: 100%; border-collapse: collapse; font-size: 7.5pt;" class="bold">
             <tr>
-                <td style="width: 48%;"><b>NOMBRES Y APELLIDOS:</b> _______________________</td>
-                <td style="width: 6%; text-align: center;"><b>EN</b></td>
-                <td style="width: 46%;">___________________________________</td>
+                <td style="width: 45%;">_______________________________________</td>
+                <td style="width: 6%; text-align: center;">EN</td>
+                <td style="width: 49%;">_________________________________________________</td>
+            </tr>
+            <tr style="font-size: 6.5pt;">
+                <td class="text-center">NOMBRES Y APELLIDOS</td>
+                <td></td>
+                <td class="text-center">NOMBRES Y APELLIDOS</td>
             </tr>
         </table>
-        <div style="margin-top: 2px;"><b>DEJO CONSTANCIA QUE:</b> ____________________________________________________________________________________</div>
-        <div class="linea-subraya"></div>
-        <div class="linea-subraya"></div>
-        
-        <table class="firma-table">
+        <div style="margin-top: 1px;" class="bold">
+            DEJO CONSTANCIA QUE ____________________________________________________________________________________
+        </div>
+        <div class="linea-llena"></div>
+        <div class="linea-llena"></div>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 2px; font-size: 7.5pt;" class="bold">
             <tr>
-                <td style="width: 50%;"></td>
-                <td style="width: 30%; text-align: right;"><b>FIRMA:</b> ______________________</td>
-                <td style="width: 20%; text-align: right;"><b>N° DNI:</b> ____________</td>
-            </tr>
-        </table>
-    </div>
-
-    <!-- Bloque 3 -->
-    <div class="incidente-block">
-        <table style="width: 100%;">
-            <tr>
-                <td style="width: 48%;"><b>NOMBRES Y APELLIDOS:</b> _______________________</td>
-                <td style="width: 6%; text-align: center;"><b>EN</b></td>
-                <td style="width: 46%;">___________________________________</td>
-            </tr>
-        </table>
-        <div style="margin-top: 2px;"><b>DEJO CONSTANCIA QUE:</b> ____________________________________________________________________________________</div>
-        <div class="linea-subraya"></div>
-        <div class="linea-subraya"></div>
-        
-        <table class="firma-table">
-            <tr>
-                <td style="width: 50%;"></td>
-                <td style="width: 30%; text-align: right;"><b>FIRMA:</b> ______________________</td>
-                <td style="width: 20%; text-align: right;"><b>N° DNI:</b> ____________</td>
+                <td style="width: 55%;"></td>
+                <td style="width: 25%; text-align: right;">FIRMA __________________</td>
+                <td style="width: 20%; text-align: right;">N° DNI ____________</td>
             </tr>
         </table>
     </div>
 
-    <!-- Bloque 4 -->
-    <div class="incidente-block">
-        <table style="width: 100%;">
+    <!-- BLOQUE 3 -->
+    <div class="incidente-box">
+        <table style="width: 100%; border-collapse: collapse; font-size: 7.5pt;" class="bold">
             <tr>
-                <td style="width: 48%;"><b>NOMBRES Y APELLIDOS:</b> _______________________</td>
-                <td style="width: 6%; text-align: center;"><b>EN</b></td>
-                <td style="width: 46%;">___________________________________</td>
+                <td style="width: 45%;">_______________________________________</td>
+                <td style="width: 6%; text-align: center;">EN</td>
+                <td style="width: 49%;">_________________________________________________</td>
+            </tr>
+            <tr style="font-size: 6.5pt;">
+                <td class="text-center">NOMBRES Y APELLIDOS</td>
+                <td></td>
+                <td class="text-center">NOMBRES Y APELLIDOS</td>
             </tr>
         </table>
-        <div style="margin-top: 2px;"><b>DEJO CONSTANCIA QUE:</b> ____________________________________________________________________________________</div>
-        <div class="linea-subraya"></div>
-        
-        <table class="firma-table">
+        <div style="margin-top: 1px;" class="bold">
+            DEJO CONSTANCIA QUE ____________________________________________________________________________________
+        </div>
+        <div class="linea-llena"></div>
+        <div class="linea-llena"></div>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 2px; font-size: 7.5pt;" class="bold">
             <tr>
-                <td style="width: 50%;"></td>
-                <td style="width: 30%; text-align: right;"><b>FIRMA:</b> ______________________</td>
-                <td style="width: 20%; text-align: right;"><b>N° DNI:</b> ____________</td>
+                <td style="width: 55%;"></td>
+                <td style="width: 25%; text-align: right;">FIRMA __________________</td>
+                <td style="width: 20%; text-align: right;">N° DNI ____________</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- BLOQUE 4 -->
+    <div class="incidente-box">
+        <table style="width: 100%; border-collapse: collapse; font-size: 7.5pt;" class="bold">
+            <tr>
+                <td style="width: 45%;">_______________________________________</td>
+                <td style="width: 6%; text-align: center;">EN</td>
+                <td style="width: 49%;">_________________________________________________</td>
+            </tr>
+            <tr style="font-size: 6.5pt;">
+                <td class="text-center">NOMBRES Y APELLIDOS</td>
+                <td></td>
+                <td class="text-center">NOMBRES Y APELLIDOS</td>
+            </tr>
+        </table>
+        <div style="margin-top: 1px;" class="bold">
+            DEJO CONSTANCIA QUE ____________________________________________________________________________________
+        </div>
+        <div class="linea-llena"></div>
+        <div class="linea-llena"></div>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 2px; font-size: 7.5pt;" class="bold">
+            <tr>
+                <td style="width: 55%;"></td>
+                <td style="width: 25%; text-align: right;">FIRMA __________________</td>
+                <td style="width: 20%; text-align: right;">N° DNI ____________</td>
             </tr>
         </table>
     </div>

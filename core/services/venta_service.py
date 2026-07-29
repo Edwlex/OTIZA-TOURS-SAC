@@ -30,11 +30,6 @@ class VentaService:
             'sede_venta', 'cajero', 'asiento'
         ).order_by('-fecha_venta')
         
-        # Filtro por sede (cajero solo ve lo suyo)
-        if not es_admin and sede:
-            qs = qs.filter(sede_venta=sede)
-            logger.info(f"  - Filtrado por sede: {sede}")
-            
         if filtros:
             # Rango de fechas
             if filtros.get('fecha_desde'):

@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
+from datetime import datetime, timedelta
+import re
 
 # ==================== SEDES ====================
 class Sede(models.Model):
@@ -57,6 +59,14 @@ class Usuario(AbstractUser):
     fecha_vencimiento_licencia = models.DateField(null=True, blank=True, help_text="Fecha de vencimiento de licencia")
     es_chofer = models.BooleanField(default=False, help_text="¿Es chofer activo?")
     
+    # NUEVO: Rutas que el chofer puede manejar
+    rutas_asignadas = models.ManyToManyField(
+        'Ruta',  # Relación con el modelo Ruta
+        blank=True,
+        related_name='choferes', # Para poder hacer ruta.choferes.all()
+        help_text='Rutas que este chofer está autorizado a conducir'
+    )
+    
     def __str__(self):
         return f"{self.username} - {self.sede}"
     
@@ -74,11 +84,32 @@ class Vehiculo(models.Model):
     modelo = models.CharField(max_length=50)
     año = models.IntegerField()
     capacidad_asientos = models.IntegerField(default=20)
-    sede_asignada = models.ForeignKey(Sede, on_delete=models.PROTECT, related_name='vehiculos')
+    
+    # CAMBIO: De sede_asignada a rutas_asignadas (ManyToMany)
+    rutas_asignadas = models.ManyToManyField(
+        'core.Ruta',
+        blank=True,
+        related_name='vehiculos',
+        help_text='Rutas que puede realizar este vehículo'
+    )
+    
+    chofer_asignado = models.ForeignKey(
+        Usuario, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='vehiculos_asignados',
+        limit_choices_to={'es_chofer': True},
+        help_text='Chofer asignado a este vehículo'
+    )
     activo = models.BooleanField(default=True)
     
     def __str__(self):
         return f"{self.placa} - {self.marca} {self.modelo}"
+    
+    def get_rutas_display(self):
+        """Obtener rutas como texto"""
+        return ", ".join([f"{r.origen}→{r.destino}" for r in self.rutas_asignadas.all()])
     
     class Meta:
         verbose_name = 'Vehículo'
@@ -115,6 +146,18 @@ class Viaje(models.Model):
     ruta = models.ForeignKey(Ruta, on_delete=models.PROTECT, related_name='viajes')
     vehiculo = models.ForeignKey(Vehiculo, on_delete=models.PROTECT, related_name='viajes')
     sede_salida = models.ForeignKey(Sede, on_delete=models.PROTECT, related_name='viajes_salida')
+    
+    # ✅ NUEVO CAMPO: Chofer asignado al viaje
+    chofer_asignado = models.ForeignKey(
+        Usuario,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='viajes_asignados',
+        limit_choices_to={'es_chofer': True},
+        help_text='Chofer asignado para este viaje'
+    )
+    
     fecha_salida = models.DateField()
     hora_salida = models.TimeField()
     fecha_llegada = models.DateField()
@@ -122,23 +165,21 @@ class Viaje(models.Model):
     estado = models.CharField(max_length=20, choices=ESTADO_VIAJE, default='programado')
     creado_en = models.DateTimeField(auto_now_add=True)
 
-    # --- AGREGA ESTO AQUÍ ---
+    # --- LÓGICA DE HORA DE LLEGADA (Tu código original) ---
     def obtener_hora_llegada(self):
         """Calcula la hora de llegada usando la misma lógica robusta del servicio"""
-        from datetime import datetime, timedelta
-        import re
         
         if self.hora_salida and self.ruta and self.ruta.duracion_estimada:
             duracion_texto = str(self.ruta.duracion_estimada).lower().strip()
             horas = 0
             minutos = 0
             
-            # Regex para horas: acepta "1 hora", "2 horas", "1h", "2 h"
+            # Regex para horas
             match_horas = re.search(r'(\d+)\s*(?:hora|horas|h)\b', duracion_texto)
             if match_horas:
                 horas = int(match_horas.group(1))
             
-            # Regex para minutos: acepta "30 min", "30 minutos", "30m", "30 m"
+            # Regex para minutos
             match_minutos = re.search(r'(\d+)\s*(?:min|minutos|m)\b', duracion_texto)
             if match_minutos:
                 minutos = int(match_minutos.group(1))
@@ -149,10 +190,10 @@ class Viaje(models.Model):
             
             return llegada_dt.strftime('%H:%M')
         
-        # Fallback: retornar hora de salida si no hay datos
+        # Fallback
         return self.hora_salida.strftime('%H:%M') if self.hora_salida else "--:--"
     
-    # --- FIN DE LO NUEVO ---
+    # --- FIN DE LA LÓGICA ---
 
     def __str__(self):
         return f"{self.ruta} - {self.fecha_salida} {self.hora_salida}"
@@ -161,7 +202,6 @@ class Viaje(models.Model):
         verbose_name = 'Viaje'
         verbose_name_plural = 'Viajes'
         ordering = ['fecha_salida', 'hora_salida']
-
 # ==================== ASIENTOS DE VIAJE ====================
 class AsientoViaje(models.Model):
     ESTADO_ASIENTO = [
@@ -176,6 +216,16 @@ class AsientoViaje(models.Model):
     estado = models.CharField(max_length=20, choices=ESTADO_ASIENTO, default='disponible')
     precio = models.DecimalField(max_digits=8, decimal_places=2)
     vendido_en = models.DateTimeField(null=True, blank=True)
+    
+    # ==========================================
+    # ✅ NUEVOS CAMPOS PARA RESERVA
+    # ==========================================
+    nombre_reserva = models.CharField(max_length=100, blank=True, null=True, help_text="Nombre del pasajero que reservó")
+    telefono_reserva = models.CharField(max_length=20, blank=True, null=True, help_text="Celular para notificar llegada")
+    fecha_reserva = models.DateTimeField(blank=True, null=True, help_text="Fecha y hora en que se realizó la reserva")
+    nota_reserva = models.TextField(blank=True, null=True, help_text="Ej: 'Paga al llegar', 'Viene con maleta grande'")
+    
+    # ==========================================
     
     # 🔒 CONSTRAINT ANTI-CONCURRENCIA: Un asiento no puede venderse 2 veces en el mismo viaje
     class Meta:
@@ -195,6 +245,7 @@ class AsientoViaje(models.Model):
 
 
 # ==================== VENTAS ====================
+
 class Venta(models.Model):
     TIPO_DOCUMENTO = [
         ('boleta', 'Boleta'),
@@ -202,13 +253,24 @@ class Venta(models.Model):
         ('ticket', 'Ticket'),
     ]
     
-    # Datos del cliente
+    METODO_PAGO = [
+        ('efectivo', 'Efectivo'),
+        ('yape', 'Yape'),
+        ('plin', 'Plin'),
+    ]
+    
+    # ===== DATOS DEL CLIENTE =====
     tipo_documento = models.CharField(max_length=20, choices=TIPO_DOCUMENTO, default='ticket')
     numero_documento = models.CharField(max_length=20, blank=True)  # DNI opcional
     nombre_cliente = models.CharField(max_length=100, blank=True)
     telefono_cliente = models.CharField(max_length=20, blank=True)
+    email_cliente = models.EmailField(blank=True, null=True)
     
-    # Datos de la transacción
+    # ✅ NUEVOS CAMPOS (para empresas/facturación)
+    ruc_cliente = models.CharField(max_length=20, blank=True, null=True, help_text="RUC del cliente")
+    razon_social = models.CharField(max_length=150, blank=True, null=True, help_text="Razón social (empresas)")
+    
+    # ===== DATOS DE LA TRANSACCIÓN =====
     asiento = models.ForeignKey(AsientoViaje, on_delete=models.PROTECT, related_name='ventas')
     viaje = models.ForeignKey(Viaje, on_delete=models.PROTECT, related_name='ventas')
     sede_venta = models.ForeignKey(Sede, on_delete=models.PROTECT, related_name='ventas')
@@ -217,6 +279,7 @@ class Venta(models.Model):
     monto_total = models.DecimalField(max_digits=10, decimal_places=2)
     fecha_venta = models.DateTimeField(auto_now_add=True)
     numero_ticket = models.CharField(max_length=50, unique=True)  # Generar automáticamente
+    metodo_pago = models.CharField(max_length=20, choices=METODO_PAGO, default='efectivo')
     observaciones = models.TextField(blank=True)
     
     def __str__(self):
@@ -259,3 +322,24 @@ class Incidencia(models.Model):
         verbose_name = 'Incidencia'
         verbose_name_plural = 'Incidencias'
         ordering = ['-fecha_reporte']
+
+
+class HorarioFijo(models.Model):
+    """Define los horarios que se repiten diariamente"""
+    ruta = models.ForeignKey('Ruta', on_delete=models.PROTECT)
+    vehiculo = models.ForeignKey('Vehiculo', on_delete=models.PROTECT)
+    hora_salida = models.TimeField(help_text="Ej: 08:00, 10:30")
+    dias_semana = models.CharField(
+        max_length=20,
+        default="1,2,3,4,5,6,7",
+        help_text="Días: 1=Lun, 2=Mar, ..., 7=Dom (separados por coma)"
+    )
+    activa = models.BooleanField(default=True)
+    
+    def __str__(self):
+        return f"{self.ruta} - {self.hora_salida.strftime('%H:%M')}"
+    
+    class Meta:
+        verbose_name = 'Horario Fijo'
+        verbose_name_plural = 'Horarios Fijos'
+        ordering = ['hora_salida']

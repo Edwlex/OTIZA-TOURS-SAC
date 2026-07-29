@@ -111,6 +111,7 @@ AUTH_PASSWORD_VALIDATORS = [
 LANGUAGE_CODE = 'es-pe'  # ← Español Perú
 
 TIME_ZONE = 'America/Lima'  # ← Perú
+DEFAULT_TIME_ZONE = 'America/Lima'
 
 USE_I18N = True
 

@@ -10,21 +10,14 @@
 
 {% block content %}
 
-<!-- ==================== 1. FILTROS DE BÚSQUEDA ==================== -->
+<!-- ==================== FILTROS ==================== -->
 <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-    <h3 class="text-lg font-bold text-gray-800 mb-4">
-        <i class="fas fa-filter text-indigo-600 mr-2"></i>
-        Filtros de Búsqueda
-    </h3>
-    
     <form method="get" action="{% url 'core:dashboard' %}">
         <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-            
             <!-- Período -->
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">
-                    <i class="fas fa-calendar text-gray-400 mr-1"></i>
-                    Período
+                    <i class="fas fa-calendar text-gray-400 mr-1"></i> Período
                 </label>
                 <select name="periodo" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
                     <option value="hoy" {% if periodo == 'hoy' %}selected{% endif %}>Hoy</option>
@@ -37,8 +30,7 @@
             <!-- Sede -->
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">
-                    <i class="fas fa-building text-gray-400 mr-1"></i>
-                    Sede
+                    <i class="fas fa-building text-gray-400 mr-1"></i> Sede
                 </label>
                 <select name="sede" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
                     <option value="">Todas las sedes</option>
@@ -51,8 +43,7 @@
             <!-- Fecha Desde -->
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">
-                    <i class="fas fa-calendar-alt text-gray-400 mr-1"></i>
-                    Fecha Desde
+                    <i class="fas fa-calendar-alt text-gray-400 mr-1"></i> Fecha Desde
                 </label>
                 <input type="date" name="fecha_desde" value="{{ fecha_desde }}" 
                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
@@ -61,8 +52,7 @@
             <!-- Fecha Hasta -->
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">
-                    <i class="fas fa-calendar-check text-gray-400 mr-1"></i>
-                    Fecha Hasta
+                    <i class="fas fa-calendar-check text-gray-400 mr-1"></i> Fecha Hasta
                 </label>
                 <input type="date" name="fecha_hasta" value="{{ fecha_hasta }}" 
                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
@@ -81,286 +71,336 @@
     </form>
 </div>
 
-<!-- ==================== 2. KPIs ==================== -->
+<!-- ==================== MENSAJE CUANDO FILTROS SIN RESULTADOS ==================== -->
+{% if hay_filtros_activos and not hay_ventas %}
+<div class="bg-amber-50 border-l-4 border-amber-500 p-6 mb-8 rounded-r-xl">
+    <div class="flex items-start">
+        <div class="flex-shrink-0">
+            <i class="fas fa-exclamation-triangle text-amber-500 text-2xl"></i>
+        </div>
+        <div class="ml-4">
+            <h4 class="text-sm font-bold text-amber-800">No se encontraron resultados</h4>
+            <p class="text-sm text-amber-700 mt-1">
+                No hay ventas registradas para los filtros seleccionados. 
+                Intenta ajustar el período o las fechas.
+            </p>
+        </div>
+        <div class="ml-auto">
+            <a href="{% url 'core:dashboard' %}" class="text-sm text-amber-600 hover:text-amber-800 font-medium">
+                Limpiar filtros ✕
+            </a>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- ==================== KPIs (CON LÓGICA CONDICIONAL) ==================== -->
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-    <div class="kpi-card bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl p-6 text-white shadow-lg">
-        <div class="flex items-center justify-between mb-2">
-            <div class="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                <i class="fas fa-dollar-sign text-2xl"></i>
+    <!-- Ingresos -->
+    <div class="bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl p-6 text-white">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm opacity-90">Ingresos Totales</p>
+                <p class="text-3xl font-bold mt-1">S/ {{ ingresos_totales|floatformat:2 }}</p>
             </div>
-            <span class="text-xs font-semibold bg-white/20 px-2 py-1 rounded">+12.5% <i class="fas fa-arrow-up"></i></span>
+            <i class="fas fa-dollar-sign text-2xl bg-white/20 p-3 rounded-lg"></i>
         </div>
-        <p class="text-sm opacity-90">Ingresos Totales</p>
-        <p class="text-3xl font-bold mt-1">S/ {{ ingresos_totales|floatformat:2 }}</p>
+        <!-- Badge condicional -->
+        <span class="absolute top-4 right-4 text-xs font-semibold px-2 py-1 rounded 
+            {% if ingresos_totales > 0 %}bg-green-100 text-green-700
+            {% else %}bg-gray-100 text-gray-400{% endif %}">
+            {% if ingresos_totales > 0 %}+12.5% ↑{% else %}--{% endif %}
+        </span>
     </div>
 
-    <div class="kpi-card bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl p-6 text-white shadow-lg">
-        <div class="flex items-center justify-between mb-2">
-            <div class="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                <i class="fas fa-bus text-2xl"></i>
+    <!-- Viajes -->
+    <div class="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl p-6 text-white">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm opacity-90">Viajes Realizados</p>
+                <p class="text-3xl font-bold mt-1">{{ total_ventas }}</p>
             </div>
-            <span class="text-xs font-semibold bg-white/20 px-2 py-1 rounded">+8.3% <i class="fas fa-arrow-up"></i></span>
+            <i class="fas fa-bus text-2xl bg-white/20 p-3 rounded-lg"></i>
         </div>
-        <p class="text-sm opacity-90">Viajes Realizados</p>
-        <p class="text-3xl font-bold mt-1">{{ total_viajes }}</p>
+        <span class="absolute top-4 right-4 text-xs font-semibold px-2 py-1 rounded 
+            {% if total_ventas > 0 %}bg-blue-100 text-blue-700
+            {% else %}bg-gray-100 text-gray-400{% endif %}">
+            {% if total_ventas > 0 %}+8.3% ↑{% else %}--{% endif %}
+        </span>
     </div>
 
-    <div class="kpi-card bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl p-6 text-white shadow-lg">
-        <div class="flex items-center justify-between mb-2">
-            <div class="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                <i class="fas fa-users text-2xl"></i>
+    <!-- Pasajeros -->
+    <div class="bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl p-6 text-white">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm opacity-90">Pasajeros</p>
+                <p class="text-3xl font-bold mt-1">{{ total_pasajeros }}</p>
             </div>
-            <span class="text-xs font-semibold bg-white/20 px-2 py-1 rounded">+15.2% <i class="fas fa-arrow-up"></i></span>
+            <i class="fas fa-users text-2xl bg-white/20 p-3 rounded-lg"></i>
         </div>
-        <p class="text-sm opacity-90">Pasajeros Transportados</p>
-        <p class="text-3xl font-bold mt-1">{{ total_pasajeros }}</p>
+        <span class="absolute top-4 right-4 text-xs font-semibold px-2 py-1 rounded 
+            {% if total_pasajeros > 0 %}bg-purple-100 text-purple-700
+            {% else %}bg-gray-100 text-gray-400{% endif %}">
+            {% if total_pasajeros > 0 %}+15.2% ↑{% else %}--{% endif %}
+        </span>
     </div>
 
-    <div class="kpi-card bg-gradient-to-br from-orange-500 to-red-600 rounded-xl p-6 text-white shadow-lg">
-        <div class="flex items-center justify-between mb-2">
-            <div class="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                <i class="fas fa-percentage text-2xl"></i>
+    <!-- Ocupación -->
+    <div class="bg-gradient-to-br from-orange-500 to-red-600 rounded-xl p-6 text-white">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm opacity-90">Ocupación</p>
+                <p class="text-3xl font-bold mt-1">{{ ocupacion_promedio }}%</p>
             </div>
-            <span class="text-xs font-semibold bg-white/20 px-2 py-1 rounded">+5.1% <i class="fas fa-arrow-up"></i></span>
+            <i class="fas fa-percentage text-2xl bg-white/20 p-3 rounded-lg"></i>
         </div>
-        <p class="text-sm opacity-90">Ocupación Promedio</p>
-        <p class="text-3xl font-bold mt-1">{{ ocupacion_promedio }}%</p>
+        <span class="absolute top-4 right-4 text-xs font-semibold px-2 py-1 rounded 
+            {% if ocupacion_promedio > 0 %}bg-orange-100 text-orange-700
+            {% else %}bg-gray-100 text-gray-400{% endif %}">
+            {% if ocupacion_promedio > 0 %}+5.1% ↑{% else %}--{% endif %}
+        </span>
     </div>
 </div>
 
-<!-- ==================== 3. GRÁFICOS ==================== -->
+<!-- ==================== GRÁFICOS ==================== -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <!-- Tendencia -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h3 class="text-lg font-bold text-gray-800 mb-4">
-            <i class="fas fa-chart-line text-indigo-600 mr-2"></i>
-            Tendencia de Ventas
-        </h3>
-        <div class="chart-container" style="height: 250px;">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">Tendencia de Ventas</h3>
+        {% if hay_ventas %}
+        <div style="position: relative; height: 250px;">
             <canvas id="dashTendenciaChart"></canvas>
         </div>
+        {% else %}
+        <div class="flex flex-col items-center justify-center h-64 text-gray-500">
+            <i class="fas fa-chart-line text-4xl mb-3 text-gray-300"></i>
+            <p class="font-medium">No hay datos de ventas en este período</p>
+            <p class="text-sm">Selecciona otro rango de fechas o verifica que haya ventas registradas</p>
+        </div>
+        {% endif %}
     </div>
 
+    <!-- Por Sede -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h3 class="text-lg font-bold text-gray-800 mb-4">
-            <i class="fas fa-chart-bar text-indigo-600 mr-2"></i>
-            Ingresos por Sede
-        </h3>
-        <div class="chart-container" style="height: 250px;">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">Ingresos por Sede</h3>
+        {% if sede_data|first > 0 %}
+        <div style="position: relative; height: 250px;">
             <canvas id="dashSedeChart"></canvas>
         </div>
+        {% else %}
+        <div class="flex flex-col items-center justify-center h-64 text-gray-500">
+            <i class="fas fa-chart-bar text-4xl mb-3 text-gray-300"></i>
+            <p class="font-medium">No hay ingresos registrados</p>
+            <p class="text-sm">Los datos aparecerán aquí cuando se registren ventas</p>
+        </div>
+        {% endif %}
     </div>
 </div>
 
-<!-- ==================== 4. TOP RUTAS Y VEHÍCULOS ==================== -->
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h3 class="text-lg font-bold text-gray-800 mb-4">
-            <i class="fas fa-trophy text-yellow-500 mr-2"></i>
-            Top 3 Rutas del Día
-        </h3>
-        <div class="space-y-3">
-            {% for ruta in top_rutas %}
-            <div class="flex items-center justify-between p-3 {% if forloop.counter == 1 %}bg-yellow-50 border-l-4 border-yellow-500{% else %}bg-gray-50{% endif %} rounded-lg">
-                <div class="flex items-center space-x-3">
-                    <div class="w-8 h-8 {% if forloop.counter == 1 %}bg-yellow-500{% elif forloop.counter == 2 %}bg-gray-400{% else %}bg-orange-600{% endif %} rounded-full flex items-center justify-center text-white font-bold text-sm">
-                        {{ forloop.counter }}
-                    </div>
-                    <div>
-                        <p class="font-semibold text-gray-800 text-sm">{{ ruta.ruta }}</p>
-                        <p class="text-xs text-gray-500">{{ ruta.ventas }} ventas</p>
-                    </div>
-                </div>
-                <span class="font-bold text-green-600 text-sm">S/ {{ ruta.ingresos|floatformat:0 }}</span>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h3 class="text-lg font-bold text-gray-800 mb-4">
-            <i class="fas fa-bus text-indigo-600 mr-2"></i>
-            Vehículos Activos Hoy
-        </h3>
-        <div class="space-y-3">
-            {% for vehiculo in vehiculos_activos %}
-            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
-                        <i class="fas fa-bus text-indigo-600"></i>
-                    </div>
-                    <div>
-                        <p class="font-semibold text-gray-800 text-sm">{{ vehiculo.placa }}</p>
-                        <p class="text-xs text-gray-500">Chofer: {{ vehiculo.chofer }}</p>
-                    </div>
-                </div>
-                <span class="px-2 py-1 rounded-full text-xs font-semibold {% if vehiculo.estado == 'En ruta' %}bg-green-100 text-green-700{% else %}bg-blue-100 text-blue-700{% endif %}">
-                    {{ vehiculo.estado }}
-                </span>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-</div>
-
-<!-- ==================== 5. TABLA DETALLE DE VENTAS ==================== -->
+<!-- ==================== TOP RUTAS ==================== -->
 <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-    <div class="flex justify-between items-center mb-4">
-        <h3 class="text-lg font-bold text-gray-800">
-            <i class="fas fa-list text-indigo-600 mr-2"></i>
-            Detalle de Ventas
-        </h3>
-        <div class="flex gap-2">
-            <button onclick="window.print()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition">
-                <i class="fas fa-print mr-2"></i>Imprimir
-            </button>
+    <h3 class="text-lg font-bold text-gray-800 mb-4">🏆 Top 3 Rutas del Día</h3>
+    {% if hay_rutas %}
+    <div class="space-y-3">
+        {% for item in top_rutas %}
+        <div class="flex items-center justify-between p-3 {% if forloop.counter == 1 %}bg-yellow-50 border-l-4 border-yellow-500{% else %}bg-gray-50{% endif %} rounded-lg">
+            <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 {% if forloop.counter == 1 %}bg-yellow-500{% elif forloop.counter == 2 %}bg-gray-400{% else %}bg-orange-600{% endif %} rounded-full flex items-center justify-center text-white font-bold text-sm">
+                    {{ forloop.counter }}
+                </div>
+                <div>
+                    <p class="font-semibold text-gray-800 text-sm">{{ item.ruta }}</p>
+                    <p class="text-xs text-gray-500">{{ item.ventas }} ventas</p>
+                </div>
+            </div>
+            <span class="font-bold text-green-600 text-sm">S/ {{ item.ingresos|floatformat:0 }}</span>
         </div>
+        {% endfor %}
     </div>
+    {% else %}
+    <div class="text-center text-gray-500 py-8">
+        <i class="fas fa-route text-3xl mb-2 text-gray-300"></i>
+        <p class="font-medium">No hay rutas con ventas en este período</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- ==================== VEHÍCULOS ACTIVOS ==================== -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+    <h3 class="text-lg font-bold text-gray-800 mb-4">🚌 Vehículos Activos Hoy</h3>
+    {% if hay_vehiculos %}
+    <div class="space-y-3">
+        {% for item in vehiculos_activos %}
+        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+                    <i class="fas fa-bus text-indigo-600"></i>
+                </div>
+                <div>
+                    <p class="font-semibold text-gray-800 text-sm">{{ item.placa }}</p>
+                    <p class="text-xs text-gray-500">Chofer: {{ item.chofer }}</p>
+                </div>
+            </div>
+            <span class="px-2 py-1 rounded-full text-xs font-semibold {% if item.estado == 'En ruta' %}bg-green-100 text-green-700{% else %}bg-blue-100 text-blue-700{% endif %}">
+                {{ item.estado }}
+            </span>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center text-gray-500 py-8">
+        <i class="fas fa-bus text-3xl mb-2 text-gray-300"></i>
+        <p class="font-medium">No hay vehículos activos hoy</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- ==================== DETALLE DE VENTAS ==================== -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+    <h3 class="text-lg font-bold text-gray-800 mb-4">
+        <i class="fas fa-list text-indigo-600 mr-2"></i>
+        Detalle de Ventas
+    </h3>
     
+    {% if hay_ventas %}
     <div class="overflow-x-auto">
-        <table class="table-admin w-full">
+        <table class="w-full">
             <thead class="bg-gray-50">
                 <tr>
-                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Fecha</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Hora</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Sede</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Ruta</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Vehículo</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Chofer</th>
-                    <th class="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Pasajeros</th>
-                    <th class="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Ingreso</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">Fecha</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">Hora</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">Ruta</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">Vehículo</th>
+                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600">Ingreso</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
-                {% for venta in detalle_ventas %}
-                <tr class="hover:bg-gray-50 transition">
-                    <td class="px-6 py-4 text-sm text-gray-700">{{ venta.fecha }}</td>
-                    <td class="px-6 py-4 text-sm font-semibold text-gray-800">{{ venta.hora }}</td>
-                    <td class="px-6 py-4 text-sm text-gray-700">{{ venta.sede }}</td>
-                    <td class="px-6 py-4 text-sm text-gray-700">{{ venta.ruta }}</td>
-                    <td class="px-6 py-4 text-sm text-gray-700">{{ venta.vehiculo }}</td>
-                    <td class="px-6 py-4 text-sm text-gray-700">{{ venta.chofer }}</td>
-                    <td class="px-6 py-4 text-sm text-right font-semibold text-blue-600">{{ venta.pasajeros }}</td>
-                    <td class="px-6 py-4 text-sm text-right font-bold text-green-600">S/ {{ venta.ingreso|floatformat:2 }}</td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="8" class="px-6 py-8 text-center text-gray-500">
-                        <i class="fas fa-inbox text-4xl mb-2 text-gray-300"></i>
-                        <p>No hay ventas en el período seleccionado</p>
-                    </td>
+                {% for item in detalle_ventas %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 text-sm">{{ item.fecha }}</td>
+                    <td class="px-4 py-3 text-sm font-semibold">{{ item.hora }}</td>
+                    <td class="px-4 py-3 text-sm">{{ item.ruta }}</td>
+                    <td class="px-4 py-3 text-sm">{{ item.vehiculo }}</td>
+                    <td class="px-4 py-3 text-sm text-right font-bold text-green-600">S/ {{ item.ingreso|floatformat:2 }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
             <tfoot class="bg-gray-50 font-bold">
                 <tr>
-                    <td colspan="6" class="px-6 py-4 text-right">TOTAL:</td>
-                    <td class="px-6 py-4 text-right text-blue-600">{{ total_ventas }}</td>
-                    <td class="px-6 py-4 text-right text-green-600">S/ {{ ingresos_totales|floatformat:2 }}</td>
+                    <td colspan="4" class="px-4 py-3 text-right">TOTAL:</td>
+                    <td class="px-4 py-3 text-right text-green-600">S/ {{ ingresos_totales|floatformat:2 }}</td>
                 </tr>
             </tfoot>
         </table>
     </div>
+    {% else %}
+    <div class="text-center text-gray-500 py-8">
+        <i class="fas fa-inbox text-4xl mb-2 text-gray-300"></i>
+        <p class="font-medium">No hay ventas registradas</p>
+        <p class="text-sm">Las ventas aparecerán aquí cuando se realicen</p>
+    </div>
+    {% endif %}
 </div>
 
-<!-- ==================== 6. INCIDENCIAS ==================== -->
+<!-- ==================== INCIDENCIAS ==================== -->
 <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
     <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-bold text-gray-800">
-            <i class="fas fa-exclamation-triangle text-red-500 mr-2"></i>
-            Incidencias Pendientes
-        </h3>
+        <h3 class="text-lg font-bold text-gray-800">⚠️ Incidencias Pendientes</h3>
         <span class="bg-red-100 text-red-800 text-xs font-bold px-3 py-1 rounded-full">
             {{ incidencias_pendientes|length }}
         </span>
     </div>
+    {% if hay_incidencias %}
     <div class="space-y-3">
-        {% for incidencia in incidencias_pendientes %}
+        {% for item in incidencias_pendientes %}
         <div class="p-4 bg-red-50 border-l-4 border-red-500 rounded-r-lg">
-            <p class="font-semibold text-red-800 text-sm">{{ incidencia.sede }}: {{ incidencia.descripcion }}</p>
-            <p class="text-xs text-red-600 mt-1">{{ incidencia.fecha|date:"d/m/Y" }}</p>
-        </div>
-        {% empty %}
-        <div class="text-center text-gray-500 py-6">
-            <i class="fas fa-check-circle text-3xl text-green-500 mb-2"></i>
-            <p class="text-sm font-medium">Todo en orden ✅</p>
+            <p class="font-semibold text-red-800 text-sm">{{ item.sede }}: {{ item.descripcion }}</p>
+            <p class="text-xs text-red-600 mt-1">{{ item.fecha|date:"d/m/Y" }}</p>
         </div>
         {% endfor %}
     </div>
+    {% else %}
+    <div class="text-center text-gray-500 py-6">
+        <i class="fas fa-check-circle text-3xl text-green-500 mb-2"></i>
+        <p class="text-sm font-medium">Todo en orden ✅</p>
+    </div>
+    {% endif %}
 </div>
 
 {% endblock %}
 
 {% block extra_scripts %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
 <script>
-const colors = {
-    primary: '#4f46e5',
-    secondary: '#06b6d4',
-    success: '#10b981',
-    gradient1: 'rgba(79, 70, 229, 0.1)',
-    gradient2: 'rgba(79, 70, 229, 0.3)'
-};
-
-// Gráfico de Tendencia
-const ctxTendencia = document.getElementById('dashTendenciaChart').getContext('2d');
-const gradTendencia = ctxTendencia.createLinearGradient(0, 0, 0, 250);
-gradTendencia.addColorStop(0, colors.gradient2);
-gradTendencia.addColorStop(1, 'rgba(79, 70, 229, 0.01)');
-
-new Chart(ctxTendencia, {
-    type: 'line',
-    data: {
-        labels: {{ dias_semana|safe }},
-        datasets: [{
-            label: 'Ventas (S/)',
-            data: {{ ventas_por_dia|safe }},
-            borderColor: colors.primary,
-            backgroundColor: gradTendencia,
-            tension: 0.4,
-            fill: true,
-            pointBackgroundColor: colors.primary,
-            pointBorderColor: '#fff',
-            pointBorderWidth: 2,
-            pointRadius: 5,
-            pointHoverRadius: 7
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-            y: { beginAtZero: false, grid: { color: '#f3f4f6' } },
-            x: { grid: { display: false } }
-        }
+document.addEventListener('DOMContentLoaded', function() {
+    // ===== GRÁFICO 1: TENDENCIA =====
+    const ctxTendencia = document.getElementById('dashTendenciaChart');
+    const chartLabels = {{ chart_labels|safe }};
+    const chartData = {{ chart_data|safe }};
+    
+    if (ctxTendencia && chartLabels.length > 0 && chartData.some(v => v > 0)) {
+        new Chart(ctxTendencia, {
+            type: 'line',
+            data: {
+                labels: chartLabels,
+                datasets: [{
+                    label: 'Ventas (S/)',
+                    data: chartData,
+                    borderColor: 'rgb(99, 102, 241)',
+                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { 
+                        beginAtZero: true,
+                        ticks: { callback: v => 'S/ ' + v }
+                    }
+                }
+            }
+        });
     }
-});
-
-// Gráfico por Sede
-const ctxSede = document.getElementById('dashSedeChart').getContext('2d');
-new Chart(ctxSede, {
-    type: 'bar',
-    data: {
-        labels: {{ sedes|safe }},
-        datasets: [{
-            label: 'Ingresos (S/)',
-            data: {{ ingresos_por_sede|safe }},
-            backgroundColor: [
-                'rgba(79, 70, 229, 0.8)',
-                'rgba(6, 182, 212, 0.8)',
-                'rgba(16, 185, 129, 0.8)'
-            ],
-            borderRadius: 6,
-            borderSkipped: false,
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-            y: { beginAtZero: true, grid: { color: '#f3f4f6' } },
-            x: { grid: { display: false } }
-        }
+    
+    // ===== GRÁFICO 2: POR SEDE =====
+    const ctxSede = document.getElementById('dashSedeChart');
+    const sedeLabels = {{ sede_labels|safe }};
+    const sedeData = {{ sede_data|safe }};
+    
+    if (ctxSede && sedeLabels.length > 0 && sedeData.some(v => v > 0)) {
+        new Chart(ctxSede, {
+            type: 'bar',
+            data: {
+                labels: sedeLabels,
+                datasets: [{
+                    label: 'Ingresos (S/)',
+                    data: sedeData,
+                    backgroundColor: [
+                        'rgba(16, 185, 129, 0.8)',
+                        'rgba(59, 130, 246, 0.8)',
+                        'rgba(245, 158, 11, 0.8)',
+                    ],
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { 
+                        beginAtZero: true,
+                        ticks: { callback: v => 'S/ ' + v }
+                    }
+                }
+            }
+        });
     }
 });
 </script>

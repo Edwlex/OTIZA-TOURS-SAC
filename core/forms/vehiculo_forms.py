@@ -1,17 +1,21 @@
 from django import forms
 from django.core.exceptions import ValidationError
-from core.models import Vehiculo, Sede
+from core.models import Usuario, Vehiculo, Sede
+
+
+from django import forms
+from core.models import Vehiculo, Usuario
 
 
 class VehiculoForm(forms.ModelForm):
-    """Formulario para crear/editar vehículos"""
-    
     class Meta:
         model = Vehiculo
-        fields = ['placa', 'marca', 'modelo', 'año', 'capacidad_asientos', 'sede_asignada', 'activo']
+        # ✅ Eliminamos 'sede_asignada' y agregamos 'rutas_asignadas'
+        fields = ['placa', 'marca', 'modelo', 'año', 'capacidad_asientos', 'rutas_asignadas', 'chofer_asignado', 'activo']
+        
         widgets = {
             'placa': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 uppercase',
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500',
                 'placeholder': 'ABC-123',
                 'maxlength': '20'
             }),
@@ -25,31 +29,46 @@ class VehiculoForm(forms.ModelForm):
             }),
             'año': forms.NumberInput(attrs={
                 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500',
-                'min': '1990',
+                'placeholder': '2024',
+                'min': '2000',
                 'max': '2030'
             }),
             'capacidad_asientos': forms.NumberInput(attrs={
                 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500',
-                'min': '1',
-                'max': '100'
+                'placeholder': '20',
+                'min': '10',
+                'max': '50'
             }),
-            'sede_asignada': forms.Select(attrs={
+            'rutas_asignadas': forms.SelectMultiple(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500',
+                'size': '4'  # Muestra 4 opciones visibles
+            }),
+            'chofer_asignado': forms.Select(attrs={
                 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500'
             }),
             'activo': forms.CheckboxInput(attrs={
-                'class': 'w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500'
+                'class': 'rounded border-gray-300 text-indigo-600 focus:ring-indigo-500'
             }),
         }
-    
+        
+        labels = {
+            'rutas_asignadas': 'Rutas Asignadas',
+            'chofer_asignado': 'Chofer Asignado',
+        }
+        
+        help_texts = {
+            'rutas_asignadas': 'Mantén presionado Ctrl (Cmd en Mac) para seleccionar múltiples rutas',
+        }
+
     def __init__(self, *args, **kwargs):
         self.usuario = kwargs.pop('usuario', None)
         super().__init__(*args, **kwargs)
         
-        # Si hay un usuario no-admin, limitar sedes
-        if self.usuario and not self.usuario.is_superuser:
-            self.fields['sede_asignada'].queryset = Sede.objects.filter(
-                nombre=self.usuario.sede.nombre
-            )
+        # Personalizar etiqueta de choferes
+        self.fields['chofer_asignado'].label_from_instance = lambda obj: f"{obj.get_full_name()} ({obj.username})"
+        
+        # Personalizar etiqueta de rutas
+        self.fields['rutas_asignadas'].label_from_instance = lambda obj: f"{obj.origen} → {obj.destino} ({obj.duracion_estimada})"
     
     def clean_placa(self):
         """Validar formato de placa"""

@@ -77,50 +77,45 @@
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 flex-shrink-0">
         <!-- Ventas Hoy -->
         <div class="glass-card rounded-2xl p-6 shadow-lg hover:shadow-xl transition relative overflow-hidden group">
-            <div class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-green-400/20 to-transparent rounded-bl-full -mr-8 -mt-8 transition group-hover:scale-110"></div>
             <div class="relative">
                 <div class="flex items-center justify-between mb-4">
                     <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-green-600 text-xl">
                         <i class="fas fa-dollar-sign"></i>
                     </div>
-                    <span class="text-xs font-bold text-green-600 bg-green-100 px-2 py-1 rounded-full">+12%</span>
                 </div>
                 <p class="text-sm text-slate-500 font-medium">Ventas Hoy</p>
-                <p class="text-3xl font-bold text-slate-800 mt-1">S/ {{ monto_total_hoy|default:"1,540.00" }}</p>
-                <p class="text-xs text-slate-400 mt-2">{{ ventas_hoy|default:15 }} transacciones</p>
+                <p class="text-3xl font-bold text-slate-800 mt-1">S/ {{ monto_total_hoy|floatformat:2 }}</p>
+                <p class="text-xs text-slate-400 mt-2">{{ ventas_hoy }} transacciones</p>
             </div>
         </div>
 
         <!-- Viajes Completados -->
         <div class="glass-card rounded-2xl p-6 shadow-lg hover:shadow-xl transition relative overflow-hidden group">
-            <div class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-400/20 to-transparent rounded-bl-full -mr-8 -mt-8 transition group-hover:scale-110"></div>
             <div class="relative">
                 <div class="flex items-center justify-between mb-4">
                     <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 text-xl">
                         <i class="fas fa-check-circle"></i>
                     </div>
-                    <span class="text-xs font-bold text-blue-600 bg-blue-100 px-2 py-1 rounded-full">+8%</span>
                 </div>
                 <p class="text-sm text-slate-500 font-medium">Viajes Completados</p>
-                <p class="text-3xl font-bold text-slate-800 mt-1">{{ viajes_completados_hoy|default:8 }}</p>
+                <p class="text-3xl font-bold text-slate-800 mt-1">{{ viajes_completados_hoy }}</p>
                 <p class="text-xs text-slate-400 mt-2">Total del día</p>
             </div>
         </div>
 
         <!-- Asientos Disponibles -->
         <div class="glass-card rounded-2xl p-6 shadow-lg hover:shadow-xl transition relative overflow-hidden group">
-            <div class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-yellow-400/20 to-transparent rounded-bl-full -mr-8 -mt-8 transition group-hover:scale-110"></div>
             <div class="relative">
                 <div class="flex items-center justify-between mb-4">
                     <div class="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center text-yellow-600 text-xl pulse-ring">
                         <i class="fas fa-chair"></i>
                     </div>
-                    <span class="text-xs font-bold text-yellow-600 bg-yellow-100 px-2 py-1 rounded-full">40 total</span>
+                    <span class="text-xs font-bold text-yellow-600 bg-yellow-100 px-2 py-1 rounded-full">{{ asientos_totales_total }} total</span>
                 </div>
                 <p class="text-sm text-slate-500 font-medium">Asientos Disponibles</p>
-                <p class="text-3xl font-bold text-slate-800 mt-1">{{ asientos_disponibles_total|default:17 }}</p>
+                <p class="text-3xl font-bold text-slate-800 mt-1">{{ asientos_disponibles_total }}</p>
                 <div class="w-full bg-slate-200 rounded-full h-1.5 mt-3">
-                    <div class="bg-yellow-500 h-1.5 rounded-full" style="width: {{ porcentaje_disponibilidad|default:42 }}%"></div>
+                    <div class="bg-yellow-500 h-1.5 rounded-full" style="width: {{ porcentaje_disponibilidad }}%"></div>
                 </div>
             </div>
         </div>
@@ -260,75 +255,76 @@
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-// Gráfico de Ventas por Hora
-new Chart(document.getElementById('ventasHoraChart'), {
-    type: 'line',
-    data: {
-        labels: ['06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00'],
-        datasets: [{
-            label: 'Ventas (S/)',
-            data: [250, 450, 380, 320, 290, 180, 120],
-            borderColor: '#10B981',
-            backgroundColor: 'rgba(16, 185, 129, 0.1)',
-            tension: 0.4,
-            fill: true,
-            borderWidth: 3,
-            pointBackgroundColor: '#10B981',
-            pointBorderColor: '#fff',
-            pointBorderWidth: 2,
-            pointRadius: 4,
-            pointHoverRadius: 6
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: { display: false }
+// Gráfico de Ventas por Hora - DATOS DINÁMICOS
+const ventasHoraCtx = document.getElementById('ventasHoraChart');
+if (ventasHoraCtx) {
+    new Chart(ventasHoraCtx, {
+        type: 'line',
+        data: {
+            labels: {{ ventas_hora_labels|safe }},
+            datasets: [{
+                label: 'Ventas (S/)',
+                data: {{ ventas_hora_data|safe }},
+                borderColor: '#10B981',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                tension: 0.4,
+                fill: true,
+                borderWidth: 3,
+                pointBackgroundColor: '#10B981',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointRadius: 4,
+                pointHoverRadius: 6
+            }]
         },
-        scales: {
-            y: { 
-                beginAtZero: true,
-                grid: { color: 'rgba(0,0,0,0.05)' }
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
             },
-            x: {
-                grid: { display: false }
-            }
-        }
-    }
-});
-
-// Gráfico de Ocupación por Ruta
-new Chart(document.getElementById('ocupacionRutaChart'), {
-    type: 'doughnut',
-    data: {
-        labels: ['Trujillo→Julcán', 'Trujillo→Mache', 'Julcán→Trujillo', 'Mache→Trujillo'],
-        datasets: [{
-            data: [75, 40, 60, 55],
-            backgroundColor: [
-                '#10B981',
-                '#3B82F6',
-                '#F59E0B',
-                '#8B5CF6'
-            ],
-            borderWidth: 0
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        cutout: '70%',
-        plugins: {
-            legend: { 
-                position: 'bottom',
-                labels: {
-                    padding: 15,
-                    usePointStyle: true,
-                    pointStyle: 'circle'
+            scales: {
+                y: { 
+                    beginAtZero: true,
+                    grid: { color: 'rgba(0,0,0,0.05)' }
+                },
+                x: {
+                    grid: { display: false }
                 }
             }
         }
-    }
-});
+    });
+}
+
+// Gráfico de Ocupación por Ruta - DATOS DINÁMICOS
+const ocupacionRutaCtx = document.getElementById('ocupacionRutaChart');
+if (ocupacionRutaCtx) {
+    new Chart(ocupacionRutaCtx, {
+        type: 'doughnut',
+        data: {
+            labels: {{ rutas_labels|safe }},
+            datasets: [{
+                data: {{ rutas_data|safe }},
+                backgroundColor: {{ rutas_colores|safe }},
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '70%',
+            plugins: {
+                legend: { 
+                    position: 'bottom',
+                    labels: {
+                        padding: 15,
+                        usePointStyle: true,
+                        pointStyle: 'circle'
+                    }
+                }
+            }
+        }
+    });
+}
 </script>
 {% endblock %}

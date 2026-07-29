@@ -79,11 +79,23 @@
                     <td class="px-6 py-4 text-gray-700">{{ usuario_item.email }}</td>
                     <td class="px-6 py-4 text-gray-700">{{ usuario_item.telefono }}</td>
                     <td class="px-6 py-4 text-gray-700">{{ usuario_item.sede }}</td>
+                    
+                    <!-- ✅ NUEVA LÓGICA DE ROL (CORREGIDA) -->
                     <td class="px-6 py-4 text-center">
-                        <span class="px-3 py-1 rounded-full text-xs font-semibold {% if usuario_item.es_cajero %}bg-blue-100 text-blue-700{% else %}bg-purple-100 text-purple-700{% endif %}">
-                            {% if usuario_item.es_cajero %}Cajero{% else %}Admin{% endif %}
+                        <span class="px-3 py-1 rounded-full text-xs font-semibold 
+                            {% if usuario_item.is_superuser %}bg-purple-100 text-purple-800
+                            {% elif usuario_item.es_cajero %}bg-blue-100 text-blue-800
+                            {% elif usuario_item.es_chofer %}bg-orange-100 text-orange-800
+                            {% else %}bg-gray-100 text-gray-800{% endif %}">
+                            
+                            {% if usuario_item.is_superuser %} Superadmin
+                            {% elif usuario_item.es_cajero %} Cajero
+                            {% elif usuario_item.es_chofer %}🚌 Chofer
+                            {% else %}👤 Usuario{% endif %}
                         </span>
                     </td>
+                    <!-- ✅ FIN DE LÓGICA DE ROL -->
+
                     <td class="px-6 py-4 text-center">
                         <span class="px-3 py-1 rounded-full text-xs font-semibold {% if usuario_item.activo %}bg-green-100 text-green-700{% else %}bg-red-100 text-red-700{% endif %}">
                             {% if usuario_item.activo %}Activo{% else %}Inactivo{% endif %}
@@ -93,10 +105,13 @@
                         <a href="{% url 'core:usuario_editar' usuario_item.id %}" class="text-yellow-600 hover:text-yellow-800" title="Editar">
                             <i class="fas fa-edit"></i>
                         </a>
-                        <a href="{% url 'core:usuario_eliminar' usuario_item.id %}" class="text-red-600 hover:text-red-800" 
-                           onclick="return confirm('¿Estás seguro de eliminar este usuario?')" title="Eliminar">
-                            <i class="fas fa-trash"></i>
-                        </a>
+                        <!-- Eliminación por POST como lo arreglamos antes -->
+                        <form action="{% url 'core:usuario_eliminar' usuario_item.id %}" method="POST" class="inline" onsubmit="return confirm('¿Estás seguro de eliminar este usuario?')">
+                            {% csrf_token %}
+                            <button type="submit" class="text-red-600 hover:text-red-800" title="Eliminar">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
                     </td>
                 </tr>
                 {% empty %}

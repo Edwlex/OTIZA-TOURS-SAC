@@ -30,16 +30,6 @@
         input:focus, select:focus {
             box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
         }
-
-        /* Animación Ken Burns para la imagen de fondo */
-        @keyframes kenburns {
-            0%   { transform: scale(1) translate(0, 0); }
-            50%  { transform: scale(1.1) translate(-1%, -1%); }
-            100% { transform: scale(1) translate(0, 0); }
-        }
-        .animate-kenburns {
-            animation: kenburns 20s ease-in-out infinite;
-        }
     </style>
 </head>
 <body class="bg-gray-50">
@@ -77,24 +67,17 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
                         <div class="relative">
-                            <!-- Icono Candado Izquierda -->
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                 <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
                                 </svg>
                             </div>
-                            
-                            <!-- Input (Modificado con id="password" y pr-10 para dar espacio al ojo) -->
                             <input type="password" id="password" name="password" class="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-otiza-green transition duration-200" placeholder="••••••••" required>
-                            
-                            <!-- Botón del Ojo Derecha -->
                             <button type="button" id="togglePassword" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none">
-                                <!-- Icono de Ojo Abierto (Ver contraseña) -> Oculto por defecto -->
                                 <svg id="eyeOpen" class="h-5 w-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
                                 </svg>
-                                <!-- Icono de Ojo Cerrado (Ocultar contraseña) -> Visible por defecto -->
                                 <svg id="eyeClosed" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18"></path>
                                 </svg>
@@ -116,7 +99,7 @@
                                 <option value="Sede Trujillo" {% if request.POST.sede == 'Sede Trujillo' %}selected{% endif %}>📍 Agencia Trujillo</option>
                                 <option value="Sede Julcán" {% if request.POST.sede == 'Sede Julcán' %}selected{% endif %}>📍 Agencia Julcán</option>
                                 <option value="Sede Mache" {% if request.POST.sede == 'Sede Mache' %}selected{% endif %}>📍 Agencia Mache</option>
-                                <option value="Oficina Central" {% if request.POST.sede == 'Oficina Central' %}selected{% endif %}> Sede Central (Dueño)</option>
+                                <option value="Oficina Central" {% if request.POST.sede == 'Oficina Central' %}selected{% endif %}>🏢 Sede Central (Dueño)</option>
                             </select>
                             <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
                                 <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -131,13 +114,15 @@
                         Ingresar al Sistema
                     </button>
 
-                    <!-- Mensajes de Error -->
-                    {% if messages %}
-                    {% for message in messages %}
+                    <!-- ✅ SOLO ERRORES DE AUTENTICACIÓN (no mensajes genéricos) -->
+                    {% if form.errors or request.GET.next %}
                     <div class="mt-4 p-3 rounded-lg bg-red-100 border border-red-200 text-red-700 text-sm text-center">
-                        {{ message }}
+                        {% if form.errors %}
+                            Usuario o contraseña incorrectos.
+                        {% else %}
+                            Debes iniciar sesión para acceder a esta página.
+                        {% endif %}
                     </div>
-                    {% endfor %}
                     {% endif %}
                 </form>
 
@@ -149,13 +134,12 @@
             </div>
         </div>
 
-        <!-- LADO DERECHO: IMAGEN -->
+        <!-- LADO DERECHO: IMAGEN (FIJA, SIN ANIMACIÓN) -->
         <div class="hidden lg:flex relative bg-otiza-dark overflow-hidden">
             <img src="{% static 'images/fondo-login.png' %}" 
                  alt="Viaja seguro con Otiza Tours" 
-                 class="absolute inset-0 w-full h-full object-cover animate-kenburns brightness-110 contrast-105">
+                 class="absolute inset-0 w-full h-full object-cover brightness-110 contrast-105">
 
-            <!-- Degradado más suave para que se vea más clara la imagen -->
             <div class="absolute inset-0 bg-gradient-to-br from-otiza-green/20 to-otiza-dark/50"></div>
 
             <div class="relative z-10 flex flex-col justify-center items-center w-full h-full text-white p-12 text-center gap-6">
@@ -183,12 +167,12 @@
         toggleButton.addEventListener('click', () => {
             if (passwordInput.type === 'password') {
                 passwordInput.type = 'text';
-                eyeOpen.classList.remove('hidden');   // Muestra ojo abierto
-                eyeClosed.classList.add('hidden');    // Oculta ojo tachado
+                eyeOpen.classList.remove('hidden');
+                eyeClosed.classList.add('hidden');
             } else {
                 passwordInput.type = 'password';
-                eyeOpen.classList.add('hidden');      // Oculta ojo abierto
-                eyeClosed.classList.remove('hidden'); // Muestra ojo tachado
+                eyeOpen.classList.add('hidden');
+                eyeClosed.classList.remove('hidden');
             }
         });
     </script>

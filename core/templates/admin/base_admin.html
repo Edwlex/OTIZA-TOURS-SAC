@@ -66,6 +66,13 @@
                     <span class="font-medium">Lista de Ventas</span>
                 </a>
 
+                <!-- En la sección GESTIÓN DEL SISTEMA -->
+                <a href="{% url 'core:horarios_fijos_lista' %}" 
+                class="flex items-center px-4 py-3 text-gray-300 hover:bg-indigo-800 hover:text-white transition">
+                    <i class="fas fa-clock w-6"></i>
+                    <span class="font-medium">Horarios Fijos</span>
+                </a>
+
                 <a href="{% url 'core:asignacion_viajes' %}"
                     class="sidebar-item flex items-center space-x-3 px-4 py-3 rounded-lg {% if request.resolver_match.url_name == 'asignacion_viajes' %}active{% endif %}">
                     <i class="fas fa-calendar-plus w-5"></i>

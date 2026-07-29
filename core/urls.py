@@ -21,6 +21,7 @@ urlpatterns = [
     path('ventas/mapa-asientos/<int:viaje_id>/', views.mapa_asientos, name='mapa_asientos'),
     path('ventas/procesar/', views.procesar_venta, name='procesar_venta'),
     path('ventas/exportar/', views.ventas_exportar, name='ventas_exportar'),
+    path('ventas/confirmar-pago-reserva/<int:asiento_id>/', views.confirmar_pago_reserva, name='confirmar_pago_reserva'),
     
     path('boletos/<int:boleto_id>/pdf/', views.descargar_boleto_pdf, name='descargar_boleto_pdf'),
     path('boletos/<int:boleto_id>/', views.ver_boleto, name='ver_boleto'),  
@@ -44,7 +45,7 @@ urlpatterns = [
     # ==================== ADMIN - FIDELIZACIÓN ====================
     path('panel-admin/fidelizacion/', views.fidelizacion_admin, name='fidelizacion_admin'),
     
-    # ==================== ADMIN - GESTIÓN DEL SISTEMA ====================
+    # ==================== ADMIN - VEHÍCULOS ====================
     path('panel-admin/vehiculos/', views.vehiculos_lista, name='vehiculos_lista'),
     path('panel-admin/vehiculos/nuevo/', views.vehiculo_nuevo, name='vehiculo_nuevo'),
     path('panel-admin/vehiculos/editar/<int:id>/', views.vehiculo_editar, name='vehiculo_editar'),
@@ -72,6 +73,21 @@ urlpatterns = [
     path('panel-admin/viajes/nuevo/', views.viaje_nuevo, name='viaje_nuevo'),
     path('panel-admin/viajes/editar/<int:id>/', views.viaje_editar, name='viaje_editar'),
     path('panel-admin/viajes/eliminar/<int:id>/', views.viaje_eliminar, name='viaje_eliminar'),
+    path('panel-admin/viajes/generar-proximos-7-dias/', views.generar_proximos_7_dias, name='generar_proximos_7_dias'),
+    path('panel-admin/viajes/<int:viaje_id>/crear-regreso/', 
+     views.crear_viaje_regreso, 
+     name='crear_viaje_regreso'),
+
+    # Agrega esta línea en urls.py
+    path('ventas/procesar-reserva/', views.procesar_reserva, name='procesar_reserva'),
+    path('ventas/procesar-reserva/<int:asiento_id>/', views.procesar_reserva_pago, name='procesar_reserva_pago'),
+    path('ventas/liberar-reserva/<int:asiento_id>/', views.liberar_reserva, name='liberar_reserva'),
+    path('ventas/confirmacion/<int:venta_id>/', views.confirmacion_venta, name='confirmacion_venta'),
+
+
+    path('panel-admin/horarios-fijos/', views.horarios_fijos_lista, name='horarios_fijos_lista'),
+    path('panel-admin/horarios-fijos/eliminar/<int:id>/', views.horario_fijo_eliminar, name='horario_fijo_eliminar'),
+    path('panel-admin/horarios-fijos/editar/<int:id>/', views.horario_fijo_editar, name='horario_fijo_editar'),
 
     # ==================== ADMIN - GESTIÓN DE USUARIOS ====================
     path('panel-admin/usuarios/', views.usuarios_lista, name='usuarios_lista'),

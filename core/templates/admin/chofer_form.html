@@ -133,18 +133,22 @@
             <!-- Asignación -->
             <div class="border-t border-gray-200 pt-6">
                 <h3 class="text-sm font-bold text-gray-700 uppercase tracking-wide mb-4 flex items-center">
-                    <i class="fas fa-building mr-2 text-indigo-600"></i>
-                    Asignación
+                    <i class="fas fa-route mr-2 text-indigo-600"></i>
+                    Asignación de Rutas
                 </h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
+                    <div class="md:col-span-2">
                         <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Sede Asignada <span class="text-red-500">*</span>
+                            Rutas Asignadas
+                            <span class="text-xs text-gray-500">(Mantén presionado Ctrl para seleccionar múltiples)</span>
                         </label>
-                        {{ form.sede }}
-                        {% if form.sede.errors %}
-                        <p class="text-red-500 text-xs mt-1">{{ form.sede.errors.0 }}</p>
+                        <div class="border border-gray-300 rounded-lg p-3 bg-white max-h-48 overflow-y-auto">
+                            {{ form.rutas_asignadas }}
+                        </div>
+                        {% if form.rutas_asignadas.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.rutas_asignadas.errors.0 }}</p>
                         {% endif %}
+                        <p class="text-xs text-gray-500 mt-1">Selecciona las rutas que este chofer puede manejar</p>
                     </div>
                     
                     <div class="flex items-center pt-6">

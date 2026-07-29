@@ -5,56 +5,58 @@ from datetime import date
 
 
 class ChoferForm(forms.ModelForm):
-    """Formulario profesional para crear/editar choferes"""
-    
     class Meta:
         model = Usuario
         fields = [
-            'username', 'email', 'first_name', 'last_name',
-            'telefono', 'licencia_conducir', 'categoria_licencia',
-            'fecha_vencimiento_licencia', 'sede', 'activo'
+            'username', 'email', 'first_name', 'last_name', 'telefono',
+            'licencia_conducir', 'categoria_licencia', 'fecha_vencimiento_licencia',
+            'rutas_asignadas', 'activo'
         ]
         widgets = {
             'username': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500',
-                'placeholder': 'DNI del chofer (8 dígitos)',
-                'maxlength': '8'
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500',
+                'placeholder': 'DNI del chofer'
             }),
             'email': forms.EmailInput(attrs={
-                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500',
-                'placeholder': 'chofer@otizatours.com'
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500',
+                'placeholder': 'email@ejemplo.com'
             }),
             'first_name': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500',
-                'placeholder': 'Juan Carlos'
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500',
+                'placeholder': 'Nombre'
             }),
             'last_name': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500',
-                'placeholder': 'Pérez García'
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500',
+                'placeholder': 'Apellido'
             }),
             'telefono': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500',
-                'placeholder': '987654321',
-                'maxlength': '9'
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500',
+                'placeholder': '999888777'
             }),
             'licencia_conducir': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500',
-                'placeholder': 'A1-234567'
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500',
+                'placeholder': 'D-12345678'
             }),
             'categoria_licencia': forms.Select(attrs={
-                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500'
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500'
             }),
             'fecha_vencimiento_licencia': forms.DateInput(attrs={
                 'type': 'date',
-                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500',
-                'min': date.today().isoformat()
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500'
             }),
-            'sede': forms.Select(attrs={
-                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500'
+            'rutas_asignadas': forms.SelectMultiple(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500',
+                'size': '5'  # Mostrar 5 opciones visibles
             }),
             'activo': forms.CheckboxInput(attrs={
-                'class': 'w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500'
+                'class': 'rounded border-gray-300 text-indigo-600 focus:ring-indigo-500'
             }),
+        }
+        labels = {
+            'rutas_asignadas': 'Rutas Asignadas',
+        }
+        help_texts = {
+            'rutas_asignadas': 'Selecciona las rutas que este chofer puede manejar',
         }
     
     def __init__(self, *args, **kwargs):

@@ -69,6 +69,7 @@ class ChoferService:
         if categoria_licencia and categoria_licencia.upper() not in [c.upper() for c in categorias_validas]:
             logger.warning(f"  - WARNING: Categoría no estándar: {categoria_licencia}")
         
+
         # 6. Crear el usuario chofer
         logger.info("  - Creando chofer en BD...")
         chofer = Usuario.objects.create_user(
@@ -79,8 +80,12 @@ class ChoferService:
             last_name=last_name,
             sede=sede_asignada,
             telefono=telefono,
+            # Flags de rol
             es_cajero=False,
             es_chofer=True,
+            # 🔒 Flags de Django (CRÍTICO para que no aparezca como admin)
+            is_staff=False,        # ← AGREGAR: Sin acceso al admin de Django
+            is_superuser=False,    # ← AGREGAR: No es superusuario
             activo=True,
             licencia_conducir=licencia_conducir.upper(),
             categoria_licencia=categoria_licencia.upper() if categoria_licencia else '',

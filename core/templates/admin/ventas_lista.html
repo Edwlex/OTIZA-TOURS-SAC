@@ -25,9 +25,19 @@
                     <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">📅 Hasta</label>
                     {{ form.fecha_hasta }}
                 </div>
+                <!-- Ruta -->
                 <div>
-                    <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide"> Ruta</label>
-                    {{ form.ruta }}
+                    <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+                        🚌 Ruta
+                    </label>
+                    <select name="ruta" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="">Todas las rutas</option>
+                        {% for ruta in rutas_activas %}
+                        <option value="{{ ruta.id }}" {% if form.ruta.value == ruta.id|stringformat:"s" %}selected{% endif %}>
+                            {{ ruta.origen }} → {{ ruta.destino }}
+                        </option>
+                        {% endfor %}
+                    </select>
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">🔍 Buscar</label>
@@ -55,6 +65,30 @@
         </div>
     </form>
 </div>
+
+<!-- ==================== MENSAJE: FILTROS SIN RESULTADOS ==================== -->
+{% if hay_filtros_activos and not ventas %}
+<div class="bg-amber-50 border-l-4 border-amber-500 p-6 mb-8 rounded-r-xl">
+    <div class="flex items-start">
+        <div class="flex-shrink-0">
+            <i class="fas fa-search text-amber-500 text-2xl"></i>
+        </div>
+        <div class="ml-4">
+            <h4 class="text-sm font-bold text-amber-800">No se encontraron ventas</h4>
+            <p class="text-sm text-amber-700 mt-1">
+                No hay resultados para los filtros seleccionados. 
+                Intenta ampliar el rango de fechas o limpiar los filtros.
+            </p>
+        </div>
+        <div class="ml-auto">
+            <a href="{% url 'core:ventas_lista' %}" class="text-sm text-amber-600 hover:text-amber-800 font-medium">
+                Limpiar filtros ✕
+            </a>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 
 <!-- KPIs -->
 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">

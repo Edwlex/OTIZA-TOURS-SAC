@@ -1,261 +1,444 @@
 {% extends 'base_cajero.html' %}
-
-{% block title %}Venta de Pasajes - {{ viaje.ruta }}{% endblock %}
-{% block page_title %}Nueva Venta{% endblock %}
+{% block title %}Venta de Pasajes - {{ viaje.ruta|default:"Otiza Tours" }}{% endblock %}
 
 {% block extra_css %}
 <style>
-    /* Estilos para el Mapa del Bus */
-    .bus-seat {
-        transition: all 0.2s;
-        cursor: pointer;
-    }
-    .bus-seat:hover:not(.occupied) {
-        transform: scale(1.1);
-        border-color: #10B981;
-    }
-    .bus-seat.selected {
-        background-color: #3B82F6;
-        border-color: #3B82F6;
-        color: white;
-    }
-    .bus-seat.occupied {
-        background-color: #EF4444;
-        border-color: #EF4444;
-        color: white;
-        cursor: not-allowed;
-        opacity: 0.7;
-    }
-    .steering-wheel {
-        transform: rotate(-90deg);
-    }
+    .seat-btn { transition: all 0.2s; cursor: pointer; }
+    .seat-btn:hover:not(.ocupado):not(.seleccionado) { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); }
+    .seat-btn.seleccionado { background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: white; transform: scale(1.05); }
+    .seat-btn.ocupado { background: #EF4444; color: white; cursor: not-allowed; opacity: 0.6; }
+    .fade-in { animation: fadeIn 0.3s ease-in; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .animate-slide-up { animation: slideUp 0.3s ease-out; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="flex flex-col h-full">
-    
-    <!-- HEADER: Info del Vehículo y Chofer -->
-    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6 flex flex-wrap items-center justify-between gap-4">
-        <div class="flex items-center gap-4">
-            <!-- Placa del Vehículo -->
-            <div class="bg-slate-800 text-white px-4 py-2 rounded-lg font-mono text-xl tracking-widest border-b-4 border-yellow-500 shadow-lg">
-                {{ viaje.vehiculo.placa }}
-            </div>
+<div class="max-w-7xl mx-auto space-y-6">
+    <!-- HEADER -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
+            <i class="fas fa-ticket-alt text-otiza-green"></i>
+            Venta de Pasajes
+        </h2>
+        <p class="text-slate-500 text-sm mt-1">Selecciona ruta, horario y registra al pasajero</p>
+    </div>
+
+    <!-- ==================== PASO 1: FILTROS DINÁMICOS ==================== -->
+    <div id="pasoFiltros" class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 fade-in">
+        <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+            <i class="fas fa-filter text-otiza-green"></i>
+            1. Selecciona Ruta y Horario
+        </h3>
+        <form id="formFiltros" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Ruta -->
             <div>
-                <h2 class="text-lg font-bold text-slate-800">{{ viaje.ruta }}</h2>
-                <p class="text-sm text-slate-500 flex items-center gap-2">
-                    <i class="fas fa-clock text-otiza-green"></i> {{ viaje.hora_salida }}
-                    <span class="mx-2">•</span>
-                    <i class="fas fa-user-tie text-otiza-green"></i> Chofer: {{ viaje.chofer|default:"Juan Pérez" }}
-                </p>
+                <label class="block text-sm font-semibold text-slate-700 mb-2">Ruta *</label>
+                <select id="selectRuta" required
+                    class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition bg-white">
+                    <option value="">Seleccionar ruta...</option>
+                    {% for ruta in rutas_activas %}
+                    <option value="{{ ruta.id }}" data-precio="{{ ruta.precio_base }}">{{ ruta.origen }} → {{ ruta.destino }}</option>
+                    {% endfor %}
+                </select>
             </div>
-        </div>
-        
-        <!-- Contador de Asientos -->
-        <div class="flex items-center gap-4 text-sm font-medium">
-            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-green-500"></span> Libre ({{ asientos_libres|default:12 }})</span>
-            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-red-500"></span> Ocupado</span>
-            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-blue-500"></span> Seleccionado</span>
+            <!-- Fecha -->
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-2">Fecha de Viaje *</label>
+                <input type="date" id="inputFecha" required min="{% now 'Y-m-d' %}"
+                    class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition">
+            </div>
+            <!-- Vehículo -->
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-2">Vehículo *</label>
+                <select id="selectVehiculo" required
+                    class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition bg-white">
+                    {% for vehiculo in vehiculos_sede %}
+                    <option value="{{ vehiculo.id }}" data-capacidad="{{ vehiculo.capacidad_asientos }}">
+                        {{ vehiculo.placa }} • {{ vehiculo.modelo }} ({{ vehiculo.capacidad_asientos }} asientos)
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <!-- Horario -->
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-2">Horario *</label>
+                <select id="selectHorario" required
+                    class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition bg-white">
+                    <option value="">Seleccionar horario...</option>
+                    <option value="08:00">08:00 AM</option>
+                    <option value="10:30">10:30 AM</option>
+                    <option value="14:00">02:00 PM</option>
+                    <option value="16:30">04:30 PM</option>
+                </select>
+            </div>
+        </form>
+        <div class="mt-6 flex justify-end">
+            <button onclick="mostrarMapaAsientos()"
+                class="px-6 py-2.5 bg-otiza-green hover:bg-otiza-dark text-white rounded-lg font-medium transition shadow-md flex items-center gap-2">
+                <i class="fas fa-arrow-right"></i> Ver Asientos Disponibles
+            </button>
         </div>
     </div>
 
-    <!-- LAYOUT PRINCIPAL: 2 COLUMNAS -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1">
-
-        <!-- COLUMNA IZQUIERDA: EL BUS (MAPA 2D) -->
-        <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col items-center">
-            
-            <div class="w-full max-w-lg">
-                <!-- Frente del Bus -->
-                <div class="border-b-4 border-slate-200 pb-4 mb-4 flex justify-between items-end">
-                    <div class="text-4xl text-slate-400 steering-wheel">
-                        <i class="fas fa-dharmachakra"></i>
-                    </div>
-                    <div class="text-right">
-                        <span class="text-xs text-slate-400 font-bold uppercase tracking-widest">FRENTE DEL BUS</span>
-                    </div>
+    <!-- ==================== PASO 2: MAPA DE ASIENTOS DINÁMICO ==================== -->
+    <div id="pasoMapa" class="hidden fade-in">
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h3 class="text-lg font-bold text-slate-800">2. Selecciona tu Asiento</h3>
+                    <p class="text-sm text-slate-500 mt-1" id="infoViajeSeleccionado">
+                        <!-- Se llena con JS -->
+                    </p>
                 </div>
+                <button onclick="volverAFiltros()"
+                    class="text-sm text-slate-500 hover:text-slate-700 flex items-center gap-1">
+                    <i class="fas fa-arrow-left"></i> Cambiar ruta
+                </button>
+            </div>
 
-                <!-- Grid de Asientos (Diseño 2 + Pasillo + 2) -->
-                <form id="ventaForm" action="{% url 'core:procesar_venta' %}" method="POST">
+            <!-- Leyenda -->
+            <div class="flex flex-wrap gap-4 text-sm mb-6">
+                <span class="flex items-center gap-2"><span class="w-4 h-4 rounded bg-slate-100 border border-slate-300"></span> Libre</span>
+                <span class="flex items-center gap-2"><span class="w-4 h-4 rounded bg-red-500"></span> Ocupado</span>
+                <span class="flex items-center gap-2"><span class="w-4 h-4 rounded bg-otiza-green"></span> Seleccionado</span>
+            </div>
+
+            <!-- Grid DINÁMICO de Asientos -->
+            <div id="containerAsientos" class="max-w-2xl mx-auto">
+                <!-- Se genera con JS según capacidad del vehículo -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== PASO 3: FORMULARIO PASAJERO ==================== -->
+    <div id="pasoFormulario" class="hidden fade-in">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Formulario -->
+            <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <i class="fas fa-user-circle text-otiza-green"></i>
+                    3. Datos del Pasajero - Asiento <span id="asientoSeleccionadoDisplay" class="text-otiza-green text-xl">--</span>
+                </h3>
+
+                <form id="formVenta" method="POST" action="{% url 'core:procesar_venta' %}" class="space-y-4">
                     {% csrf_token %}
-                    <!-- Contenedor oculto para enviar datos -->
-                    <div id="datosSeleccionados"></div>
+                    <input type="hidden" name="asiento_numero" id="inputAsientoNumero">
+                    <input type="hidden" name="ruta_id" id="inputRutaId">
+                    <input type="hidden" name="viaje_id" id="inputViajeId">
 
-                    <div class="grid grid-cols-5 gap-y-3 gap-x-2 justify-items-center mb-8">
-                        
-                        <!-- FILA 1 -->
-                        <div class="col-span-2 w-full grid grid-cols-2 gap-2">
-                            <button type="button" class="bus-seat h-12 rounded-lg border-2 border-slate-200 bg-slate-50 flex items-center justify-center text-xs font-bold text-slate-600" 
-                                    onclick="toggleSeat(this, '01A')">01A</button>
-                            <button type="button" class="bus-seat h-12 rounded-lg border-2 border-slate-200 bg-slate-50 flex items-center justify-center text-xs font-bold text-slate-600" 
-                                    onclick="toggleSeat(this, '01B')">01B</button>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- DNI -->
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-2">DNI / Pasaporte *</label>
+                            <div class="relative">
+                                <i class="fas fa-id-card absolute left-3 top-3 text-slate-400"></i>
+                                <input type="text" name="dni_pasajero" id="dniPasajero" maxlength="12" required
+                                    class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition"
+                                    placeholder="12345678">
+                            </div>
                         </div>
-                        <div class="col-span-1 text-center flex items-center justify-center text-[10px] text-slate-300 font-bold uppercase">PASILLO</div>
-                        <div class="col-span-2 w-full grid grid-cols-2 gap-2">
-                            <button type="button" class="bus-seat occupied h-12 rounded-lg border-2 border-slate-200 bg-red-100 flex items-center justify-center text-xs font-bold text-red-600" disabled>01C</button>
-                            <button type="button" class="bus-seat h-12 rounded-lg border-2 border-slate-200 bg-slate-50 flex items-center justify-center text-xs font-bold text-slate-600" 
-                                    onclick="toggleSeat(this, '01D')">01D</button>
+                        <!-- Teléfono -->
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-2">Teléfono / Celular *</label>
+                            <div class="relative">
+                                <i class="fas fa-phone absolute left-3 top-3 text-slate-400"></i>
+                                <input type="tel" name="telefono_pasajero" id="telefonoPasajero" maxlength="9" required
+                                    class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition"
+                                    placeholder="987654321">
+                            </div>
                         </div>
+                    </div>
 
-                        <!-- FILA 2 -->
-                        <div class="col-span-2 w-full grid grid-cols-2 gap-2">
-                            <button type="button" class="bus-seat h-12 rounded-lg border-2 border-slate-200 bg-slate-50 flex items-center justify-center text-xs font-bold text-slate-600" 
-                                    onclick="toggleSeat(this, '02A')">02A</button>
-                            <button type="button" class="bus-seat h-12 rounded-lg border-2 border-slate-200 bg-slate-50 flex items-center justify-center text-xs font-bold text-slate-600" 
-                                    onclick="toggleSeat(this, '02B')">02B</button>
+                    <!-- Nombre Completo -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">Nombre Completo *</label>
+                        <div class="relative">
+                            <i class="fas fa-user absolute left-3 top-3 text-slate-400"></i>
+                            <input type="text" name="nombre_pasajero" required
+                                class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition uppercase"
+                                placeholder="PÉREZ GARCÍA JUAN CARLOS">
                         </div>
-                        <div class="col-span-1"></div> <!-- Pasillo vacío -->
-                        <div class="col-span-2 w-full grid grid-cols-2 gap-2">
-                            <button type="button" class="bus-seat h-12 rounded-lg border-2 border-slate-200 bg-slate-50 flex items-center justify-center text-xs font-bold text-slate-600" 
-                                    onclick="toggleSeat(this, '02C')">02C</button>
-                            <button type="button" class="bus-seat h-12 rounded-lg border-2 border-slate-200 bg-slate-50 flex items-center justify-center text-xs font-bold text-slate-600" 
-                                    onclick="toggleSeat(this, '02D')">02D</button>
-                        </div>
+                    </div>
 
-                        <!-- FILA 3 (Ejemplo ocupado) -->
-                        <div class="col-span-2 w-full grid grid-cols-2 gap-2">
-                            <button type="button" class="bus-seat occupied h-12 rounded-lg border-2 border-slate-200 bg-red-100 flex items-center justify-center text-xs font-bold text-red-600" disabled>03A</button>
-                            <button type="button" class="bus-seat occupied h-12 rounded-lg border-2 border-slate-200 bg-red-100 flex items-center justify-center text-xs font-bold text-red-600" disabled>03B</button>
+                    <!-- Email -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">Correo Electrónico <span class="text-xs text-slate-400">(Opcional)</span></label>
+                        <div class="relative">
+                            <i class="fas fa-envelope absolute left-3 top-3 text-slate-400"></i>
+                            <input type="email" name="email_pasajero"
+                                class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition"
+                                placeholder="juan.perez@email.com">
                         </div>
-                        <div class="col-span-1"></div>
-                        <div class="col-span-2 w-full grid grid-cols-2 gap-2">
-                            <button type="button" class="bus-seat h-12 rounded-lg border-2 border-slate-200 bg-slate-50 flex items-center justify-center text-xs font-bold text-slate-600" 
-                                    onclick="toggleSeat(this, '03C')">03C</button>
-                            <button type="button" class="bus-seat h-12 rounded-lg border-2 border-slate-200 bg-slate-50 flex items-center justify-center text-xs font-bold text-slate-600" 
-                                    onclick="toggleSeat(this, '03D')">03D</button>
+                    </div>
+
+                    <!-- Método de Pago -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">Método de Pago *</label>
+                        <div class="grid grid-cols-3 gap-3">
+                            <label class="cursor-pointer block select-none" onclick="prevenirSalto(event)">
+                                <input type="radio" name="metodo_pago" value="efectivo" class="peer sr-only" checked>
+                                <div class="p-3 rounded-xl border-2 border-slate-200 text-center peer-checked:bg-green-100 peer-checked:border-green-500 peer-checked:text-green-700 transition hover:bg-slate-50 h-full flex flex-col items-center justify-center">
+                                    <i class="fas fa-money-bill-wave text-2xl mb-1"></i>
+                                    <p class="text-sm font-semibold">Efectivo</p>
+                                </div>
+                            </label>
+                            <label class="cursor-pointer block select-none" onclick="prevenirSalto(event)">
+                                <input type="radio" name="metodo_pago" value="yape" class="peer sr-only">
+                                <div class="p-3 rounded-xl border-2 border-slate-200 text-center peer-checked:bg-purple-100 peer-checked:border-purple-500 peer-checked:text-purple-700 transition hover:bg-slate-50 h-full flex flex-col items-center justify-center">
+                                    <i class="fas fa-mobile-alt text-2xl mb-1"></i>
+                                    <p class="text-sm font-semibold">Yape</p>
+                                </div>
+                            </label>
+                            <label class="cursor-pointer block select-none" onclick="prevenirSalto(event)">
+                                <input type="radio" name="metodo_pago" value="plin" class="peer sr-only">
+                                <div class="p-3 rounded-xl border-2 border-slate-200 text-center peer-checked:bg-teal-100 peer-checked:border-teal-500 peer-checked:text-teal-700 transition hover:bg-slate-50 h-full flex flex-col items-center justify-center">
+                                    <i class="fas fa-wallet text-2xl mb-1"></i>
+                                    <p class="text-sm font-semibold">Plin</p>
+                                </div>
+                            </label>
                         </div>
-                        
-                        <!-- Más filas... (Repetir estructura para llenar el bus) -->
+                    </div>
+
+                    <!-- Precio DINÁMICO -->
+                    <div class="bg-slate-50 rounded-xl p-4 border-2 border-slate-200">
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-600 font-medium">Precio del Pasaje:</span>
+                            <span class="text-2xl font-bold text-otiza-green" id="precioDinamico">S/ 0.00</span>
+                        </div>
+                    </div>
+
+                    <!-- Botones -->
+                    <div class="flex justify-end gap-3 pt-4 border-t border-slate-200">
+                        <button type="button" onclick="volverAMapa()"
+                            class="px-6 py-2.5 border border-slate-300 rounded-lg text-slate-700 font-medium hover:bg-slate-50 transition">
+                            <i class="fas fa-arrow-left mr-2"></i>Volver
+                        </button>
+                        <button type="submit"
+                            class="px-6 py-2.5 bg-otiza-green hover:bg-otiza-dark text-white rounded-lg font-medium transition shadow-md flex items-center gap-2">
+                            <i class="fas fa-check-circle"></i> Confirmar Venta
+                        </button>
                     </div>
                 </form>
             </div>
+
+            <!-- Resumen DINÁMICO -->
+            <div class="bg-gradient-to-br from-otiza-green to-emerald-600 rounded-xl shadow-lg p-6 text-white">
+                <h4 class="font-bold text-lg mb-4 flex items-center gap-2">
+                    <i class="fas fa-receipt"></i> Resumen de Venta
+                </h4>
+                <div class="space-y-3 text-sm">
+                    <div class="flex justify-between border-b border-white/20 pb-2">
+                        <span class="text-green-100">Ruta:</span>
+                        <span class="font-semibold" id="resumenRuta">--</span>
+                    </div>
+                    <div class="flex justify-between border-b border-white/20 pb-2">
+                        <span class="text-green-100">Fecha:</span>
+                        <span class="font-semibold" id="resumenFecha">--</span>
+                    </div>
+                    <div class="flex justify-between border-b border-white/20 pb-2">
+                        <span class="text-green-100">Hora:</span>
+                        <span class="font-semibold" id="resumenHora">--</span>
+                    </div>
+                    <div class="flex justify-between border-b border-white/20 pb-2">
+                        <span class="text-green-100">Asiento:</span>
+                        <span class="font-semibold text-xl" id="resumenAsiento">--</span>
+                    </div>
+                    <div class="flex justify-between border-b border-white/20 pb-2">
+                        <span class="text-green-100">Vehículo:</span>
+                        <span class="font-semibold" id="resumenVehiculo">--</span>
+                    </div>
+                    <div class="flex justify-between pt-2">
+                        <span class="text-green-100 font-bold">TOTAL:</span>
+                        <span class="font-bold text-2xl" id="resumenTotal">S/ 0.00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Confirmación de Venta -->
+<div id="modalConfirmacionVenta" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="cerrarModalVenta()"></div>
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 animate-slide-up">
+        <div class="text-center mb-6">
+            <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center text-green-600 text-3xl mx-auto mb-3">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-gray-800">¡Venta Confirmada!</h3>
+            <p class="text-gray-500 text-sm mt-1">Ticket generado correctamente</p>
         </div>
 
-        <!-- COLUMNA DERECHA: BOLETERO (FORMULARIO STICKY) -->
-        <div class="lg:col-span-1">
-            <div class="bg-white rounded-xl shadow-lg border border-slate-200 p-6 sticky top-6">
-                <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">📝 Datos del Pasajero</h3>
-                
-                <!-- Lista de Asientos Seleccionados -->
-                <div id="seatsList" class="space-y-4 mb-6 max-h-[300px] overflow-y-auto">
-                    <p class="text-sm text-slate-400 text-center italic" id="emptyState">Selecciona un asiento en el mapa</p>
-                    
-                    <!-- Aquí se inyectan los formularios de pasajeros vía JS -->
-                </div>
-
-                <!-- Resumen de Pago -->
-                <div class="bg-slate-50 rounded-lg p-4 mb-6">
-                    <div class="flex justify-between text-sm text-slate-600 mb-1">
-                        <span>Precio por asiento:</span>
-                        <span class="font-medium">S/ {{ viaje.precio_base|default:25.00 }}</span>
-                    </div>
-                    <div class="flex justify-between text-lg font-bold text-slate-800 mt-2 pt-2 border-t border-slate-200">
-                        <span>Total a Pagar:</span>
-                        <span class="text-otiza-green" id="totalPrice">S/ 0.00</span>
-                    </div>
-                </div>
-
-                <!-- Método de Pago -->
-                <div class="mb-6">
-                    <label class="block text-sm font-medium text-slate-700 mb-2">Método de Pago</label>
-                    <div class="grid grid-cols-3 gap-2">
-                        <label class="cursor-pointer">
-                            <input type="radio" name="pago" value="efectivo" class="peer sr-only" checked>
-                            <div class="p-2 rounded-lg border border-slate-200 text-center text-xs font-medium peer-checked:bg-green-100 peer-checked:border-green-500 peer-checked:text-green-700 transition hover:bg-slate-50">
-                                💵 Efectivo
-                            </div>
-                        </label>
-                        <label class="cursor-pointer">
-                            <input type="radio" name="pago" value="yape" class="peer sr-only">
-                            <div class="p-2 rounded-lg border border-slate-200 text-center text-xs font-medium peer-checked:bg-purple-100 peer-checked:border-purple-500 peer-checked:text-purple-700 transition hover:bg-slate-50">
-                                📱 Yape
-                            </div>
-                        </label>
-                        <label class="cursor-pointer">
-                            <input type="radio" name="pago" value="plin" class="peer sr-only">
-                            <div class="p-2 rounded-lg border border-slate-200 text-center text-xs font-medium peer-checked:bg-teal-100 peer-checked:border-teal-500 peer-checked:text-teal-700 transition hover:bg-slate-50">
-                                 Plin
-                            </div>
-                        </label>
-                    </div>
-                </div>
-
-                <!-- Botón de Acción -->
-                <button type="submit" form="ventaForm" id="btnCobrar" disabled class="w-full bg-slate-300 text-white font-bold py-3 rounded-lg transition flex items-center justify-center gap-2 cursor-not-allowed">
-                    <i class="fas fa-print"></i> COBRAR E IMPRIMIR
-                </button>
+        <div class="bg-gray-50 rounded-xl p-4 mb-6 border-2 border-gray-200">
+            <div class="space-y-2 text-sm">
+                <div class="flex justify-between"><span class="text-gray-600">🎫 Asiento:</span><span class="font-bold text-gray-800" id="ticketAsiento">--</span></div>
+                <div class="flex justify-between"><span class="text-gray-600">🚌 Ruta:</span><span class="font-bold text-gray-800" id="ticketRuta">--</span></div>
+                <div class="flex justify-between"><span class="text-gray-600">📅 Fecha:</span><span class="font-bold text-gray-800" id="ticketFecha">--</span></div>
+                <div class="flex justify-between"><span class="text-gray-600">🕐 Hora:</span><span class="font-bold text-gray-800" id="ticketHora">--</span></div>
+                <div class="flex justify-between"><span class="text-gray-600">👤 Pasajero:</span><span class="font-bold text-gray-800" id="ticketPasajero">--</span></div>
+                <div class="flex justify-between pt-2 border-t border-gray-300"><span class="text-gray-600 font-bold">💰 Total:</span><span class="font-bold text-otiza-green text-lg" id="ticketTotal">S/ 0.00</span></div>
             </div>
         </div>
 
+        <div class="space-y-3">
+            <a id="btnDescargarPDF" href="#" class="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition shadow-lg flex items-center justify-center gap-2">
+                <i class="fas fa-file-pdf"></i><span>Descargar Boleto PDF</span>
+            </a>
+            <button onclick="imprimirTicket()" class="w-full px-6 py-3 bg-otiza-green hover:bg-otiza-dark text-white rounded-xl font-bold transition shadow-lg flex items-center justify-center gap-2">
+                <i class="fas fa-print"></i><span>Imprimir Boleto</span>
+            </button>
+            <button onclick="cerrarModalVenta()" class="w-full px-6 py-3 border-2 border-gray-300 hover:bg-gray-50 text-gray-700 rounded-xl font-bold transition">
+                Cerrar y Nueva Venta
+            </button>
+        </div>
     </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    let selectedSeats = {};
-    const pricePerSeat = {{ viaje.precio_base|default:25.00 }};
+    let asientoSeleccionado = null;
+    let precioActual = 0;
 
-    function toggleSeat(btn, seatId) {
-        // Si está ocupado, no hacer nada
-        if (btn.classList.contains('occupied')) return;
+    // Validaciones
+    document.getElementById('dniPasajero')?.addEventListener('input', function(e) {
+        this.value = this.value.replace(/[^0-9]/g, '');
+    });
 
-        const emptyState = document.getElementById('emptyState');
-        const seatsList = document.getElementById('seatsList');
-        const totalPriceEl = document.getElementById('totalPrice');
-        const btnCobrar = document.getElementById('btnCobrar');
+    function mostrarMapaAsientos() {
+        const ruta = document.getElementById('selectRuta').value;
+        const fecha = document.getElementById('inputFecha').value;
+        const vehiculoId = document.getElementById('selectVehiculo').value;
+        const horario = document.getElementById('selectHorario').value;
 
-        if (btn.classList.contains('selected')) {
-            // DESSELECCIONAR
-            btn.classList.remove('selected');
-            delete selectedSeats[seatId];
-        } else {
-            // SELECCIONAR
-            btn.classList.add('selected');
-            selectedSeats[seatId] = { id: seatId, dni: '', nombre: '' };
+        if (!ruta || !fecha || !horario) {
+            alert('⚠️ Por favor completa todos los campos obligatorios');
+            return;
         }
 
-        // Actualizar UI de la lista
-        seatsList.innerHTML = '';
-        let total = 0;
+        // Obtener datos del vehículo seleccionado
+        const vehiculoSelect = document.getElementById('selectVehiculo');
+        const capacidad = vehiculoSelect.options[vehiculoSelect.selectedIndex].dataset.capacidad;
+        const precioRuta = document.getElementById('selectRuta').options[document.getElementById('selectRuta').selectedIndex].dataset.precio;
+        
+        precioActual = parseFloat(precioRuta);
+        document.getElementById('precioDinamico').textContent = `S/ ${precioActual.toFixed(2)}`;
+        document.getElementById('resumenTotal').textContent = `S/ ${precioActual.toFixed(2)}`;
 
-        const seatIds = Object.keys(selectedSeats);
-        if (seatIds.length === 0) {
-            seatsList.innerHTML = '<p class="text-sm text-slate-400 text-center italic" id="emptyState">Selecciona un asiento en el mapa</p>';
-            btnCobrar.disabled = true;
-            btnCobrar.classList.add('bg-slate-300', 'cursor-not-allowed');
-            btnCobrar.classList.remove('bg-otiza-green', 'hover:bg-otiza-dark');
-        } else {
-            btnCobrar.disabled = false;
-            btnCobrar.classList.remove('bg-slate-300', 'cursor-not-allowed');
-            btnCobrar.classList.add('bg-otiza-green', 'hover:bg-otiza-dark');
+        // Actualizar resumen
+        const rutaText = document.getElementById('selectRuta').options[document.getElementById('selectRuta').selectedIndex].text;
+        document.getElementById('resumenRuta').textContent = rutaText;
+        document.getElementById('resumenFecha').textContent = fecha.split('-').reverse().join('/');
+        document.getElementById('resumenHora').textContent = horario + (parseInt(horario) >= 12 ? ' PM' : ' AM');
+        document.getElementById('resumenVehiculo').textContent = vehiculoSelect.options[vehiculoSelect.selectedIndex].text.split('•')[0].trim();
 
-            seatIds.forEach(id => {
-                total += pricePerSeat;
-                seatsList.innerHTML += `
-                    <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 animate-pulse-once">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="font-bold text-otiza-dark bg-green-100 px-2 py-0.5 rounded text-xs">Asiento ${id}</span>
-                            <button onclick="toggleSeat(document.querySelector('[onclick*=\\'${id}\\']'), '${id}')" class="text-red-500 hover:text-red-700 text-xs">
-                                <i class="fas fa-times"></i> Quitar
-                            </button>
-                        </div>
-                        <input type="text" placeholder="DNI del pasajero" class="w-full text-sm border border-slate-300 rounded px-2 py-1 mb-1 focus:border-otiza-green outline-none" required onchange="updateData('${id}', 'dni', this.value)">
-                        <input type="text" placeholder="Nombre completo" class="w-full text-sm border border-slate-300 rounded px-2 py-1 focus:border-otiza-green outline-none" required onchange="updateData('${id}', 'nombre', this.value)">
-                    </div>
-                `;
-            });
-        }
+        // Generar grid de asientos dinámico
+        generarGridAsientos(parseInt(capacidad));
 
-        totalPriceEl.textContent = `S/ ${total.toFixed(2)}`;
+        // Mostrar mapa
+        document.getElementById('pasoFiltros').classList.add('hidden');
+        document.getElementById('pasoMapa').classList.remove('hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    function updateData(seatId, field, value) {
-        if (selectedSeats[seatId]) {
-            selectedSeats[seatId][field] = value;
+    function generarGridAsientos(capacidad) {
+        const container = document.getElementById('containerAsientos');
+        container.innerHTML = '';
+        
+        // Layout simple: 2 asientos + pasillo + 2 asientos por fila
+        let html = '<div class="grid grid-cols-5 gap-y-3 gap-x-2 justify-items-center">';
+        
+        for (let i = 1; i <= capacidad; i++) {
+            // Agregar separador de pasillo cada 2 asientos (excepto al inicio/final)
+            if (i > 1 && i < capacidad && (i - 1) % 2 === 0) {
+                html += '<div class="col-span-1 text-center flex items-center justify-center text-[10px] text-slate-300 font-bold uppercase">PASILLO</div>';
+            }
+            
+            // Estado simulado (en producción vendría de BD)
+            const ocupado = Math.random() < 0.3; // 30% de probabilidad de estar ocupado
+            
+            html += `
+                <button type="button" 
+                        class="seat-btn h-14 rounded-xl border-2 ${ocupado ? 'ocupado border-red-500 bg-red-100' : 'border-slate-200 bg-slate-50'} font-bold ${ocupado ? 'text-red-600' : 'text-slate-700'}"
+                        ${ocupado ? 'disabled' : `onclick="seleccionarAsiento('${i}', this)"`}>
+                    ${i}
+                </button>
+            `;
         }
+        html += '</div>';
+        container.innerHTML = html;
     }
+
+    function volverAFiltros() {
+        document.getElementById('pasoMapa').classList.add('hidden');
+        document.getElementById('pasoFormulario').classList.add('hidden');
+        document.getElementById('pasoFiltros').classList.remove('hidden');
+        asientoSeleccionado = null;
+    }
+
+    function seleccionarAsiento(numero, elemento) {
+        if (elemento.classList.contains('ocupado')) {
+            alert('⚠️ Este asiento ya está ocupado');
+            return;
+        }
+
+        document.querySelectorAll('.seat-btn').forEach(btn => btn.classList.remove('seleccionado'));
+        elemento.classList.add('seleccionado');
+        asientoSeleccionado = numero;
+
+        // Actualizar formulario
+        document.getElementById('inputAsientoNumero').value = numero;
+        document.getElementById('asientoSeleccionadoDisplay').textContent = numero;
+        document.getElementById('resumenAsiento').textContent = numero;
+
+        // Mostrar formulario de datos
+        const pasoFormulario = document.getElementById('pasoFormulario');
+        pasoFormulario.classList.remove('hidden');
+        window.scrollTo({ top: pasoFormulario.offsetTop - 20, behavior: 'smooth' });
+    }
+
+    function volverAMapa() {
+        document.getElementById('pasoFormulario').classList.add('hidden');
+        document.querySelectorAll('.seat-btn').forEach(btn => btn.classList.remove('seleccionado'));
+        asientoSeleccionado = null;
+    }
+
+    function prevenirSalto(event) {
+        const scrollActual = window.scrollY || document.documentElement.scrollTop;
+        requestAnimationFrame(() => {
+            window.scrollTo({ top: scrollActual, behavior: 'instant' });
+        });
+    }
+
+    function imprimirTicket() {
+        window.print();
+    }
+
+    function cerrarModalVenta() {
+        document.getElementById('modalConfirmacionVenta').classList.add('hidden');
+        document.getElementById('formVenta').reset();
+        volverAFiltros();
+    }
+
+    // Submit del formulario
+    document.getElementById('formVenta')?.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        // Llenar datos del modal
+        document.getElementById('ticketAsiento').textContent = document.getElementById('inputAsientoNumero').value;
+        document.getElementById('ticketRuta').textContent = document.getElementById('selectRuta').options[document.getElementById('selectRuta').selectedIndex].text;
+        document.getElementById('ticketFecha').textContent = document.getElementById('inputFecha').value.split('-').reverse().join('/');
+        document.getElementById('ticketHora').textContent = document.getElementById('selectHorario').value;
+        document.getElementById('ticketPasajero').textContent = document.querySelector('input[name="nombre_pasajero"]').value;
+        document.getElementById('ticketTotal').textContent = `S/ ${precioActual.toFixed(2)}`;
+
+        // Configurar enlace PDF (reemplazar con ID real cuando el backend lo devuelva)
+        document.getElementById('btnDescargarPDF').href = '#';
+
+        // Mostrar modal
+        document.getElementById('modalConfirmacionVenta').classList.remove('hidden');
+    });
 </script>
 {% endblock %}
