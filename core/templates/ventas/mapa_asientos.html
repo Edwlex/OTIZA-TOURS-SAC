@@ -81,8 +81,11 @@
                             {% if a.estado == 'vendido' %}ocupado bg-red-500 text-white
                             {% elif a.estado == 'reservado' %}reservado{% endif %}"
                         {% if a.estado == 'vendido' %}disabled
-                        {% elif a.estado == 'reservado' %}onclick="abrirModalReserva('{{ a.id }}', '{{ a.numero_asiento }}', '{{ a.nombre_reserva|default:'Reservado' }}')"
-                        {% else %}onclick="seleccionarAsiento('{{ a.numero_asiento }}', this)"{% endif %}>
+                        {% elif a.estado == 'reservado' %}
+                            onclick="abrirModalReserva('{{ a.id }}', '{{ a.numero_asiento }}', '{{ a.nombre_reserva|default:'Sin nombre' }}')"
+                        {% else %}
+                            onclick="seleccionarAsiento('{{ a.numero_asiento }}', this)"
+                        {% endif %}>
                         {{ a.numero_asiento }}
                     </button>
                     {% endfor %}
@@ -241,13 +244,26 @@
             <p class="text-sm text-gray-500 mt-1">Reservado por: <span id="reservaNombre" class="font-semibold">--</span></p>
         </div>
         <div class="space-y-3">
-            <button onclick="confirmarPagoReserva()" class="w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-medium transition flex items-center justify-center gap-2"><i class="fas fa-check-circle"></i><span>El cliente llegó - Confirmar Pago</span></button>
-            {% if puede_liberar_reservas %}
-            <button onclick="liberarReserva()" class="w-full px-4 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-medium transition flex items-center justify-center gap-2"><i class="fas fa-undo"></i><span>Cliente no llegó - Liberar Asiento</span></button>
-            {% endif %}
-            <button onclick="cerrarModalReserva()" class="w-full px-4 py-3 border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-xl font-medium transition">Cancelar</button>
+            <!-- Botón 1: Confirmar Pago -->
+            <button onclick="confirmarPagoReserva()" 
+                    class="w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-medium transition flex items-center justify-center gap-2">
+                <i class="fas fa-check-circle"></i>
+                <span>El cliente llegó - Confirmar Pago</span>
+            </button>
+            
+            <!-- Botón 2: Liberar Asiento (NUEVO - AMARILLO) -->
+            <button onclick="liberarReserva()" 
+                    class="w-full px-4 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-medium transition flex items-center justify-center gap-2">
+                <i class="fas fa-undo"></i>
+                <span>Cliente NO llegó - Liberar Asiento</span>
+            </button>
+            
+            <!-- Botón 3: Cancelar -->
+            <button onclick="cerrarModalReserva()" 
+                    class="w-full px-4 py-3 border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-xl font-medium transition">
+                Cancelar
+            </button>
         </div>
-        <p class="text-xs text-gray-400 text-center mt-4"><i class="fas fa-info-circle mr-1"></i>Solo personal autorizado puede liberar reservas</p>
     </div>
 </div>
 {% endblock %}
@@ -311,20 +327,32 @@ function volverAMapa() {
     document.querySelectorAll('.seat-btn').forEach(btn => btn.classList.remove('seleccionado'));
     asientoSeleccionado = null;
 }
+function volverAFiltros() {
+    // ✅ Redirigir a la lista de viajes disponibles
+    // Ajusta la URL según tu configuración de urls.py
+    window.location.href = "{% url 'core:ventas_lista' %}";
+}
+
 
 // ===== ACTUALIZAR VISUALMENTE EL ASIENTO =====
-function actualizarAsientoVisual(numeroAsiento, tipo) {
+function actualizarAsientoVisual(numeroAsiento, tipo, asientoId = null) {
     const btn = document.querySelector(`button[data-asiento="${numeroAsiento}"]`);
     if (!btn) return;
+    
     if (tipo === 'venta') {
         btn.className = 'seat-btn h-14 rounded-xl border-2 border-slate-200 font-bold text-white ocupado bg-red-500';
         btn.disabled = true;
         btn.removeAttribute('onclick');
-    } else if (tipo === 'reserva') {
+    } 
+    else if (tipo === 'reserva' && asientoId) {
+        // ✅ PONER MORADO + ACTUALIZAR ONCLICK
         btn.className = 'seat-btn h-14 rounded-xl border-2 border-slate-200 font-bold text-white reservado';
+        btn.disabled = false;
+        btn.onclick = function() {
+            abrirModalReserva(asientoId, numeroAsiento, 'Reservado');
+        };
     }
 }
-
 // ===== MODAL DE RESERVA =====
 function abrirModalReserva(asientoId, numero, nombreReserva) {
     if (!asientoId || asientoId === 'None' || asientoId === 'undefined') {
@@ -378,18 +406,62 @@ function confirmarPagoReserva() {
 
 // ===== LIBERAR RESERVA =====
 function liberarReserva() {
-    if (!asientoReservaActual) return;
-    if (confirm('¿Liberar este asiento reservado?')) {
+    if (!asientoReservaActual) {
+        alert('⚠️ Error: No hay asiento seleccionado');
+        return;
+    }
+    
+    if (confirm('¿Estás seguro de liberar este asiento?\n\nEl asiento volverá a estar disponible para vender.')) {
+        const btn = document.querySelector('#modalReserva button.bg-amber-500');
+        const textoOriginal = btn ? btn.innerHTML : '';
+        
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Liberando...';
+        }
+        
         fetch(`/ventas/liberar-reserva/${asientoReservaActual}/`, {
             method: 'POST',
-            headers: { 'X-CSRFToken': getCookie('csrftoken'), 'Content-Type': 'application/json' }
+            headers: { 
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json'
+            }
         })
-        .then(r => r.json())
+        .then(response => response.json())
         .then(data => {
-            alert(data.success ? '✅ Asiento liberado' : '❌ ' + data.error);
-            if (data.success) location.reload();
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = textoOriginal;
+            }
+            
+            if (data.success) {
+                // ✅ CERRAR MODAL
+                document.getElementById('modalReserva').classList.add('hidden');
+                
+                // ✅ PINTAR ASIENTO COMO DISPONIBLE (BLANCO/GRIS)
+                const btnAsiento = document.querySelector(`button[data-asiento="${data.asiento}"]`);
+                if (btnAsiento) {
+                    btnAsiento.className = 'seat-btn h-14 rounded-xl border-2 border-slate-200 font-bold text-slate-700';
+                    btnAsiento.disabled = false;
+                    btnAsiento.onclick = function() {
+                        seleccionarAsiento(data.asiento, btnAsiento);
+                    };
+                }
+                
+                alert('✅ Asiento liberado correctamente. Ya está disponible para vender.');
+                asientoReservaActual = null;
+            } else {
+                alert('❌ Error: ' + data.error);
+            }
         })
-        .catch(() => alert('❌ Error de conexión'));
+        .catch(err => {
+            console.error(err);
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = textoOriginal;
+            }
+            alert('❌ Error de conexión. Revisa la consola.');
+        });
     }
 }
 
@@ -420,10 +492,13 @@ document.getElementById('formVenta')?.addEventListener('submit', function(e) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            actualizarAsientoVisual(data.asiento, data.tipo || 'venta');
+            // ✅ PASAR EL ID DEL ASIENTO (tercer parámetro)
+            actualizarAsientoVisual(data.asiento, data.tipo || 'venta', data.asiento_id);
+            
             if (data.tipo === 'reserva') {
-                alert(`✅ Asiento ${data.asiento} reservado para ${data.pasajero || data.nombre}\n\nEl cliente debe llegar antes de la hora de salida.`);
+                alert(`✅ Asiento ${data.asiento} reservado para ${data.nombre}\n\nEl cliente debe llegar antes de la hora de salida.`);
             } else {
+                // CASO VENTA: Mostrar modal completo
                 document.getElementById('ticketAsiento').textContent = data.asiento;
                 document.getElementById('ticketRuta').textContent = data.ruta;
                 document.getElementById('ticketFecha').textContent = data.fecha;
@@ -435,7 +510,9 @@ document.getElementById('formVenta')?.addEventListener('submit', function(e) {
             }
             this.reset();
             volverAMapa();
-        } else { alert('❌ Error: ' + data.error); }
+        } else { 
+            alert('❌ Error: ' + data.error); 
+        }
     })
     .catch(err => { console.error(err); alert('❌ Error de conexión'); });
 });
@@ -460,5 +537,7 @@ function cambiarTipoOperacion(tipo) {
         if (form) form.action = "{% url 'core:procesar_venta' %}";
     }
 }
+
+
 </script>
 {% endblock %}

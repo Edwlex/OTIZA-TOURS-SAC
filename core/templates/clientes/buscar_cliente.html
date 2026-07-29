@@ -1,0 +1,231 @@
+{% extends 'base_cajero.html' %}
+{% block title %}Buscar Cliente - Otiza Tours{% endblock %}
+{% block page_title %}Buscar Cliente{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold text-slate-800">Buscar Cliente</h1>
+        <p class="text-slate-500 mt-1">Ingresa el DNI para ver el historial de viajes y aplicar filtros</p>
+    </div>
+
+    <!-- Formulario de Búsqueda Principal (DNI) -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+        <form method="GET" id="formBusqueda">
+            <div class="flex flex-col sm:flex-row gap-4">
+                <div class="flex-1">
+                    <label class="block text-sm font-medium text-slate-700 mb-2">DNI del Cliente</label>
+                    <div class="relative">
+                        <i class="fas fa-id-card absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        <input type="text" name="dni" value="{{ dni_busqueda|default:'' }}" placeholder="Ej: 12345678" maxlength="8" pattern="\d{8}" class="w-full pl-12 pr-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green" required>
+                    </div>
+                    {% if error %}
+                    <p class="text-red-500 text-sm mt-2"><i class="fas fa-exclamation-circle mr-1"></i>{{ error }}</p>
+                    {% endif %}
+                </div>
+                <div class="flex items-end">
+                    <button type="submit" class="w-full sm:w-auto bg-otiza-green hover:bg-otiza-dark text-white px-6 py-3 rounded-lg font-medium transition flex items-center gap-2">
+                        <i class="fas fa-search"></i> Buscar
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Resultados -->
+    {% if cliente %}
+    <div class="space-y-6">
+        
+        <!-- Tarjeta de Datos del Cliente -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <div class="flex items-center gap-4">
+                <div class="w-16 h-16 bg-otiza-green/10 rounded-full flex items-center justify-center text-2xl font-bold text-otiza-green">
+                    {{ cliente.nombre|first|default:'C' }}
+                </div>
+                <div class="flex-1">
+                    <h2 class="text-xl font-bold text-slate-800">{{ cliente.nombre }}</h2>
+                    <p class="text-slate-500 text-sm">
+                        <i class="fas fa-id-card mr-1"></i> DNI: {{ cliente.dni }}
+                        {% if cliente.telefono %} • <i class="fas fa-phone mr-1"></i>{{ cliente.telefono }}{% endif %}
+                        {% if cliente.email %} • <i class="fas fa-envelope mr-1"></i>{{ cliente.email }}{% endif %}
+                    </p>
+                </div>
+                <div class="text-right">
+                    <span class="bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-sm font-medium">
+                        Total Histórico: {{ cliente.total_viajes_global }} viajes
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== BARRA DE FILTROS AVANZADOS ==================== -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+            <form method="GET" class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                <!-- Mantener el DNI oculto en el form de filtros -->
+                <input type="hidden" name="dni" value="{{ dni_busqueda }}">
+                
+                <!-- Filtro por Ruta -->
+                <div class="md:col-span-4">
+                    <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">🚌 Filtrar por Ruta</label>
+                    <select name="ruta" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-otiza-green text-sm">
+                        <option value="">Todas las rutas</option>
+                        {% for ruta in rutas_activas %}
+                            <option value="{{ ruta.id }}" {% if filtro_ruta == ruta.id|stringformat:"s" %}selected{% endif %}>
+                                {{ ruta.origen }} → {{ ruta.destino }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Filtro por Tiempo -->
+                <div class="md:col-span-3">
+                    <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">📅 Periodo</label>
+                    <select name="periodo" id="selectPeriodo" onchange="toggleFechas()" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-otiza-green text-sm">
+                        <option value="">Todo el historial</option>
+                        <option value="semana" {% if filtro_periodo == 'semana' %}selected{% endif %}>Última semana</option>
+                        <option value="mes" {% if filtro_periodo == 'mes' %}selected{% endif %}>Último mes</option>
+                        <option value="6meses" {% if filtro_periodo == '6meses' %}selected{% endif %}>Últimos 6 meses</option>
+                        <option value="anio" {% if filtro_periodo == 'anio' %}selected{% endif %}>Último año</option>
+                        <option value="custom" {% if filtro_periodo == 'custom' %}selected{% endif %}>Rango personalizado</option>
+                    </select>
+                </div>
+
+                <!-- Fechas Personalizadas (Oculto por defecto) -->
+                <div id="fechasCustom" class="md:col-span-3 grid grid-cols-2 gap-2" style="display: {% if filtro_periodo == 'custom' %}block{% else %}none{% endif %};">
+                    <div>
+                        <label class="block text-xs text-slate-500 mb-1">Desde</label>
+                        <input type="date" name="fecha_desde" value="{{ filtro_fecha_desde }}" class="w-full px-2 py-2 border border-slate-300 rounded-lg text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-500 mb-1">Hasta</label>
+                        <input type="date" name="fecha_hasta" value="{{ filtro_fecha_hasta }}" class="w-full px-2 py-2 border border-slate-300 rounded-lg text-sm">
+                    </div>
+                </div>
+
+                <!-- Botón Aplicar -->
+                <div class="md:col-span-2">
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition flex items-center justify-center gap-2 text-sm">
+                        <i class="fas fa-filter"></i> Aplicar
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- ==================== KPIs DEL FILTRO ==================== -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-blue-50 border border-blue-100 rounded-lg p-4 text-center">
+                <p class="text-xs text-blue-600 font-semibold uppercase">Viajes en este filtro</p>
+                <p class="text-2xl font-bold text-blue-800">{{ cliente.total_viajes_filtrados }}</p>
+            </div>
+            <div class="bg-green-50 border border-green-100 rounded-lg p-4 text-center">
+                <p class="text-xs text-green-600 font-semibold uppercase">Total Gastado (Filtro)</p>
+                <p class="text-2xl font-bold text-green-800">S/ {{ cliente.total_gastado_filtrado|floatformat:2 }}</p>
+            </div>
+            <div class="bg-purple-50 border border-purple-100 rounded-lg p-4 text-center">
+                <p class="text-xs text-purple-600 font-semibold uppercase">Promedio por Viaje</p>
+                <p class="text-2xl font-bold text-purple-800">
+                    {% if cliente.total_viajes_filtrados > 0 %}
+                        S/ {{ cliente.total_gastado_filtrado|floatformat:2 }}
+                    {% else %}
+                        S/ 0.00
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+
+        <!-- ==================== TABLA DE HISTORIAL ==================== -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="p-4 border-b border-slate-200 flex justify-between items-center">
+                <div>
+                    <h3 class="font-bold text-slate-800">Historial de Viajes</h3>
+                    <p class="text-sm text-slate-500">Mostrando página {{ cliente.historial.number }} de {{ cliente.historial.paginator.num_pages }}</p>
+                </div>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-slate-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Fecha</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Ruta</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Vehículo</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Asiento</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Precio</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Ticket</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200">
+                        {% for viaje in cliente.historial %}
+                        <tr class="hover:bg-slate-50">
+                            <td class="px-4 py-3 text-sm text-slate-700">{{ viaje.fecha }}</td>
+                            <td class="px-4 py-3"><span class="text-sm font-medium text-slate-900">{{ viaje.ruta }}</span></td>
+                            <td class="px-4 py-3 text-sm text-slate-600">{{ viaje.vehiculo }}</td>
+                            <td class="px-4 py-3"><span class="bg-slate-100 text-slate-700 px-2 py-1 rounded text-xs font-bold">{{ viaje.asiento }}</span></td>
+                            <td class="px-4 py-3 text-sm font-bold text-slate-900">S/ {{ viaje.precio|floatformat:2 }}</td>
+                            <td class="px-4 py-3 text-sm text-slate-500 font-mono">{{ viaje.ticket }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="px-4 py-8 text-center text-slate-500">
+                                <i class="fas fa-filter text-3xl text-slate-300 mb-2"></i>
+                                <p>No hay viajes que coincidan con los filtros seleccionados.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- ==================== PAGINACIÓN ==================== -->
+            {% if cliente.historial.has_other_pages %}
+            <div class="p-4 border-t border-slate-200 flex items-center justify-between bg-slate-50">
+                <div class="text-sm text-slate-600">
+                    Página {{ cliente.historial.number }} de {{ cliente.historial.paginator.num_pages }}
+                </div>
+                <div class="flex gap-2">
+                    {% if cliente.historial.has_previous %}
+                        <a href="?{{ querystring }}&page={{ cliente.historial.previous_page_number }}" class="px-3 py-1 border border-slate-300 rounded-lg text-sm hover:bg-white transition">
+                            <i class="fas fa-chevron-left"></i> Anterior
+                        </a>
+                    {% endif %}
+                    
+                    {% if cliente.historial.has_next %}
+                        <a href="?{{ querystring }}&page={{ cliente.historial.next_page_number }}" class="px-3 py-1 border border-slate-300 rounded-lg text-sm hover:bg-white transition">
+                            Siguiente <i class="fas fa-chevron-right"></i>
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+    </div>
+    
+    {% elif dni_busqueda and not error %}
+    <!-- Sin resultados -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
+        <div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <i class="fas fa-user text-3xl text-slate-400"></i>
+        </div>
+        <h3 class="text-lg font-bold text-slate-800 mb-2">Sin viajes registrados</h3>
+        <p class="text-slate-500">No se encontraron viajes para el DNI {{ dni_busqueda }}</p>
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- Script para mostrar/ocultar fechas personalizadas -->
+<script>
+    function toggleFechas() {
+        const select = document.getElementById('selectPeriodo');
+        const fechasDiv = document.getElementById('fechasCustom');
+        if (select.value === 'custom') {
+            fechasDiv.style.display = 'block';
+        } else {
+            fechasDiv.style.display = 'none';
+        }
+    }
+</script>
+{% endblock %}

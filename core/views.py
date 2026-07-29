@@ -14,6 +14,7 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator
 from django.http import HttpResponse, JsonResponse, HttpResponseRedirect
 from django.db.models import Count, Q, Sum, IntegerField
 from django.db.models.functions import ExtractHour, Cast
@@ -912,14 +913,64 @@ def fidelizacion_cliente(request):
     ]
     return render(request, 'clientes/fidelizacion.html', {'clientes_cercanos': clientes_cercanos})
 
-@login_required
-def buscar_cliente_view(request):
-    """Vista para la página de buscar cliente"""
-    contexto = {
-        'cliente_busqueda': request.GET.get('dni_cliente', ''),
-    }
-    return render(request, 'clientes/buscar.html', contexto)
 
+
+@login_required
+def buscar_cliente(request):
+    from core.services.cliente_service import ClienteService
+    
+    usuario = request.user
+    dni_busqueda = request.GET.get('dni', '').strip()
+    
+    # Capturar filtros
+    ruta_id = request.GET.get('ruta') or None
+    periodo = request.GET.get('periodo') or None
+    fecha_desde = request.GET.get('fecha_desde') or None
+    fecha_hasta = request.GET.get('fecha_hasta') or None
+    page = request.GET.get('page', 1)
+    
+    cliente = None
+    error = None
+    
+    if dni_busqueda:
+        if len(dni_busqueda) == 8 and dni_busqueda.isdigit():
+            cliente = ClienteService.buscar_por_dni(
+                dni=dni_busqueda, 
+                ruta_id=ruta_id, 
+                periodo=periodo, 
+                fecha_desde=fecha_desde, 
+                fecha_hasta=fecha_hasta,
+                page=page
+            )
+            if not cliente:
+                error = f'No se encontraron ventas para el DNI {dni_busqueda}'
+        else:
+            error = 'El DNI debe tener exactamente 8 dígitos'
+    
+    # Para el dropdown de rutas
+    rutas_activas = Ruta.objects.filter(activa=True).order_by('origen', 'destino')
+    
+    # Limpiar el 'page' de los parámetros GET para que la paginación funcione bien con los filtros
+    get_params = request.GET.copy()
+    if 'page' in get_params:
+        del get_params['page']
+    querystring = get_params.urlencode()
+    
+    contexto = {
+        'usuario': usuario,
+        'dni_busqueda': dni_busqueda,
+        'cliente': cliente,
+        'error': error,
+        'rutas_activas': rutas_activas,
+        'querystring': querystring, # Para los botones de paginación
+        # Mantener valores seleccionados en los filtros
+        'filtro_ruta': ruta_id,
+        'filtro_periodo': periodo,
+        'filtro_fecha_desde': fecha_desde,
+        'filtro_fecha_hasta': fecha_hasta,
+    }
+    
+    return render(request, 'clientes/buscar_cliente.html', contexto)
 
 # ==================== INCIDENCIAS ====================
 
@@ -2694,70 +2745,79 @@ def procesar_reserva_pago(request, asiento_id):
 
 @login_required
 def procesar_reserva(request):
-    """Procesa la RESERVA de un asiento - AHORA CAPTURA EL DNI"""
+    """Procesa la RESERVA de un asiento"""
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=400)
     
-    # Obtener datos (AGREGAR dni_pasajero)
     viaje_id = request.POST.get('viaje_id')
     asiento_numero = request.POST.get('asiento_numero')
-    dni_pasajero = request.POST.get('dni_pasajero', '')  # ← AGREGADO
-    nombre = request.POST.get('nombre_pasajero')
+    dni_pasajero = request.POST.get('dni_pasajero', '')
+    nombre = request.POST.get('nombre_pasajero')  # ← Este es el nombre
     telefono = request.POST.get('telefono_pasajero')
     
     if not all([viaje_id, asiento_numero, nombre]):
-        return JsonResponse({'success': False, 'error': 'Faltan datos para reservar'}, status=400)
+        return JsonResponse({'success': False, 'error': 'Faltan datos'}, status=400)
     
     try:
         viaje = get_object_or_404(Viaje, id=viaje_id)
         asiento = get_object_or_404(AsientoViaje, viaje=viaje, numero_asiento=asiento_numero)
         
         if asiento.estado != 'disponible':
-            return JsonResponse({'success': False, 'error': f'El asiento {asiento_numero} ya no está disponible'}, status=409)
+            return JsonResponse({'success': False, 'error': 'Asiento no disponible'}, status=409)
         
-        # Marcar como RESERVADO (GUARDAR DNI Y TELÉFONO)
+        # ✅ GUARDAR EL NOMBRE CORRECTAMENTE
         asiento.estado = 'reservado'
-        asiento.nombre_reserva = nombre
-        asiento.numero_documento_reserva = dni_pasajero  # ← AGREGADO (si existe este campo)
+        asiento.nombre_reserva = nombre.strip().upper()  # ← Guardar nombre limpio
+        asiento.numero_documento_reserva = dni_pasajero
         asiento.telefono_reserva = telefono
         asiento.fecha_reserva = timezone.now()
         asiento.save()
         
         return JsonResponse({
             'success': True,
+            'asiento_id': asiento.id,
             'asiento': asiento.numero_asiento,
             'tipo': 'reserva',
-            'nombre': nombre,
-            'dni': dni_pasajero  # ← Devolver el DNI
+            'nombre': nombre  # ← Devolver el nombre
         })
-        
     except Exception as e:
-        logger.error(f"Error al procesar reserva: {str(e)}", exc_info=True)
-        return JsonResponse({'success': False, 'error': f'Error al reservar: {str(e)}'}, status=500)
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
     
 
 @login_required
 def liberar_reserva(request, asiento_id):
-    """Libera un asiento reservado (solo admin o sede central)"""
-    
+    """Libera una reserva (cuando el cliente no llegó)"""
     if request.method != 'POST':
-        return JsonResponse({'error': 'Método no permitido'}, status=400)
+        return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=400)
     
-    asiento = get_object_or_404(AsientoViaje, id=asiento_id, estado='reservado')
-    
-    # Solo admin o sede central puede liberar
-    if not (request.user.is_superuser or request.user.sede.nombre == 'Oficina Central'):
-        return JsonResponse({'error': 'No tienes permisos'}, status=403)
-    
-    # Liberar asiento
-    asiento.estado = 'disponible'
-    asiento.nombre_reserva = None
-    asiento.telefono_reserva = None
-    asiento.fecha_reserva = None
-    asiento.nota_reserva = None
-    asiento.save()
-    
-    return JsonResponse({'success': True, 'message': 'Asiento liberado'})
+    try:
+        asiento = get_object_or_404(AsientoViaje, id=asiento_id)
+        
+        # Verificar que esté reservado
+        if asiento.estado != 'reservado':
+            return JsonResponse({
+                'success': False, 
+                'error': f'El asiento no está reservado (estado: {asiento.estado})'
+            }, status=400)
+        
+        # Liberar el asiento
+        asiento.estado = 'disponible'
+        asiento.nombre_reserva = ''
+        asiento.numero_documento_reserva = ''
+        asiento.telefono_reserva = ''
+        asiento.fecha_reserva = None
+        asiento.save()
+        
+        return JsonResponse({
+            'success': True,
+            'asiento': asiento.numero_asiento,
+            'message': f'Asiento {asiento.numero_asiento} liberado correctamente'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error al liberar reserva: {str(e)}", exc_info=True)
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
 
 @login_required
 def confirmacion_venta(request, venta_id):

@@ -22,6 +22,7 @@ urlpatterns = [
     path('ventas/procesar/', views.procesar_venta, name='procesar_venta'),
     path('ventas/exportar/', views.ventas_exportar, name='ventas_exportar'),
     path('ventas/confirmar-pago-reserva/<int:asiento_id>/', views.confirmar_pago_reserva, name='confirmar_pago_reserva'),
+    path('ventas/liberar-reserva/<int:asiento_id>/', views.liberar_reserva, name='liberar_reserva'),
     
     path('boletos/<int:boleto_id>/pdf/', views.descargar_boleto_pdf, name='descargar_boleto_pdf'),
     path('boletos/<int:boleto_id>/', views.ver_boleto, name='ver_boleto'),  
@@ -31,7 +32,7 @@ urlpatterns = [
     # ==================== CLIENTES Y FIDELIZACIÓN ====================
     path('clientes/historial/<str:dni>/', views.historial_cliente, name='cliente_historial'),
     path('clientes/fidelizacion/', views.fidelizacion_cliente, name='fidelizacion'),
-    path('clientes/buscar/', views.buscar_cliente_view, name='buscar_cliente'),
+    path('clientes/buscar/', views.buscar_cliente, name='buscar_cliente'),
 
     # ==================== REPORTES ====================
     path('reportes/', views.reportes_unificados, name='reportes_unificados'),
