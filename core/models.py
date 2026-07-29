@@ -222,12 +222,12 @@ class AsientoViaje(models.Model):
     # ==========================================
     nombre_reserva = models.CharField(max_length=100, blank=True, null=True, help_text="Nombre del pasajero que reservó")
     telefono_reserva = models.CharField(max_length=20, blank=True, null=True, help_text="Celular para notificar llegada")
+    numero_documento_reserva = models.CharField(max_length=20, blank=True, null=True, help_text="DNI del pasajero que reservó")  # ← AGREGADO
     fecha_reserva = models.DateTimeField(blank=True, null=True, help_text="Fecha y hora en que se realizó la reserva")
     nota_reserva = models.TextField(blank=True, null=True, help_text="Ej: 'Paga al llegar', 'Viene con maleta grande'")
-    
     # ==========================================
     
-    # 🔒 CONSTRAINT ANTI-CONCURRENCIA: Un asiento no puede venderse 2 veces en el mismo viaje
+    #  CONSTRAINT ANTI-CONCURRENCIA: Un asiento no puede venderse 2 veces en el mismo viaje
     class Meta:
         verbose_name = 'Asiento de Viaje'
         verbose_name_plural = 'Asientos de Viaje'
@@ -243,7 +243,7 @@ class AsientoViaje(models.Model):
     def __str__(self):
         return f"{self.viaje} - Asiento {self.numero_asiento} ({self.estado})"
 
-
+    
 # ==================== VENTAS ====================
 
 class Venta(models.Model):

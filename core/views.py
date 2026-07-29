@@ -2694,46 +2694,41 @@ def procesar_reserva_pago(request, asiento_id):
 
 @login_required
 def procesar_reserva(request):
-    """
-    Procesa la RESERVA de un asiento (sin pago inmediato) - VERSIÓN AJAX/JSON
-    El asiento cambia a estado 'reservado' (Morado).
-    """
+    """Procesa la RESERVA de un asiento - AHORA CAPTURA EL DNI"""
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=400)
     
-    # Obtener datos del formulario
+    # Obtener datos (AGREGAR dni_pasajero)
     viaje_id = request.POST.get('viaje_id')
     asiento_numero = request.POST.get('asiento_numero')
+    dni_pasajero = request.POST.get('dni_pasajero', '')  # ← AGREGADO
     nombre = request.POST.get('nombre_pasajero')
     telefono = request.POST.get('telefono_pasajero')
     
-    # Validar datos obligatorios
     if not all([viaje_id, asiento_numero, nombre]):
         return JsonResponse({'success': False, 'error': 'Faltan datos para reservar'}, status=400)
     
     try:
-        # 1. Buscar el viaje y el asiento
         viaje = get_object_or_404(Viaje, id=viaje_id)
         asiento = get_object_or_404(AsientoViaje, viaje=viaje, numero_asiento=asiento_numero)
         
-        # 2. Verificar que esté disponible
         if asiento.estado != 'disponible':
             return JsonResponse({'success': False, 'error': f'El asiento {asiento_numero} ya no está disponible'}, status=409)
         
-        # 3. ✅ Actualizar a RESERVADO (NO vendido)
+        # Marcar como RESERVADO (GUARDAR DNI Y TELÉFONO)
         asiento.estado = 'reservado'
         asiento.nombre_reserva = nombre
+        asiento.numero_documento_reserva = dni_pasajero  # ← AGREGADO (si existe este campo)
         asiento.telefono_reserva = telefono
         asiento.fecha_reserva = timezone.now()
         asiento.save()
         
-        # ✅ Devolver JSON exitoso con datos para el frontend
         return JsonResponse({
             'success': True,
             'asiento': asiento.numero_asiento,
-            'tipo': 'reserva',  # ← Clave para que el JS pinte morado
-            'nombre': nombre,   # ← Para mostrar en el mensaje
-            'message': f'Asiento {asiento.numero_asiento} reservado correctamente'
+            'tipo': 'reserva',
+            'nombre': nombre,
+            'dni': dni_pasajero  # ← Devolver el DNI
         })
         
     except Exception as e:
@@ -2797,7 +2792,7 @@ def confirmacion_venta(request, venta_id):
 
 @login_required
 def confirmar_pago_reserva(request, asiento_id):
-    """Convierte una reserva en venta (cuando el cliente llega)"""
+    """Convierte reserva en venta - AHORA USA EL DNI GUARDADO"""
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=400)
     
@@ -2809,22 +2804,21 @@ def confirmar_pago_reserva(request, asiento_id):
         if asiento.estado != 'reservado':
             return JsonResponse({'success': False, 'error': 'El asiento no está reservado'}, status=400)
         
-        # Crear la venta
+        # Crear la venta (USAR DNI GUARDADO)
         venta = Venta.objects.create(
             viaje=asiento.viaje,
             asiento=asiento,
             sede_venta=request.user.sede,
             cajero=request.user,
-            numero_documento='',  # Se puede completar después
-            nombre_cliente=asiento.nombre_reserva,
-            telefono_cliente=asiento.telefono_reserva,
-            metodo_pago='efectivo',  # Por defecto
+            numero_documento=asiento.numero_documento_reserva or '',  # ← USAR CAMPO DE RESERVA
+            nombre_cliente=asiento.nombre_reserva or 'Cliente Reserva',
+            telefono_cliente=asiento.telefono_reserva or '',
+            metodo_pago='efectivo',
             monto_total=asiento.viaje.ruta.precio_base,
             numero_ticket=f"TKT-{timezone.now().strftime('%y%m%d')}-{random.randint(1000, 9999)}",
             fecha_venta=timezone.now()
         )
         
-        # Marcar como vendido
         asiento.estado = 'vendido'
         asiento.save()
         

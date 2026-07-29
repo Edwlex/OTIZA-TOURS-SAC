@@ -7,34 +7,20 @@
     .seat-btn:hover:not(.ocupado):not(.seleccionado):not(.reservado) { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); }
     .seat-btn.seleccionado { background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: white; transform: scale(1.05); }
     .seat-btn.ocupado { background: #EF4444; color: white; cursor: not-allowed; opacity: 0.6; }
-    
-    /* ✅ NUEVO: Estilo para asiento RESERVADO (Morado) */
     .seat-btn.reservado { 
         background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%); 
         color: white; 
         cursor: pointer;
         animation: pulse 2s infinite;
     }
-    .seat-btn.reservado:hover { 
-        transform: translateY(-2px); 
-        box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4); 
-    }
-    
-    @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.85; }
-    }
-    
+    .seat-btn.reservado:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4); }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.85; } }
     .fade-in { animation: fadeIn 0.3s ease-in; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     .animate-slide-up { animation: slideUp 0.3s ease-out; }
-
-    /* Prevenir scroll en métodos de pago */
     input[name="metodo_pago"] { scroll-margin: 0; }
-    input[type="radio"][name="metodo_pago"] {
-        position: absolute; opacity: 0; pointer-events: none; width: 0; height: 0;
-    }
+    input[type="radio"][name="metodo_pago"] { position: absolute; opacity: 0; pointer-events: none; width: 0; height: 0; }
 </style>
 {% endblock %}
 
@@ -43,8 +29,7 @@
     <!-- HEADER -->
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
         <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
-            <i class="fas fa-ticket-alt text-otiza-green"></i>
-            Venta de Pasajes
+            <i class="fas fa-ticket-alt text-otiza-green"></i> Venta de Pasajes
         </h2>
         <p class="text-slate-500 text-sm mt-1">Selecciona ruta, horario y registra al pasajero</p>
     </div>
@@ -52,26 +37,13 @@
     <!-- PASO 1: INFO DEL VIAJE -->
     <div id="pasoFiltros" class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 fade-in">
         <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-            <i class="fas fa-filter text-otiza-green"></i>
-            1. Información del Viaje
+            <i class="fas fa-filter text-otiza-green"></i> 1. Información del Viaje
         </h3>
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-slate-50 rounded-lg">
-            <div>
-                <label class="block text-xs font-semibold text-slate-600 mb-1">Ruta</label>
-                <p class="font-bold text-slate-800">{{ viaje.ruta.origen }} → {{ viaje.ruta.destino }}</p>
-            </div>
-            <div>
-                <label class="block text-xs font-semibold text-slate-600 mb-1">Fecha</label>
-                <p class="font-bold text-slate-800">{{ viaje.fecha_salida|date:"d/m/Y" }}</p>
-            </div>
-            <div>
-                <label class="block text-xs font-semibold text-slate-600 mb-1">Hora</label>
-                <p class="font-bold text-slate-800">{{ viaje.hora_salida|date:"H:i" }}</p>
-            </div>
-            <div>
-                <label class="block text-xs font-semibold text-slate-600 mb-1">Vehículo</label>
-                <p class="font-bold text-slate-800">{{ viaje.vehiculo.placa }}</p>
-            </div>
+            <div><label class="block text-xs font-semibold text-slate-600 mb-1">Ruta</label><p class="font-bold text-slate-800">{{ viaje.ruta.origen }} → {{ viaje.ruta.destino }}</p></div>
+            <div><label class="block text-xs font-semibold text-slate-600 mb-1">Fecha</label><p class="font-bold text-slate-800">{{ viaje.fecha_salida|date:"d/m/Y" }}</p></div>
+            <div><label class="block text-xs font-semibold text-slate-600 mb-1">Hora</label><p class="font-bold text-slate-800">{{ viaje.hora_salida|date:"H:i" }}</p></div>
+            <div><label class="block text-xs font-semibold text-slate-600 mb-1">Vehículo</label><p class="font-bold text-slate-800">{{ viaje.vehiculo.placa }}</p></div>
         </div>
         <div class="mt-4 flex justify-end">
             <button onclick="document.getElementById('pasoMapa').scrollIntoView({behavior: 'smooth'})"
@@ -87,19 +59,10 @@
             <div class="flex items-center justify-between mb-4">
                 <div>
                     <h3 class="text-lg font-bold text-slate-800">2. Selecciona tu Asiento</h3>
-                    <p class="text-sm text-slate-500 mt-1">
-                        {{ viaje.ruta.origen }} → {{ viaje.ruta.destino }} • 
-                        {{ viaje.hora_salida|date:"H:i" }} • 
-                        {{ viaje.vehiculo.placa }} ({{ asientos|length }} asientos)
-                    </p>
+                    <p class="text-sm text-slate-500 mt-1">{{ viaje.ruta.origen }} → {{ viaje.ruta.destino }} • {{ viaje.hora_salida|date:"H:i" }} • {{ viaje.vehiculo.placa }} ({{ asientos|length }} asientos)</p>
                 </div>
-                <button onclick="volverAFiltros()"
-                    class="text-sm text-slate-500 hover:text-slate-700 flex items-center gap-1">
-                    <i class="fas fa-arrow-left"></i> Cambiar ruta
-                </button>
+                <button onclick="volverAFiltros()" class="text-sm text-slate-500 hover:text-slate-700 flex items-center gap-1"><i class="fas fa-arrow-left"></i> Cambiar ruta</button>
             </div>
-
-            <!-- Leyenda ACTUALIZADA -->
             <div class="flex flex-wrap gap-4 text-sm mb-6">
                 <span class="flex items-center gap-2"><span class="w-4 h-4 rounded bg-slate-100 border border-slate-300"></span> Libre</span>
                 <span class="flex items-center gap-2"><span class="w-4 h-4 rounded bg-red-500"></span> Ocupado</span>
@@ -112,195 +75,17 @@
             <div id="layout16" class="max-w-2xl mx-auto">
                 <div class="text-center text-xs text-slate-400 font-bold mb-6 uppercase tracking-widest">Frente del Vehículo 🛞</div>
                 <div class="grid grid-cols-4 gap-3">
-                    <!-- Fila 1 -->
-                    {% with a=asientos.0 %}
+                    {% for a in asientos %}
                     <button type="button" data-asiento="{{ a.numero_asiento }}"
                         class="seat-btn h-14 rounded-xl border-2 border-slate-200 font-bold text-slate-700
                             {% if a.estado == 'vendido' %}ocupado bg-red-500 text-white
                             {% elif a.estado == 'reservado' %}reservado{% endif %}"
                         {% if a.estado == 'vendido' %}disabled
-                        {% elif a.estado == 'reservado' %}onclick="mostrarOpcionesReserva('{{ a.id }}', '{{ a.numero_asiento }}', '{{ a.nombre_reserva|default:'' }}')"
+                        {% elif a.estado == 'reservado' %}onclick="abrirModalReserva('{{ a.id }}', '{{ a.numero_asiento }}', '{{ a.nombre_reserva|default:'Reservado' }}')"
                         {% else %}onclick="seleccionarAsiento('{{ a.numero_asiento }}', this)"{% endif %}>
                         {{ a.numero_asiento }}
                     </button>
-                    {% endwith %}
-                    {% with a=asientos.15 %}
-                    <button type="button" data-asiento="{{ a.numero_asiento }}"
-                        class="seat-btn h-14 rounded-xl border-2 border-slate-200 font-bold text-slate-700
-                            {% if a.estado == 'vendido' %}ocupado bg-red-500 text-white
-                            {% elif a.estado == 'reservado' %}reservado{% endif %}"
-                        {% if a.estado == 'vendido' %}disabled
-                        {% elif a.estado == 'reservado' %}onclick="mostrarOpcionesReserva('{{ a.id }}', '{{ a.numero_asiento }}', '{{ a.nombre_reserva|default:'' }}')"
-                        {% else %}onclick="seleccionarAsiento('{{ a.numero_asiento }}', this)"{% endif %}>
-                        {{ a.numero_asiento }}
-                    </button>
-                    {% endwith %}
-                    <div class="h-14 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 flex items-center justify-center text-xs font-bold text-slate-400">Cho</div>
-                    <div></div>
-                    
-                    <!-- Fila 2 -->
-                    {% with a=asientos.1 %}
-                    <button type="button" data-asiento="{{ a.numero_asiento }}"
-                        class="seat-btn h-14 rounded-xl border-2 border-slate-200 font-bold text-slate-700
-                            {% if a.estado == 'vendido' %}ocupado bg-red-500 text-white
-                            {% elif a.estado == 'reservado' %}reservado{% endif %}"
-                        {% if a.estado == 'vendido' %}disabled
-                        {% elif a.estado == 'reservado' %}onclick="mostrarOpcionesReserva('{{ a.id }}', '{{ a.numero_asiento }}', '{{ a.nombre_reserva|default:'' }}')"
-                        {% else %}onclick="seleccionarAsiento('{{ a.numero_asiento }}', this)"{% endif %}>
-                        {{ a.numero_asiento }}
-                    </button>
-                    {% endwith %}
-                    {% with a=asientos.2 %}
-                    <button type="button" data-asiento="{{ a.numero_asiento }}"
-                        class="seat-btn h-14 rounded-xl border-2 border-slate-200 font-bold text-slate-700
-                            {% if a.estado == 'vendido' %}ocupado bg-red-500 text-white
-                            {% elif a.estado == 'reservado' %}reservado{% endif %}"
-                        {% if a.estado == 'vendido' %}disabled
-                        {% elif a.estado == 'reservado' %}onclick="mostrarOpcionesReserva('{{ a.id }}', '{{ a.numero_asiento }}', '{{ a.nombre_reserva|default:'' }}')"
-                        {% else %}onclick="seleccionarAsiento('{{ a.numero_asiento }}', this)"{% endif %}>
-                        {{ a.numero_asiento }}
-                    </button>
-                    {% endwith %}
-                    {% with a=asientos.3 %}
-                    <button type="button" data-asiento="{{ a.numero_asiento }}"
-                        class="seat-btn h-14 rounded-xl border-2 border-slate-200 font-bold text-slate-700
-                            {% if a.estado == 'vendido' %}ocupado bg-red-500 text-white
-                            {% elif a.estado == 'reservado' %}reservado{% endif %}"
-                        {% if a.estado == 'vendido' %}disabled
-                        {% elif a.estado == 'reservado' %}onclick="mostrarOpcionesReserva('{{ a.id }}', '{{ a.numero_asiento }}', '{{ a.nombre_reserva|default:'' }}')"
-                        {% else %}onclick="seleccionarAsiento('{{ a.numero_asiento }}', this)"{% endif %}>
-                        {{ a.numero_asiento }}
-                    </button>
-                    {% endwith %}
-                    {% with a=asientos.4 %}
-                    <button type="button" data-asiento="{{ a.numero_asiento }}"
-                        class="seat-btn h-14 rounded-xl border-2 border-slate-200 font-bold text-slate-700
-                            {% if a.estado == 'vendido' %}ocupado bg-red-500 text-white
-                            {% elif a.estado == 'reservado' %}reservado{% endif %}"
-                        {% if a.estado == 'vendido' %}disabled
-                        {% elif a.estado == 'reservado' %}onclick="mostrarOpcionesReserva('{{ a.id }}', '{{ a.numero_asiento }}', '{{ a.nombre_reserva|default:'' }}')"
-                        {% else %}onclick="seleccionarAsiento('{{ a.numero_asiento }}', this)"{% endif %}>
-                        {{ a.numero_asiento }}
-                    </button>
-                    {% endwith %}
-                    
-                    <!-- Fila 3 -->
-                    {% with a=asientos.7 %}
-                    <button type="button" data-asiento="{{ a.numero_asiento }}"
-                        class="seat-btn h-14 rounded-xl border-2 border-slate-200 font-bold text-slate-700
-                            {% if a.estado == 'vendido' %}ocupado bg-red-500 text-white
-                            {% elif a.estado == 'reservado' %}reservado{% endif %}"
-                        {% if a.estado == 'vendido' %}disabled
-                        {% elif a.estado == 'reservado' %}onclick="mostrarOpcionesReserva('{{ a.id }}', '{{ a.numero_asiento }}', '{{ a.nombre_reserva|default:'' }}')"
-                        {% else %}onclick="seleccionarAsiento('{{ a.numero_asiento }}', this)"{% endif %}>
-                        {{ a.numero_asiento }}
-                    </button>
-                    {% endwith %}
-                    <div class="h-14 flex items-center justify-center text-[10px] text-slate-300 font-bold uppercase">Pasillo</div>
-                    {% with a=asientos.5 %}
-                    <button type="button" data-asiento="{{ a.numero_asiento }}"
-                        class="seat-btn h-14 rounded-xl border-2 border-slate-200 font-bold text-slate-700
-                            {% if a.estado == 'vendido' %}ocupado bg-red-500 text-white
-                            {% elif a.estado == 'reservado' %}reservado{% endif %}"
-                        {% if a.estado == 'vendido' %}disabled
-                        {% elif a.estado == 'reservado' %}onclick="mostrarOpcionesReserva('{{ a.id }}', '{{ a.numero_asiento }}', '{{ a.nombre_reserva|default:'' }}')"
-                        {% else %}onclick="seleccionarAsiento('{{ a.numero_asiento }}', this)"{% endif %}>
-                        {{ a.numero_asiento }}
-                    </button>
-                    {% endwith %}
-                    {% with a=asientos.6 %}
-                    <button type="button" data-asiento="{{ a.numero_asiento }}"
-                        class="seat-btn h-14 rounded-xl border-2 border-slate-200 font-bold text-slate-700
-                            {% if a.estado == 'vendido' %}ocupado bg-red-500 text-white
-                            {% elif a.estado == 'reservado' %}reservado{% endif %}"
-                        {% if a.estado == 'vendido' %}disabled
-                        {% elif a.estado == 'reservado' %}onclick="mostrarOpcionesReserva('{{ a.id }}', '{{ a.numero_asiento }}', '{{ a.nombre_reserva|default:'' }}')"
-                        {% else %}onclick="seleccionarAsiento('{{ a.numero_asiento }}', this)"{% endif %}>
-                        {{ a.numero_asiento }}
-                    </button>
-                    {% endwith %}
-                    
-                    <!-- Fila 4 -->
-                    {% with a=asientos.10 %}
-                    <button type="button" data-asiento="{{ a.numero_asiento }}"
-                        class="seat-btn h-14 rounded-xl border-2 border-slate-200 font-bold text-slate-700
-                            {% if a.estado == 'vendido' %}ocupado bg-red-500 text-white
-                            {% elif a.estado == 'reservado' %}reservado{% endif %}"
-                        {% if a.estado == 'vendido' %}disabled
-                        {% elif a.estado == 'reservado' %}onclick="mostrarOpcionesReserva('{{ a.id }}', '{{ a.numero_asiento }}', '{{ a.nombre_reserva|default:'' }}')"
-                        {% else %}onclick="seleccionarAsiento('{{ a.numero_asiento }}', this)"{% endif %}>
-                        {{ a.numero_asiento }}
-                    </button>
-                    {% endwith %}
-                    <div class="h-14 flex items-center justify-center text-[10px] text-slate-300 font-bold uppercase">Pasillo</div>
-                    {% with a=asientos.8 %}
-                    <button type="button" data-asiento="{{ a.numero_asiento }}"
-                        class="seat-btn h-14 rounded-xl border-2 border-slate-200 font-bold text-slate-700
-                            {% if a.estado == 'vendido' %}ocupado bg-red-500 text-white
-                            {% elif a.estado == 'reservado' %}reservado{% endif %}"
-                        {% if a.estado == 'vendido' %}disabled
-                        {% elif a.estado == 'reservado' %}onclick="mostrarOpcionesReserva('{{ a.id }}', '{{ a.numero_asiento }}', '{{ a.nombre_reserva|default:'' }}')"
-                        {% else %}onclick="seleccionarAsiento('{{ a.numero_asiento }}', this)"{% endif %}>
-                        {{ a.numero_asiento }}
-                    </button>
-                    {% endwith %}
-                    {% with a=asientos.9 %}
-                    <button type="button" data-asiento="{{ a.numero_asiento }}"
-                        class="seat-btn h-14 rounded-xl border-2 border-slate-200 font-bold text-slate-700
-                            {% if a.estado == 'vendido' %}ocupado bg-red-500 text-white
-                            {% elif a.estado == 'reservado' %}reservado{% endif %}"
-                        {% if a.estado == 'vendido' %}disabled
-                        {% elif a.estado == 'reservado' %}onclick="mostrarOpcionesReserva('{{ a.id }}', '{{ a.numero_asiento }}', '{{ a.nombre_reserva|default:'' }}')"
-                        {% else %}onclick="seleccionarAsiento('{{ a.numero_asiento }}', this)"{% endif %}>
-                        {{ a.numero_asiento }}
-                    </button>
-                    {% endwith %}
-                    
-                    <!-- Fila 5 -->
-                    {% with a=asientos.14 %}
-                    <button type="button" data-asiento="{{ a.numero_asiento }}"
-                        class="seat-btn h-14 rounded-xl border-2 border-slate-200 font-bold text-slate-700
-                            {% if a.estado == 'vendido' %}ocupado bg-red-500 text-white
-                            {% elif a.estado == 'reservado' %}reservado{% endif %}"
-                        {% if a.estado == 'vendido' %}disabled
-                        {% elif a.estado == 'reservado' %}onclick="mostrarOpcionesReserva('{{ a.id }}', '{{ a.numero_asiento }}', '{{ a.nombre_reserva|default:'' }}')"
-                        {% else %}onclick="seleccionarAsiento('{{ a.numero_asiento }}', this)"{% endif %}>
-                        {{ a.numero_asiento }}
-                    </button>
-                    {% endwith %}
-                    {% with a=asientos.13 %}
-                    <button type="button" data-asiento="{{ a.numero_asiento }}"
-                        class="seat-btn h-14 rounded-xl border-2 border-slate-200 font-bold text-slate-700
-                            {% if a.estado == 'vendido' %}ocupado bg-red-500 text-white
-                            {% elif a.estado == 'reservado' %}reservado{% endif %}"
-                        {% if a.estado == 'vendido' %}disabled
-                        {% elif a.estado == 'reservado' %}onclick="mostrarOpcionesReserva('{{ a.id }}', '{{ a.numero_asiento }}', '{{ a.nombre_reserva|default:'' }}')"
-                        {% else %}onclick="seleccionarAsiento('{{ a.numero_asiento }}', this)"{% endif %}>
-                        {{ a.numero_asiento }}
-                    </button>
-                    {% endwith %}
-                    {% with a=asientos.12 %}
-                    <button type="button" data-asiento="{{ a.numero_asiento }}"
-                        class="seat-btn h-14 rounded-xl border-2 border-slate-200 font-bold text-slate-700
-                            {% if a.estado == 'vendido' %}ocupado bg-red-500 text-white
-                            {% elif a.estado == 'reservado' %}reservado{% endif %}"
-                        {% if a.estado == 'vendido' %}disabled
-                        {% elif a.estado == 'reservado' %}onclick="mostrarOpcionesReserva('{{ a.id }}', '{{ a.numero_asiento }}', '{{ a.nombre_reserva|default:'' }}')"
-                        {% else %}onclick="seleccionarAsiento('{{ a.numero_asiento }}', this)"{% endif %}>
-                        {{ a.numero_asiento }}
-                    </button>
-                    {% endwith %}
-                    {% with a=asientos.11 %}
-                    <button type="button" data-asiento="{{ a.numero_asiento }}"
-                        class="seat-btn h-14 rounded-xl border-2 border-slate-200 font-bold text-slate-700
-                            {% if a.estado == 'vendido' %}ocupado bg-red-500 text-white
-                            {% elif a.estado == 'reservado' %}reservado{% endif %}"
-                        {% if a.estado == 'vendido' %}disabled
-                        {% elif a.estado == 'reservado' %}onclick="mostrarOpcionesReserva('{{ a.id }}', '{{ a.numero_asiento }}', '{{ a.nombre_reserva|default:'' }}')"
-                        {% else %}onclick="seleccionarAsiento('{{ a.numero_asiento }}', this)"{% endif %}>
-                        {{ a.numero_asiento }}
-                    </button>
-                    {% endwith %}
+                    {% endfor %}
                 </div>
             </div>
             {% endif %}
@@ -311,120 +96,17 @@
                 <div class="text-center text-xs text-slate-400 font-bold mb-6 uppercase tracking-widest">Frente del Vehículo</div>
                 <div class="grid grid-cols-3 gap-4">
                     <div class="h-14 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 flex items-center justify-center text-xs font-bold text-slate-400">Cho</div>
-                    {% with a=asientos.0 %}
+                    {% for a in asientos %}
                     <button type="button" data-asiento="{{ a.numero_asiento }}"
                         class="seat-btn h-14 rounded-xl border-2 border-slate-200 font-bold text-slate-700
                             {% if a.estado == 'vendido' %}ocupado bg-red-500 text-white
                             {% elif a.estado == 'reservado' %}reservado{% endif %}"
                         {% if a.estado == 'vendido' %}disabled
-                        {% elif a.estado == 'reservado' %}onclick="mostrarOpcionesReserva('{{ a.id }}', '{{ a.numero_asiento }}', '{{ a.nombre_reserva|default:'' }}')"
+                        {% elif a.estado == 'reservado' %}onclick="abrirModalReserva('{{ a.id }}', '{{ a.numero_asiento }}', '{{ a.nombre_reserva|default:'Reservado' }}')"
                         {% else %}onclick="seleccionarAsiento('{{ a.numero_asiento }}', this)"{% endif %}>
                         {{ a.numero_asiento }}
                     </button>
-                    {% endwith %}
-                    <div></div>
-                    
-                    {% with a=asientos.1 %}
-                    <button type="button" data-asiento="{{ a.numero_asiento }}"
-                        class="seat-btn h-14 rounded-xl border-2 border-slate-200 font-bold text-slate-700
-                            {% if a.estado == 'vendido' %}ocupado bg-red-500 text-white
-                            {% elif a.estado == 'reservado' %}reservado{% endif %}"
-                        {% if a.estado == 'vendido' %}disabled
-                        {% elif a.estado == 'reservado' %}onclick="mostrarOpcionesReserva('{{ a.id }}', '{{ a.numero_asiento }}', '{{ a.nombre_reserva|default:'' }}')"
-                        {% else %}onclick="seleccionarAsiento('{{ a.numero_asiento }}', this)"{% endif %}>
-                        {{ a.numero_asiento }}
-                    </button>
-                    {% endwith %}
-                    {% with a=asientos.2 %}
-                    <button type="button" data-asiento="{{ a.numero_asiento }}"
-                        class="seat-btn h-14 rounded-xl border-2 border-slate-200 font-bold text-slate-700
-                            {% if a.estado == 'vendido' %}ocupado bg-red-500 text-white
-                            {% elif a.estado == 'reservado' %}reservado{% endif %}"
-                        {% if a.estado == 'vendido' %}disabled
-                        {% elif a.estado == 'reservado' %}onclick="mostrarOpcionesReserva('{{ a.id }}', '{{ a.numero_asiento }}', '{{ a.nombre_reserva|default:'' }}')"
-                        {% else %}onclick="seleccionarAsiento('{{ a.numero_asiento }}', this)"{% endif %}>
-                        {{ a.numero_asiento }}
-                    </button>
-                    {% endwith %}
-                    {% with a=asientos.3 %}
-                    <button type="button" data-asiento="{{ a.numero_asiento }}"
-                        class="seat-btn h-14 rounded-xl border-2 border-slate-200 font-bold text-slate-700
-                            {% if a.estado == 'vendido' %}ocupado bg-red-500 text-white
-                            {% elif a.estado == 'reservado' %}reservado{% endif %}"
-                        {% if a.estado == 'vendido' %}disabled
-                        {% elif a.estado == 'reservado' %}onclick="mostrarOpcionesReserva('{{ a.id }}', '{{ a.numero_asiento }}', '{{ a.nombre_reserva|default:'' }}')"
-                        {% else %}onclick="seleccionarAsiento('{{ a.numero_asiento }}', this)"{% endif %}>
-                        {{ a.numero_asiento }}
-                    </button>
-                    {% endwith %}
-                    
-                    {% with a=asientos.4 %}
-                    <button type="button" data-asiento="{{ a.numero_asiento }}"
-                        class="seat-btn h-14 rounded-xl border-2 border-slate-200 font-bold text-slate-700
-                            {% if a.estado == 'vendido' %}ocupado bg-red-500 text-white
-                            {% elif a.estado == 'reservado' %}reservado{% endif %}"
-                        {% if a.estado == 'vendido' %}disabled
-                        {% elif a.estado == 'reservado' %}onclick="mostrarOpcionesReserva('{{ a.id }}', '{{ a.numero_asiento }}', '{{ a.nombre_reserva|default:'' }}')"
-                        {% else %}onclick="seleccionarAsiento('{{ a.numero_asiento }}', this)"{% endif %}>
-                        {{ a.numero_asiento }}
-                    </button>
-                    {% endwith %}
-                    {% with a=asientos.5 %}
-                    <button type="button" data-asiento="{{ a.numero_asiento }}"
-                        class="seat-btn h-14 rounded-xl border-2 border-slate-200 font-bold text-slate-700
-                            {% if a.estado == 'vendido' %}ocupado bg-red-500 text-white
-                            {% elif a.estado == 'reservado' %}reservado{% endif %}"
-                        {% if a.estado == 'vendido' %}disabled
-                        {% elif a.estado == 'reservado' %}onclick="mostrarOpcionesReserva('{{ a.id }}', '{{ a.numero_asiento }}', '{{ a.nombre_reserva|default:'' }}')"
-                        {% else %}onclick="seleccionarAsiento('{{ a.numero_asiento }}', this)"{% endif %}>
-                        {{ a.numero_asiento }}
-                    </button>
-                    {% endwith %}
-                    {% with a=asientos.6 %}
-                    <button type="button" data-asiento="{{ a.numero_asiento }}"
-                        class="seat-btn h-14 rounded-xl border-2 border-slate-200 font-bold text-slate-700
-                            {% if a.estado == 'vendido' %}ocupado bg-red-500 text-white
-                            {% elif a.estado == 'reservado' %}reservado{% endif %}"
-                        {% if a.estado == 'vendido' %}disabled
-                        {% elif a.estado == 'reservado' %}onclick="mostrarOpcionesReserva('{{ a.id }}', '{{ a.numero_asiento }}', '{{ a.nombre_reserva|default:'' }}')"
-                        {% else %}onclick="seleccionarAsiento('{{ a.numero_asiento }}', this)"{% endif %}>
-                        {{ a.numero_asiento }}
-                    </button>
-                    {% endwith %}
-                    
-                    {% with a=asientos.7 %}
-                    <button type="button" data-asiento="{{ a.numero_asiento }}"
-                        class="seat-btn h-14 rounded-xl border-2 border-slate-200 font-bold text-slate-700
-                            {% if a.estado == 'vendido' %}ocupado bg-red-500 text-white
-                            {% elif a.estado == 'reservado' %}reservado{% endif %}"
-                        {% if a.estado == 'vendido' %}disabled
-                        {% elif a.estado == 'reservado' %}onclick="mostrarOpcionesReserva('{{ a.id }}', '{{ a.numero_asiento }}', '{{ a.nombre_reserva|default:'' }}')"
-                        {% else %}onclick="seleccionarAsiento('{{ a.numero_asiento }}', this)"{% endif %}>
-                        {{ a.numero_asiento }}
-                    </button>
-                    {% endwith %}
-                    {% with a=asientos.8 %}
-                    <button type="button" data-asiento="{{ a.numero_asiento }}"
-                        class="seat-btn h-14 rounded-xl border-2 border-slate-200 font-bold text-slate-700
-                            {% if a.estado == 'vendido' %}ocupado bg-red-500 text-white
-                            {% elif a.estado == 'reservado' %}reservado{% endif %}"
-                        {% if a.estado == 'vendido' %}disabled
-                        {% elif a.estado == 'reservado' %}onclick="mostrarOpcionesReserva('{{ a.id }}', '{{ a.numero_asiento }}', '{{ a.nombre_reserva|default:'' }}')"
-                        {% else %}onclick="seleccionarAsiento('{{ a.numero_asiento }}', this)"{% endif %}>
-                        {{ a.numero_asiento }}
-                    </button>
-                    {% endwith %}
-                    {% with a=asientos.9 %}
-                    <button type="button" data-asiento="{{ a.numero_asiento }}"
-                        class="seat-btn h-14 rounded-xl border-2 border-slate-200 font-bold text-slate-700
-                            {% if a.estado == 'vendido' %}ocupado bg-red-500 text-white
-                            {% elif a.estado == 'reservado' %}reservado{% endif %}"
-                        {% if a.estado == 'vendido' %}disabled
-                        {% elif a.estado == 'reservado' %}onclick="mostrarOpcionesReserva('{{ a.id }}', '{{ a.numero_asiento }}', '{{ a.nombre_reserva|default:'' }}')"
-                        {% else %}onclick="seleccionarAsiento('{{ a.numero_asiento }}', this)"{% endif %}>
-                        {{ a.numero_asiento }}
-                    </button>
-                    {% endwith %}
+                    {% endfor %}
                 </div>
             </div>
             {% endif %}
@@ -435,208 +117,103 @@
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6">
         <div class="flex items-center justify-center gap-4">
             <label class="flex items-center gap-2 cursor-pointer">
-                <input type="radio" name="tipo_operacion" value="venta" checked 
-                    class="w-4 h-4 text-otiza-green border-slate-300 focus:ring-otiza-green"
-                    onchange="cambiarTipoOperacion('venta')">
+                <input type="radio" name="tipo_operacion" value="venta" checked class="w-4 h-4 text-otiza-green border-slate-300 focus:ring-otiza-green" onchange="cambiarTipoOperacion('venta')">
                 <span class="font-semibold text-slate-700"> Venta Normal</span>
             </label>
-            
             <div class="w-px h-8 bg-slate-300"></div>
-            
             <label class="flex items-center gap-2 cursor-pointer">
-                <input type="radio" name="tipo_operacion" value="reserva" 
-                    class="w-4 h-4 text-purple-600 border-slate-300 focus:ring-purple-600"
-                    onchange="cambiarTipoOperacion('reserva')">
+                <input type="radio" name="tipo_operacion" value="reserva" class="w-4 h-4 text-purple-600 border-slate-300 focus:ring-purple-600" onchange="cambiarTipoOperacion('reserva')">
                 <span class="font-semibold text-slate-700"> Reservar (Sin Pagar)</span>
             </label>
         </div>
-        <p class="text-xs text-slate-500 text-center mt-2">
-            <span id="textoAyudaOperacion">El cliente paga inmediatamente</span>
-        </p>
+        <p class="text-xs text-slate-500 text-center mt-2"><span id="textoAyudaOperacion">El cliente paga inmediatamente</span></p>
     </div>
 
     <!-- PASO 3: FORMULARIO PASAJERO -->
     <div id="pasoFormulario" class="hidden fade-in">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <!-- Formulario -->
             <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 p-6">
                 <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                    <i class="fas fa-user-circle text-otiza-green"></i>
-                    3. Datos del Pasajero - Asiento <span id="asientoSeleccionadoDisplay" class="text-otiza-green text-xl">--</span>
+                    <i class="fas fa-user-circle text-otiza-green"></i> 3. Datos del Pasajero - Asiento <span id="asientoSeleccionadoDisplay" class="text-otiza-green text-xl">--</span>
                 </h3>
-
                 <form id="formVenta" method="POST" action="{% url 'core:procesar_venta' %}" class="space-y-4">
                     {% csrf_token %}
                     <input type="hidden" name="asiento_numero" id="inputAsientoNumero" value="">
                     <input type="hidden" name="viaje_id" id="inputViajeId" value="{{ viaje.id }}">
-
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-semibold text-slate-700 mb-2">DNI / Pasaporte *</label>
-                            <div class="relative">
-                                <i class="fas fa-id-card absolute left-3 top-3 text-slate-400"></i>
-                                <input type="text" name="dni_pasajero" id="dniPasajero" maxlength="12" required
-                                    class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition"
-                                    placeholder="12345678">
+                            <div class="relative"><i class="fas fa-id-card absolute left-3 top-3 text-slate-400"></i>
+                                <input type="text" name="dni_pasajero" id="dniPasajero" maxlength="12" required class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition" placeholder="12345678">
                             </div>
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-slate-700 mb-2">Teléfono / Celular *</label>
-                            <div class="relative">
-                                <i class="fas fa-phone absolute left-3 top-3 text-slate-400"></i>
-                                <input type="tel" name="telefono_pasajero" id="telefonoPasajero" maxlength="9" required
-                                    class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition"
-                                    placeholder="987654321">
+                            <div class="relative"><i class="fas fa-phone absolute left-3 top-3 text-slate-400"></i>
+                                <input type="tel" name="telefono_pasajero" id="telefonoPasajero" maxlength="9" required class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition" placeholder="987654321">
                             </div>
                         </div>
                     </div>
-
-                    <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-2">Nombre Completo *</label>
-                        <div class="relative">
-                            <i class="fas fa-user absolute left-3 top-3 text-slate-400"></i>
-                            <input type="text" name="nombre_pasajero" required
-                                class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition uppercase"
-                                placeholder="PÉREZ GARCÍA JUAN CARLOS">
+                    <div><label class="block text-sm font-semibold text-slate-700 mb-2">Nombre Completo *</label>
+                        <div class="relative"><i class="fas fa-user absolute left-3 top-3 text-slate-400"></i>
+                            <input type="text" name="nombre_pasajero" required class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition uppercase" placeholder="PÉREZ GARCÍA JUAN CARLOS">
                         </div>
                     </div>
-
-                    <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-2">Correo Electrónico <span class="text-xs text-slate-400">(Opcional)</span></label>
-                        <div class="relative">
-                            <i class="fas fa-envelope absolute left-3 top-3 text-slate-400"></i>
-                            <input type="email" name="email_pasajero"
-                                class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition"
-                                placeholder="juan.perez@email.com">
+                    <div><label class="block text-sm font-semibold text-slate-700 mb-2">Correo Electrónico <span class="text-xs text-slate-400">(Opcional)</span></label>
+                        <div class="relative"><i class="fas fa-envelope absolute left-3 top-3 text-slate-400"></i>
+                            <input type="email" name="email_pasajero" class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition" placeholder="juan.perez@email.com">
                         </div>
                     </div>
-
-                    <!-- Después del campo de email, agrega: -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-semibold text-slate-700 mb-2">
-                                RUC <span class="text-xs text-slate-400">(Opcional)</span>
-                            </label>
-                            <div class="relative">
-                                <i class="fas fa-file-invoice absolute left-3 top-3 text-slate-400"></i>
-                                <input type="text" name="ruc_cliente" id="rucCliente" maxlength="20"
-                                    class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition"
-                                    placeholder="20603076304">
+                        <div><label class="block text-sm font-semibold text-slate-700 mb-2">RUC <span class="text-xs text-slate-400">(Opcional)</span></label>
+                            <div class="relative"><i class="fas fa-file-invoice absolute left-3 top-3 text-slate-400"></i>
+                                <input type="text" name="ruc_cliente" id="rucCliente" maxlength="20" class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition" placeholder="20603076304">
                             </div>
                         </div>
-                        <div>
-                            <label class="block text-sm font-semibold text-slate-700 mb-2">
-                                Razón Social <span class="text-xs text-slate-400">(Opcional)</span>
-                            </label>
-                            <div class="relative">
-                                <i class="fas fa-building absolute left-3 top-3 text-slate-400"></i>
-                                <input type="text" name="razon_social" id="razonSocial" maxlength="150"
-                                    class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition uppercase"
-                                    placeholder="OTIZA TOURS S.A.C.">
+                        <div><label class="block text-sm font-semibold text-slate-700 mb-2">Razón Social <span class="text-xs text-slate-400">(Opcional)</span></label>
+                            <div class="relative"><i class="fas fa-building absolute left-3 top-3 text-slate-400"></i>
+                                <input type="text" name="razon_social" id="razonSocial" maxlength="150" class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition uppercase" placeholder="OTIZA TOURS S.A.C.">
                             </div>
                         </div>
                     </div>
-                    <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-2">Método de Pago *</label>
+                    <div><label class="block text-sm font-semibold text-slate-700 mb-2">Método de Pago *</label>
                         <div class="grid grid-cols-3 gap-3">
-                            <!-- Efectivo -->
-                            <label class="cursor-pointer block select-none">
-                                <input type="radio" name="metodo_pago" value="efectivo" class="peer sr-only" checked tabindex="-1">
-                                <div class="p-3 rounded-xl border-2 border-slate-200 text-center peer-checked:bg-green-100 peer-checked:border-green-500 peer-checked:text-green-700 transition hover:bg-slate-50 h-full flex flex-col items-center justify-center">
-                                    <i class="fas fa-money-bill-wave text-2xl mb-1"></i>
-                                    <p class="text-sm font-semibold">Efectivo</p>
-                                </div>
-                            </label>
-                            <!-- Yape -->
-                            <label class="cursor-pointer block select-none">
-                                <input type="radio" name="metodo_pago" value="yape" class="peer sr-only" tabindex="-1">
-                                <div class="p-3 rounded-xl border-2 border-slate-200 text-center peer-checked:bg-purple-100 peer-checked:border-purple-500 peer-checked:text-purple-700 transition hover:bg-slate-50 h-full flex flex-col items-center justify-center">
-                                    <i class="fas fa-mobile-alt text-2xl mb-1"></i>
-                                    <p class="text-sm font-semibold">Yape</p>
-                                </div>
-                            </label>
-                            <!-- Plin -->
-                            <label class="cursor-pointer block select-none">
-                                <input type="radio" name="metodo_pago" value="plin" class="peer sr-only" tabindex="-1">
-                                <div class="p-3 rounded-xl border-2 border-slate-200 text-center peer-checked:bg-teal-100 peer-checked:border-teal-500 peer-checked:text-teal-700 transition hover:bg-slate-50 h-full flex flex-col items-center justify-center">
-                                    <i class="fas fa-wallet text-2xl mb-1"></i>
-                                    <p class="text-sm font-semibold">Plin</p>
-                                </div>
-                            </label>
+                            <label class="cursor-pointer block select-none"><input type="radio" name="metodo_pago" value="efectivo" class="peer sr-only" checked tabindex="-1"><div class="p-3 rounded-xl border-2 border-slate-200 text-center peer-checked:bg-green-100 peer-checked:border-green-500 peer-checked:text-green-700 transition hover:bg-slate-50 h-full flex flex-col items-center justify-center"><i class="fas fa-money-bill-wave text-2xl mb-1"></i><p class="text-sm font-semibold">Efectivo</p></div></label>
+                            <label class="cursor-pointer block select-none"><input type="radio" name="metodo_pago" value="yape" class="peer sr-only" tabindex="-1"><div class="p-3 rounded-xl border-2 border-slate-200 text-center peer-checked:bg-purple-100 peer-checked:border-purple-500 peer-checked:text-purple-700 transition hover:bg-slate-50 h-full flex flex-col items-center justify-center"><i class="fas fa-mobile-alt text-2xl mb-1"></i><p class="text-sm font-semibold">Yape</p></div></label>
+                            <label class="cursor-pointer block select-none"><input type="radio" name="metodo_pago" value="plin" class="peer sr-only" tabindex="-1"><div class="p-3 rounded-xl border-2 border-slate-200 text-center peer-checked:bg-teal-100 peer-checked:border-teal-500 peer-checked:text-teal-700 transition hover:bg-slate-50 h-full flex flex-col items-center justify-center"><i class="fas fa-wallet text-2xl mb-1"></i><p class="text-sm font-semibold">Plin</p></div></label>
                         </div>
                     </div>
-                    
-                    <div class="bg-slate-50 rounded-xl p-4 border-2 border-slate-200">
-                        <div class="flex justify-between items-center">
-                            <span class="text-slate-600 font-medium">Precio del Pasaje:</span>
-                            <span class="text-2xl font-bold text-otiza-green">S/ {{ viaje.ruta.precio_base|floatformat:2 }}</span>
-                        </div>
-                    </div>
-
+                    <div class="bg-slate-50 rounded-xl p-4 border-2 border-slate-200"><div class="flex justify-between items-center"><span class="text-slate-600 font-medium">Precio del Pasaje:</span><span class="text-2xl font-bold text-otiza-green">S/ {{ viaje.ruta.precio_base|floatformat:2 }}</span></div></div>
                     <div class="flex justify-end gap-3 pt-4 border-t border-slate-200">
-                        <button type="button" onclick="volverAMapa()"
-                            class="px-6 py-2.5 border border-slate-300 rounded-lg text-slate-700 font-medium hover:bg-slate-50 transition">
-                            <i class="fas fa-arrow-left mr-2"></i>Volver
-                        </button>
-                        
-                        <!-- Botón dinámico que cambia según el tipo -->
-                        <button type="submit" id="btnConfirmar"
-                            class="px-6 py-2.5 bg-otiza-green hover:bg-otiza-dark text-white rounded-lg font-medium transition shadow-md flex items-center gap-2">
-                            <i class="fas fa-check-circle"></i> <span id="textoBoton">Confirmar Venta</span>
-                        </button>
+                        <button type="button" onclick="volverAMapa()" class="px-6 py-2.5 border border-slate-300 rounded-lg text-slate-700 font-medium hover:bg-slate-50 transition"><i class="fas fa-arrow-left mr-2"></i>Volver</button>
+                        <button type="submit" id="btnConfirmar" class="px-6 py-2.5 bg-otiza-green hover:bg-otiza-dark text-white rounded-lg font-medium transition shadow-md flex items-center gap-2"><i class="fas fa-check-circle"></i> <span id="textoBoton">Confirmar Venta</span></button>
                     </div>
                 </form>
             </div>
-
-            <!-- Resumen -->
             <div class="bg-gradient-to-br from-otiza-green to-emerald-600 rounded-xl shadow-lg p-6 text-white">
-                <h4 class="font-bold text-lg mb-4 flex items-center gap-2">
-                    <i class="fas fa-receipt"></i> Resumen de Venta
-                </h4>
+                <h4 class="font-bold text-lg mb-4 flex items-center gap-2"><i class="fas fa-receipt"></i> Resumen de Venta</h4>
                 <div class="space-y-3 text-sm">
-                    <div class="flex justify-between border-b border-white/20 pb-2">
-                        <span class="text-green-100">Ruta:</span>
-                        <span class="font-semibold">{{ viaje.ruta.origen }} → {{ viaje.ruta.destino }}</span>
-                    </div>
-                    <div class="flex justify-between border-b border-white/20 pb-2">
-                        <span class="text-green-100">Fecha:</span>
-                        <span class="font-semibold">{{ viaje.fecha_salida|date:"d/m/Y" }}</span>
-                    </div>
-                    <div class="flex justify-between border-b border-white/20 pb-2">
-                        <span class="text-green-100">Hora:</span>
-                        <span class="font-semibold">{{ viaje.hora_salida|date:"H:i" }}</span>
-                    </div>
-                    <div class="flex justify-between border-b border-white/20 pb-2">
-                        <span class="text-green-100">Asiento:</span>
-                        <span class="font-semibold text-xl" id="resumenAsiento">--</span>
-                    </div>
-                    <div class="flex justify-between border-b border-white/20 pb-2">
-                        <span class="text-green-100">Vehículo:</span>
-                        <span class="font-semibold">{{ viaje.vehiculo.placa }}</span>
-                    </div>
-                    <div class="flex justify-between pt-2">
-                        <span class="text-green-100 font-bold">TOTAL:</span>
-                        <span class="font-bold text-2xl">S/ {{ viaje.ruta.precio_base|floatformat:2 }}</span>
-                    </div>
+                    <div class="flex justify-between border-b border-white/20 pb-2"><span class="text-green-100">Ruta:</span><span class="font-semibold">{{ viaje.ruta.origen }} → {{ viaje.ruta.destino }}</span></div>
+                    <div class="flex justify-between border-b border-white/20 pb-2"><span class="text-green-100">Fecha:</span><span class="font-semibold">{{ viaje.fecha_salida|date:"d/m/Y" }}</span></div>
+                    <div class="flex justify-between border-b border-white/20 pb-2"><span class="text-green-100">Hora:</span><span class="font-semibold">{{ viaje.hora_salida|date:"H:i" }}</span></div>
+                    <div class="flex justify-between border-b border-white/20 pb-2"><span class="text-green-100">Asiento:</span><span class="font-semibold text-xl" id="resumenAsiento">--</span></div>
+                    <div class="flex justify-between border-b border-white/20 pb-2"><span class="text-green-100">Vehículo:</span><span class="font-semibold">{{ viaje.vehiculo.placa }}</span></div>
+                    <div class="flex justify-between pt-2"><span class="text-green-100 font-bold">TOTAL:</span><span class="font-bold text-2xl">S/ {{ viaje.ruta.precio_base|floatformat:2 }}</span></div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- MODAL: Confirmación de Venta (ACTUALIZADO) -->
+<!-- MODAL: Confirmación de Venta -->
 <div id="modalConfirmacionVenta" class="fixed inset-0 z-50 hidden">
     <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="cerrarModalVenta()"></div>
     <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 animate-slide-up">
-        
         <div class="text-center mb-6">
-            <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center text-green-600 text-3xl mx-auto mb-3">
-                <i class="fas fa-check-circle"></i>
-            </div>
+            <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center text-green-600 text-3xl mx-auto mb-3"><i class="fas fa-check-circle"></i></div>
             <h3 class="text-2xl font-bold text-gray-800">¡Venta Confirmada!</h3>
             <p class="text-gray-500 text-sm mt-1">Ticket generado correctamente</p>
         </div>
-
         <div class="bg-gray-50 rounded-xl p-4 mb-6 border-2 border-gray-200">
             <div class="space-y-2 text-sm">
                 <div class="flex justify-between"><span class="text-gray-600">🎫 Asiento:</span><span class="font-bold text-gray-800" id="ticketAsiento">--</span></div>
@@ -647,29 +224,15 @@
                 <div class="flex justify-between pt-2 border-t border-gray-300"><span class="text-gray-600 font-bold">💰 Total:</span><span class="font-bold text-otiza-green text-lg" id="ticketTotal">--</span></div>
             </div>
         </div>
-
         <div class="space-y-3">
-            <!-- Descargar PDF: href dinámico -->
-            <a id="btnDescargarPDF" href="#" target="_blank"
-               class="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition shadow-lg flex items-center justify-center gap-2">
-                <i class="fas fa-file-pdf"></i><span>Descargar Boleto PDF</span>
-            </a>
-            
-            <!-- Imprimir: abre PDF y fuerza Ctrl+P -->
-            <button type="button" onclick="imprimirBoleto()" 
-                    class="w-full px-6 py-3 bg-otiza-green hover:bg-otiza-dark text-white rounded-xl font-bold transition shadow-lg flex items-center justify-center gap-2">
-                <i class="fas fa-print"></i><span>Imprimir Boleto</span>
-            </button>
-            
-            <button onclick="cerrarModalVenta()" 
-                    class="w-full px-6 py-3 border-2 border-gray-300 hover:bg-gray-50 text-gray-700 rounded-xl font-bold transition">
-                Cerrar y Nueva Venta
-            </button>
+            <a id="btnDescargarPDF" href="#" target="_blank" class="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition shadow-lg flex items-center justify-center gap-2"><i class="fas fa-file-pdf"></i><span>Descargar Boleto PDF</span></a>
+            <button type="button" onclick="imprimirBoleto()" class="w-full px-6 py-3 bg-otiza-green hover:bg-otiza-dark text-white rounded-xl font-bold transition shadow-lg flex items-center justify-center gap-2"><i class="fas fa-print"></i><span>Imprimir Boleto</span></button>
+            <button onclick="cerrarModalVenta()" class="w-full px-6 py-3 border-2 border-gray-300 hover:bg-gray-50 text-gray-700 rounded-xl font-bold transition">Cerrar y Nueva Venta</button>
         </div>
     </div>
 </div>
 
-<!-- ✅ NUEVO MODAL: Opciones para Asiento Reservado -->
+<!-- MODAL: Opciones para Asiento Reservado (SOLO UNO) -->
 <div id="modalReserva" class="fixed inset-0 z-50 hidden">
     <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="cerrarModalReserva()"></div>
     <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-slide-up">
@@ -678,317 +241,224 @@
             <p class="text-sm text-gray-500 mt-1">Reservado por: <span id="reservaNombre" class="font-semibold">--</span></p>
         </div>
         <div class="space-y-3">
-            <button onclick="confirmarPagoReserva()" 
-                    class="w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-medium transition flex items-center justify-center gap-2">
-                <i class="fas fa-check-circle"></i>
-                <span>El cliente llegó - Confirmar Pago</span>
-            </button>
+            <button onclick="confirmarPagoReserva()" class="w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-medium transition flex items-center justify-center gap-2"><i class="fas fa-check-circle"></i><span>El cliente llegó - Confirmar Pago</span></button>
             {% if puede_liberar_reservas %}
-            <button onclick="liberarReserva()" 
-                    class="w-full px-4 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-medium transition flex items-center justify-center gap-2">
-                <i class="fas fa-undo"></i>
-                <span>Cliente no llegó - Liberar Asiento</span>
-            </button>
+            <button onclick="liberarReserva()" class="w-full px-4 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-medium transition flex items-center justify-center gap-2"><i class="fas fa-undo"></i><span>Cliente no llegó - Liberar Asiento</span></button>
             {% endif %}
-            <button onclick="cerrarModalReserva()" 
-                    class="w-full px-4 py-3 border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-xl font-medium transition">
-                Cancelar
-            </button>
+            <button onclick="cerrarModalReserva()" class="w-full px-4 py-3 border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-xl font-medium transition">Cancelar</button>
         </div>
-        <p class="text-xs text-gray-400 text-center mt-4">
-            <i class="fas fa-info-circle mr-1"></i>
-            Solo personal autorizado puede liberar reservas
-        </p>
+        <p class="text-xs text-gray-400 text-center mt-4"><i class="fas fa-info-circle mr-1"></i>Solo personal autorizado puede liberar reservas</p>
     </div>
 </div>
 {% endblock %}
 
-{% block extra_js %}  {# ← AGREGA ESTE BLOCK #}
+{% block extra_js %}
 <script>
-    let asientoSeleccionado = null;
-    let asientoReservaActual = null;
+// ===== VARIABLES GLOBALES =====
+let asientoSeleccionado = null;
+let asientoReservaActual = null;
 
-    // ✅ Función para pintar el asiento automáticamente
-    function actualizarAsientoVisual(numero, tipo) {
-        const btn = document.querySelector(`button[data-asiento="${numero}"]`);
-        if (!btn) return;
-
-        btn.classList.remove('seleccionado');
-        
-        if (tipo === 'venta') {
-            btn.classList.add('ocupado', 'bg-red-500', 'text-white');
-            btn.disabled = true;
-            btn.removeAttribute('onclick');
-        } 
-        else if (tipo === 'reserva') {
-            btn.classList.add('reservado');
-            btn.disabled = false;
-            btn.setAttribute('onclick', `mostrarOpcionesReserva('', '${numero}', 'Reservado')`);
+// ===== UTILIDADES =====
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie) {
+        for (let cookie of document.cookie.split(';')) {
+            cookie = cookie.trim();
+            if (cookie.startsWith(name + '=')) {
+                cookieValue = decodeURIComponent(cookie.slice(name.length + 1));
+                break;
+            }
         }
     }
+    return cookieValue;
+}
 
-    // Validar DNI solo números
-    document.getElementById('dniPasajero')?.addEventListener('input', function(e) {
-        this.value = this.value.replace(/[^0-9]/g, '');
-    });
+// ===== VALIDACIÓN DNI =====
+document.getElementById('dniPasajero')?.addEventListener('input', function(e) {
+    this.value = this.value.replace(/[^0-9]/g, '');
+});
 
-    // ===== SELECCIONAR ASIENTO =====
-    function seleccionarAsiento(numero, elemento) {
-        if (!elemento || elemento.disabled) return;
-        
-        if (elemento.classList.contains('ocupado') || elemento.classList.contains('reservado')) {
-            alert(elemento.classList.contains('reservado') ? 'ℹ️ Este asiento está reservado' : '⚠️ Este asiento ya está ocupado');
-            return;
-        }
-
-        if (asientoSeleccionado === numero) {
-            elemento.classList.remove('seleccionado');
-            asientoSeleccionado = null;
-            document.getElementById('inputAsientoNumero').value = '';
-            document.getElementById('asientoSeleccionadoDisplay').textContent = '--';
-            document.getElementById('resumenAsiento').textContent = '--';
-            document.getElementById('pasoFormulario').classList.add('hidden');
-            return;
-        }
-
-        document.querySelectorAll('.seat-btn').forEach(btn => btn.classList.remove('seleccionado'));
-        elemento.classList.add('seleccionado');
-        asientoSeleccionado = numero;
-
-        document.getElementById('inputAsientoNumero').value = numero;
-        document.getElementById('asientoSeleccionadoDisplay').textContent = numero;
-        document.getElementById('resumenAsiento').textContent = numero;
-
-        // ✅ MOSTRAR FORMULARIO
-        const pasoFormulario = document.getElementById('pasoFormulario');
-        if (pasoFormulario) {
-            pasoFormulario.classList.remove('hidden');
-            setTimeout(() => pasoFormulario.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
-        }
-    }
-
-    function volverAMapa() {
-        document.getElementById('pasoFormulario')?.classList.add('hidden');
-        document.querySelectorAll('.seat-btn').forEach(btn => btn.classList.remove('seleccionado'));
-        asientoSeleccionado = null;
-    }
-
-    // ===== MODAL DE CONFIRMACIÓN =====
-    function cerrarModalVenta() {
-        document.getElementById('modalConfirmacionVenta')?.classList.add('hidden');
-        document.getElementById('formVenta')?.reset();
-        volverAMapa();
-    }
-    function imprimirBoleto() {
-        // 1. Obtener la URL del PDF (ej: /boletos/5/pdf/)
-        const pdfUrl = document.getElementById('btnDescargarPDF')?.href;
-        if (!pdfUrl || pdfUrl === '#') {
-            alert('⚠️ Genera el boleto primero antes de imprimir');
-            return;
-        }
-        
-        // 2. Convertir a URL HTML (quitamos /pdf/ del final)
-        // /boletos/5/pdf/  →  /boletos/5/
-        const htmlUrl = pdfUrl.replace(/\/pdf\/?$/, '/');
-        
-        // 3. Abrir en nueva pestaña optimizada
-        const printWindow = window.open(htmlUrl, '_blank', 'width=850,height=700');
-        
-        // 4. Forzar Ctrl+P apenas cargue el HTML
-        printWindow.onload = function() {
-            setTimeout(() => {
-                printWindow.focus();
-                printWindow.print();
-            }, 400); // 400ms es suficiente para HTML
-        };
-    }
+// ===== SELECCIONAR ASIENTO (VENTA NORMAL) =====
+function seleccionarAsiento(numero, elemento) {
+    if (!elemento || elemento.disabled) return;
+    if (elemento.classList.contains('ocupado')) { alert('⚠️ Este asiento ya está ocupado'); return; }
+    if (elemento.classList.contains('reservado')) return; // Dejar que el onclick del HTML ejecute abrirModalReserva
     
+    if (asientoSeleccionado === numero) {
+        elemento.classList.remove('seleccionado');
+        asientoSeleccionado = null;
+        document.getElementById('inputAsientoNumero').value = '';
+        document.getElementById('asientoSeleccionadoDisplay').textContent = '--';
+        document.getElementById('resumenAsiento').textContent = '--';
+        document.getElementById('pasoFormulario').classList.add('hidden');
+        return;
+    }
+    document.querySelectorAll('.seat-btn').forEach(btn => btn.classList.remove('seleccionado'));
+    elemento.classList.add('seleccionado');
+    asientoSeleccionado = numero;
+    document.getElementById('inputAsientoNumero').value = numero;
+    document.getElementById('asientoSeleccionadoDisplay').textContent = numero;
+    document.getElementById('resumenAsiento').textContent = numero;
+    const pasoFormulario = document.getElementById('pasoFormulario');
+    if (pasoFormulario) {
+        pasoFormulario.classList.remove('hidden');
+        setTimeout(() => pasoFormulario.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+    }
+}
 
-    // ✅ PROCESAR FORMULARIO (Venta O Reserva según el tipo seleccionado)
-    document.getElementById('formVenta')?.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const formData = new FormData(this);
-        const csrfToken = getCookie('csrftoken');
-        const tipoOperacion = document.querySelector('input[name="tipo_operacion"]:checked')?.value;
-        
-        // Determinar la URL según el tipo de operación
-        const url = tipoOperacion === 'reserva' 
-            ? "{% url 'core:procesar_reserva' %}" 
-            : "{% url 'core:procesar_venta' %}";
-        
-        fetch(url, {
-            method: 'POST',
-            body: formData,
-            headers: { 'X-CSRFToken': csrfToken }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // ✅ ACTUALIZAR MAPA AUTOMÁTICAMENTE
-                actualizarAsientoVisual(data.asiento, data.tipo || 'venta');
-                
-                if (data.tipo === 'reserva') {
-                    // 🟣 CASO RESERVA: Solo mostrar mensaje simple
-                    alert(`✅ Asiento ${data.asiento} reservado para ${data.pasajero || data.nombre}\n\nEl cliente debe llegar antes de la hora de salida.`);
-                } else {
-                    //  CASO VENTA: Mostrar modal completo con PDF/Imprimir
-                    document.getElementById('ticketAsiento').textContent = data.asiento;
-                    document.getElementById('ticketRuta').textContent = data.ruta;
-                    document.getElementById('ticketFecha').textContent = data.fecha;
-                    document.getElementById('ticketHora').textContent = data.hora;
-                    document.getElementById('ticketPasajero').textContent = data.pasajero;
-                    document.getElementById('ticketTotal').textContent = `S/ ${data.total}`;
-                    
-                    const pdfUrl = `/boletos/${data.venta_id}/pdf/`;
-                    document.getElementById('btnDescargarPDF').href = pdfUrl;
-                    
-                    document.getElementById('modalConfirmacionVenta').classList.remove('hidden');
-                }
-                
-                // Limpiar formulario y volver al mapa
-                this.reset();
-                volverAMapa();
-            } else {
-                alert('❌ Error: ' + data.error);
-            }
-        })
-        .catch(err => {
-            console.error(err);
-            alert('❌ Error de conexión');
-        });
+function volverAMapa() {
+    document.getElementById('pasoFormulario')?.classList.add('hidden');
+    document.querySelectorAll('.seat-btn').forEach(btn => btn.classList.remove('seleccionado'));
+    asientoSeleccionado = null;
+}
+
+// ===== ACTUALIZAR VISUALMENTE EL ASIENTO =====
+function actualizarAsientoVisual(numeroAsiento, tipo) {
+    const btn = document.querySelector(`button[data-asiento="${numeroAsiento}"]`);
+    if (!btn) return;
+    if (tipo === 'venta') {
+        btn.className = 'seat-btn h-14 rounded-xl border-2 border-slate-200 font-bold text-white ocupado bg-red-500';
+        btn.disabled = true;
+        btn.removeAttribute('onclick');
+    } else if (tipo === 'reserva') {
+        btn.className = 'seat-btn h-14 rounded-xl border-2 border-slate-200 font-bold text-white reservado';
+    }
+}
+
+// ===== MODAL DE RESERVA =====
+function abrirModalReserva(asientoId, numero, nombreReserva) {
+    if (!asientoId || asientoId === 'None' || asientoId === 'undefined') {
+        alert('⚠️ Error: El asiento no tiene ID válido.');
+        return;
+    }
+    asientoReservaActual = String(asientoId).trim();
+    document.getElementById('reservaNumero').textContent = numero;
+    document.getElementById('reservaNombre').textContent = nombreReserva || 'Sin nombre';
+    document.getElementById('modalReserva').classList.remove('hidden');
+}
+
+function cerrarModalReserva() {
+    document.getElementById('modalReserva').classList.add('hidden');
+    asientoReservaActual = null;
+}
+
+// ===== CONFIRMAR PAGO DE RESERVA =====
+function confirmarPagoReserva() {
+    if (!asientoReservaActual) { alert('⚠️ Error: No se identificó el asiento.'); return; }
+    const btn = document.querySelector('#modalReserva button.bg-green-600');
+    const textoOriginal = btn ? btn.innerHTML : 'Confirmar Pago';
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Procesando...'; }
+    
+    fetch(`/ventas/confirmar-pago-reserva/${asientoReservaActual}/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCookie('csrftoken'), 'Content-Type': 'application/json' }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (btn) { btn.disabled = false; btn.innerHTML = textoOriginal; }
+        if (data.success) {
+            document.getElementById('modalReserva').classList.add('hidden');
+            actualizarAsientoVisual(data.asiento, 'venta');
+            document.getElementById('ticketAsiento').textContent = data.asiento;
+            document.getElementById('ticketRuta').textContent = data.ruta;
+            document.getElementById('ticketFecha').textContent = data.fecha;
+            document.getElementById('ticketHora').textContent = data.hora;
+            document.getElementById('ticketPasajero').textContent = data.pasajero;
+            document.getElementById('ticketTotal').textContent = `S/ ${data.total}`;
+            document.getElementById('btnDescargarPDF').href = `/boletos/${data.venta_id}/pdf/`;
+            document.getElementById('modalConfirmacionVenta').classList.remove('hidden');
+        } else { alert('❌ ' + data.error); }
+    })
+    .catch(err => {
+        console.error(err);
+        if (btn) { btn.disabled = false; btn.innerHTML = textoOriginal; }
+        alert('❌ Error de conexión');
     });
+}
 
-    function mostrarOpcionesReserva(asientoId, numero, nombreReserva) {
-        // ✅ Guardamos el ID REAL de la BD (no el número visual)
-        asientoReservaActual = asientoId;
-        console.log("✅ Reserva seleccionada - ID BD:", asientoReservaActual);
-        
-        document.getElementById('reservaNumero').textContent = numero;
-        document.getElementById('reservaNombre').textContent = nombreReserva || 'Sin nombre';
-        document.getElementById('modalReserva').classList.remove('hidden');
-    }
-
-    function cerrarModalReserva() {
-        document.getElementById('modalReserva')?.classList.add('hidden');
-        asientoReservaActual = null;
-    }
-
-    // ===== FUNCIONES PARA RESERVAS (ACTUALIZADO) =====
-
-    function confirmarPagoReserva() {
-        if (!asientoReservaActual) {
-            alert('⚠️ Error: No se identificó el asiento. Cierra y vuelve a abrir la reserva.');
-            return;
-        }
-        
-        // Feedback visual de carga
-        const btn = document.querySelector('#modalReserva button[onclick="confirmarPagoReserva()"]');
-        const textoOriginal = btn ? btn.innerHTML : '';
-        if (btn) {
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Confirmando...';
-            btn.disabled = true;
-        }
-
-        const formData = new FormData();
-        formData.append('csrfmiddlewaretoken', getCookie('csrftoken'));
-
-        fetch(`/ventas/confirmar-pago-reserva/${asientoReservaActual}/`, {
+// ===== LIBERAR RESERVA =====
+function liberarReserva() {
+    if (!asientoReservaActual) return;
+    if (confirm('¿Liberar este asiento reservado?')) {
+        fetch(`/ventas/liberar-reserva/${asientoReservaActual}/`, {
             method: 'POST',
-            body: formData,
-            headers: { 'X-CSRFToken': getCookie('csrftoken') }
+            headers: { 'X-CSRFToken': getCookie('csrftoken'), 'Content-Type': 'application/json' }
         })
-        .then(response => response.json())
+        .then(r => r.json())
         .then(data => {
-            if (btn) {
-                btn.innerHTML = textoOriginal;
-                btn.disabled = false;
-            }
-            
-            if (data.success) {
-                // 1. Cerrar modal de reserva
-                document.getElementById('modalReserva').classList.add('hidden');
-                
-                // 2. Pintar asiento ROJO automáticamente
-                if (typeof actualizarAsientoVisual === 'function') {
-                    actualizarAsientoVisual(data.asiento, 'venta');
-                }
-                
-                // 3. ✅ MOSTRAR MODAL DE VENTA CONFIRMADA (con PDF/Imprimir)
+            alert(data.success ? '✅ Asiento liberado' : '❌ ' + data.error);
+            if (data.success) location.reload();
+        })
+        .catch(() => alert('❌ Error de conexión'));
+    }
+}
+
+// ===== MODAL DE CONFIRMACIÓN DE VENTA =====
+function cerrarModalVenta() {
+    document.getElementById('modalConfirmacionVenta').classList.add('hidden');
+    document.getElementById('formVenta')?.reset();
+    volverAMapa();
+}
+
+function imprimirBoleto() {
+    const pdfUrl = document.getElementById('btnDescargarPDF')?.href;
+    if (!pdfUrl || pdfUrl === '#') { alert('⚠️ Genera el boleto primero'); return; }
+    const htmlUrl = pdfUrl.replace(/\/pdf\/?$/, '/');
+    const printWindow = window.open(htmlUrl, '_blank', 'width=850,height=700');
+    printWindow.onload = function() { setTimeout(() => { printWindow.focus(); printWindow.print(); }, 400); };
+}
+
+// ===== PROCESAR FORMULARIO (VENTA O RESERVA) =====
+document.getElementById('formVenta')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const csrfToken = getCookie('csrftoken');
+    const tipoOperacion = document.querySelector('input[name="tipo_operacion"]:checked')?.value;
+    const url = tipoOperacion === 'reserva' ? "{% url 'core:procesar_reserva' %}" : "{% url 'core:procesar_venta' %}";
+    
+    fetch(url, { method: 'POST', body: formData, headers: { 'X-CSRFToken': csrfToken } })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            actualizarAsientoVisual(data.asiento, data.tipo || 'venta');
+            if (data.tipo === 'reserva') {
+                alert(`✅ Asiento ${data.asiento} reservado para ${data.pasajero || data.nombre}\n\nEl cliente debe llegar antes de la hora de salida.`);
+            } else {
                 document.getElementById('ticketAsiento').textContent = data.asiento;
                 document.getElementById('ticketRuta').textContent = data.ruta;
                 document.getElementById('ticketFecha').textContent = data.fecha;
                 document.getElementById('ticketHora').textContent = data.hora;
                 document.getElementById('ticketPasajero').textContent = data.pasajero;
                 document.getElementById('ticketTotal').textContent = `S/ ${data.total}`;
-                
-                const pdfUrl = `/boletos/${data.venta_id}/pdf/`;
-                document.getElementById('btnDescargarPDF').href = pdfUrl;
-                
+                document.getElementById('btnDescargarPDF').href = `/boletos/${data.venta_id}/pdf/`;
                 document.getElementById('modalConfirmacionVenta').classList.remove('hidden');
-            } else {
-                alert('❌ Error: ' + data.error);
             }
-        })
-        .catch(err => {
-            console.error(err);
-            if (btn) {
-                btn.innerHTML = textoOriginal;
-                btn.disabled = false;
-            }
-            alert('❌ Error de conexión. Revisa la consola (F12).');
-        });
-    }
+            this.reset();
+            volverAMapa();
+        } else { alert('❌ Error: ' + data.error); }
+    })
+    .catch(err => { console.error(err); alert('❌ Error de conexión'); });
+});
 
-    function liberarReserva() {
-        if (!asientoReservaActual) return;
-        if (confirm('¿Liberar este asiento reservado?')) {
-            fetch(`/ventas/liberar-reserva/${asientoReservaActual}/`, {
-                method: 'POST',
-                headers: { 'X-CSRFToken': getCookie('csrftoken'), 'Content-Type': 'application/json' }
-            })
-            .then(r => r.json())
-            .then(data => {
-                alert(data.success ? '✅ Asiento liberado' : '❌ ' + data.error);
-                if (data.success) location.reload();
-            })
-            .catch(() => alert('❌ Error de conexión'));
-        }
+// ===== CAMBIAR TIPO DE OPERACIÓN =====
+function cambiarTipoOperacion(tipo) {
+    const btn = document.getElementById('btnConfirmar');
+    const textoBtn = document.getElementById('textoBoton');
+    const textoAyuda = document.getElementById('textoAyudaOperacion');
+    const form = document.getElementById('formVenta');
+    if (tipo === 'reserva') {
+        btn?.classList.replace('bg-otiza-green', 'bg-purple-600');
+        btn?.classList.replace('hover:bg-otiza-dark', 'hover:bg-purple-700');
+        if (textoBtn) textoBtn.textContent = 'Confirmar Reserva';
+        if (textoAyuda) textoAyuda.textContent = 'El cliente paga cuando llegue';
+        if (form) form.action = "{% url 'core:procesar_reserva' %}";
+    } else {
+        btn?.classList.replace('bg-purple-600', 'bg-otiza-green');
+        btn?.classList.replace('hover:bg-purple-700', 'hover:bg-otiza-dark');
+        if (textoBtn) textoBtn.textContent = 'Confirmar Venta';
+        if (textoAyuda) textoAyuda.textContent = 'El cliente paga inmediatamente';
+        if (form) form.action = "{% url 'core:procesar_venta' %}";
     }
-
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie) {
-            for (let cookie of document.cookie.split(';')) {
-                cookie = cookie.trim();
-                if (cookie.startsWith(name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.slice(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    }
-
-    function cambiarTipoOperacion(tipo) {
-        const btn = document.getElementById('btnConfirmar');
-        const textoBtn = document.getElementById('textoBoton');
-        const textoAyuda = document.getElementById('textoAyudaOperacion');
-        const form = document.getElementById('formVenta');
-        
-        if (tipo === 'reserva') {
-            btn?.classList.replace('bg-otiza-green', 'bg-purple-600');
-            btn?.classList.replace('hover:bg-otiza-dark', 'hover:bg-purple-700');
-            if (textoBtn) textoBtn.textContent = 'Confirmar Reserva';
-            if (textoAyuda) textoAyuda.textContent = 'El cliente paga cuando llegue';
-            if (form) form.action = "{% url 'core:procesar_reserva' %}";
-        } else {
-            btn?.classList.replace('bg-purple-600', 'bg-otiza-green');
-            btn?.classList.replace('hover:bg-purple-700', 'hover:bg-otiza-dark');
-            if (textoBtn) textoBtn.textContent = 'Confirmar Venta';
-            if (textoAyuda) textoAyuda.textContent = 'El cliente paga inmediatamente';
-            if (form) form.action = "{% url 'core:procesar_venta' %}";
-        }
-    }
+}
 </script>
-{% endblock %}  {# ← CIERRA block extra_js #}
+{% endblock %}
