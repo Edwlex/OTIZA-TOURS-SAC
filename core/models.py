@@ -2,6 +2,8 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
 from datetime import datetime, timedelta
+from django.conf import settings
+
 import re
 
 # ==================== SEDES ====================
@@ -343,3 +345,35 @@ class HorarioFijo(models.Model):
         verbose_name = 'Horario Fijo'
         verbose_name_plural = 'Horarios Fijos'
         ordering = ['hora_salida']
+
+
+
+class Notificacion(models.Model):
+    TIPO_CHOICES = [
+        ('fidelizacion', 'Fidelización'),
+        ('operativa', 'Operativa'),
+        ('comunicado', 'Comunicado'),
+        ('venta', 'Venta'),
+    ]
+    CATEGORIA_CHOICES = [
+        ('alerta', 'Alerta'),
+        ('comunicado', 'Comunicado'),
+        ('info', 'Información'),
+    ]
+    
+    titulo = models.CharField(max_length=200)
+    descripcion = models.TextField()
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES)
+    categoria = models.CharField(max_length=20, choices=CATEGORIA_CHOICES, default='alerta')
+    leida = models.BooleanField(default=False)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    
+    # Si es null, es para todas las sedes o todos los usuarios
+    sede = models.ForeignKey('Sede', on_delete=models.SET_NULL, null=True, blank=True, related_name='notificaciones')
+    usuario_destino = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='notificaciones')
+
+    class Meta:
+        ordering = ['-fecha_creacion']
+
+    def __str__(self):
+        return f"[{self.get_tipo_display()}] {self.titulo}"

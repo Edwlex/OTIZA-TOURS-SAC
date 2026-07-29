@@ -39,6 +39,8 @@ urlpatterns = [
     
     # ==================== NOTIFICACIONES ====================
     path('notificaciones/', views.notificaciones_lista, name='notificaciones_lista'),
+    path('notificaciones/<int:notif_id>/leer/', views.marcar_notificacion_leida, name='marcar_notificacion_leida'),
+    path('notificaciones/todas-leer/', views.marcar_todas_leidas, name='marcar_todas_leidas'),
 
     # ==================== PERFIL ====================
     path('perfil/', views.mi_perfil, name='mi_perfil'),
@@ -52,11 +54,14 @@ urlpatterns = [
     path('panel-admin/vehiculos/editar/<int:id>/', views.vehiculo_editar, name='vehiculo_editar'),
     path('panel-admin/vehiculos/eliminar/<int:id>/', views.vehiculo_eliminar, name='vehiculo_eliminar'),
 
-    
+
+    # ==================== INCIDENCIAS ====================
     path('incidencias/', views.incidencias_lista, name='incidencias_lista'),
-    path('incidencias/nuevo/', views.incidencia_nuevo, name='incidencia_nuevo'),
+    path('incidencias/nuevo/', views.incidencia_nuevo, name='incidencia_nuevo'), # ← ESTA ES LA ÚNICA QUE NECESITAS
     path('incidencias/actualizar/<int:id>/', views.incidencia_actualizar_estado, name='incidencia_actualizar_estado'),
+    path('incidencias/detalle/<int:id>/', views.incidencia_ver_detalle, name='incidencia_ver_detalle'),
     path('incidencias/eliminar/<int:id>/', views.incidencia_eliminar, name='incidencia_eliminar'),
+
     # ==================== ADMIN - GESTIÓN DE CHOFERES ====================
     path('panel-admin/choferes/', views.choferes_lista, name='choferes_lista'),
     path('panel-admin/choferes/nuevo/', views.chofer_nuevo, name='chofer_nuevo'),

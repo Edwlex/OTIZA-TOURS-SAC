@@ -10,7 +10,7 @@
 
 {% block content %}
 
-<!-- ==================== 1. FILTROS (CON BOTÓN EXPLÍCITO) ==================== -->
+<!-- ==================== 1. FILTROS ==================== -->
 <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
     <form method="get" class="flex flex-wrap items-end gap-4">
         
@@ -50,21 +50,17 @@
             </select>
         </div>
         
-        <!-- Botones de Acción (ALINEADOS ABAJO) -->
+        <!-- Botones de Acción -->
         <div class="flex items-end gap-2 pb-2.5">
-            <!-- Botón Filtrar -->
             <button type="submit" class="px-5 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm font-medium flex items-center gap-2 shadow-md">
                 <i class="fas fa-filter"></i> Filtrar
             </button>
-            
-            <!-- Botón Limpiar -->
             <a href="{% url 'core:incidencias_lista' %}" 
                class="px-4 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition text-sm font-medium flex items-center gap-2"
                title="Limpiar filtros">
                 <i class="fas fa-times"></i>
             </a>
         </div>
-        
     </form>
 </div>
 
@@ -121,7 +117,7 @@
                 {% for inc in incidencias %}
                 <tr class="hover:bg-gray-50 transition">
                     <td class="px-6 py-4 text-sm text-gray-700">{{ inc.fecha_reporte|date:"d/m/Y H:i" }}</td>
-                    <td class="px-6 py-4 text-sm text-gray-700">{{ inc.sede_reporte }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-700">{{ inc.sede_reporte.nombre }}</td>
                     <td class="px-6 py-4">
                         <span class="px-2 py-1 rounded text-xs font-semibold 
                             {% if inc.tipo == 'reclamo' %}bg-red-100 text-red-700
@@ -215,10 +211,83 @@
     </div>
 </div>
 
+<!-- ==================== MODAL VER DETALLE (NUEVO) ==================== -->
+<div id="modalDetalle" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/50" onclick="cerrarModalDetalle()"></div>
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-6 m-4 max-h-[90vh] overflow-y-auto">
+        
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
+            <h3 class="text-xl font-bold text-gray-800">📋 Detalle de Incidencia #<span id="detalleId"></span></h3>
+            <button onclick="cerrarModalDetalle()" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        
+        <!-- Contenido -->
+        <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <p class="text-xs text-gray-500 uppercase">Tipo</p>
+                    <p class="font-semibold text-gray-800" id="detalleTipo">-</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500 uppercase">Estado</p>
+                    <p class="font-semibold" id="detalleEstado">-</p>
+                </div>
+            </div>
+            
+            <div>
+                <p class="text-xs text-gray-500 uppercase">Descripción</p>
+                <div class="mt-1 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <p class="text-gray-700 whitespace-pre-wrap" id="detalleDescripcion">-</p>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <p class="text-xs text-gray-500 uppercase">Sede</p>
+                    <p class="font-semibold text-gray-800" id="detalleSede">-</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500 uppercase">Reportado por</p>
+                    <p class="font-semibold text-gray-800" id="detalleReportadoPor">-</p>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <p class="text-xs text-gray-500 uppercase">Fecha de Reporte</p>
+                    <p class="text-gray-700" id="detalleFecha">-</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500 uppercase">Fecha de Resolución</p>
+                    <p class="text-gray-700" id="detalleFechaResolucion">-</p>
+                </div>
+            </div>
+            
+            <div>
+                <p class="text-xs text-gray-500 uppercase">Solución Aplicada</p>
+                <div class="mt-1 p-3 bg-green-50 rounded-lg border border-green-200">
+                    <p class="text-gray-700 whitespace-pre-wrap" id="detalleSolucion">-</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="mt-6 pt-4 border-t border-gray-200 flex justify-end">
+            <button onclick="cerrarModalDetalle()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
+                Cerrar
+            </button>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
+// ==================== MODAL CAMBIAR ESTADO ====================
 function abrirModalEstado(id, estadoActual) {
     document.getElementById('modalEstado').classList.remove('hidden');
     document.getElementById('formEstado').action = `{% url 'core:incidencia_actualizar_estado' 0 %}`.replace('0', id);
@@ -238,15 +307,45 @@ function toggleSolucion() {
     }
 }
 
-function verDetalle(id) {
-    // Aquí puedes abrir un modal con más detalle o redirigir
-    alert('📋 Detalle de incidencia #' + id + '\n\n(Aquí puedes implementar un modal con la descripción completa)');
+// ==================== MODAL VER DETALLE ====================
+async function verDetalle(id) {
+    try {
+        const response = await fetch(`/incidencias/detalle/${id}/`);
+        
+        if (!response.ok) {
+            throw new Error('Error al cargar detalle');
+        }
+        
+        const data = await response.json();
+        
+        // Llenar el modal con los datos
+        document.getElementById('detalleId').textContent = id;
+        document.getElementById('detalleTipo').textContent = data.tipo;
+        document.getElementById('detalleDescripcion').textContent = data.descripcion;
+        document.getElementById('detalleEstado').textContent = data.estado;
+        document.getElementById('detalleSede').textContent = data.sede;
+        document.getElementById('detalleReportadoPor').textContent = data.reportado_por;
+        document.getElementById('detalleFecha').textContent = data.fecha_reporte;
+        document.getElementById('detalleSolucion').textContent = data.solucion;
+        document.getElementById('detalleFechaResolucion').textContent = data.fecha_resolucion;
+        
+        // Mostrar modal
+        document.getElementById('modalDetalle').classList.remove('hidden');
+        
+    } catch (error) {
+        alert('❌ Error al cargar el detalle: ' + error.message);
+    }
 }
 
-// Cerrar modal con tecla Escape
+function cerrarModalDetalle() {
+    document.getElementById('modalDetalle').classList.add('hidden');
+}
+
+// Cerrar modales con tecla Escape
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         cerrarModalEstado();
+        cerrarModalDetalle();
     }
 });
 </script>

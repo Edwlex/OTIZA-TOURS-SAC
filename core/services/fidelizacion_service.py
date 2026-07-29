@@ -5,27 +5,40 @@ from core.models import Venta
 
 logger = logging.getLogger('core.fidelizacion_service')
 
-
 class FidelizacionService:
     """Servicio para manejar la lógica del programa de fidelización"""
     
     VIAJES_PARA_PREMIO = 12
     
     @staticmethod
-    def obtener_progreso_clientes(filtro='todos'):
+    def obtener_progreso_clientes(filtro='todos', sede=None):
         """
         Obtiene clientes agrupados por DNI con su conteo de viajes y progreso hacia el premio.
         
         Args:
-            filtro: 'todos', 'premios' (listos para canjear), 'cerca' (faltan ≤ 3)
-            
-        Returns:
-            list: Lista de diccionarios con datos del cliente
+            filtro: 'todos', 'premios' (listos para canjear), 'cerca' (faltan <= 2)
+            sede: Objeto Sede. Si se proporciona, solo muestra clientes que han comprado en esta sede,
+                  pero el conteo de viajes ('viajes') es GLOBAL (compartido entre sedes).
         """
-        logger.info(f"FIDELIZACION - Consultando progreso de clientes (filtro: {filtro})...")
+        logger.info(f"FIDELIZACION - Consultando progreso (filtro: {filtro}, sede: {sede.nombre if sede else 'Global'})...")
         
-        # 1. Agrupar ventas por documento de identidad
-        clientes_qs = Venta.objects.values(
+        # 1. Si hay una sede específica, primero obtenemos los DNIs que han comprado en esta sede
+        if sede:
+            dnis_en_sede = Venta.objects.filter(
+                sede_venta=sede,
+                numero_documento__isnull=False
+            ).exclude(
+                numero_documento=''
+            ).values_list('numero_documento', flat=True).distinct()
+            
+            # Base queryset: solo estos DNIs, pero contaremos TODOS sus viajes (globales)
+            base_qs = Venta.objects.filter(numero_documento__in=dnis_en_sede)
+        else:
+            # Admin: todos los DNIs del sistema sin filtro de sede
+            base_qs = Venta.objects
+            
+        # 2. Agrupar ventas por documento de identidad (conteo GLOBAL de viajes)
+        clientes_qs = base_qs.values(
             'numero_documento', 
             'nombre_cliente', 
             'telefono_cliente'
@@ -52,41 +65,42 @@ class FidelizacionService:
                 'dni': dni,
                 'nombre': cliente['nombre_cliente'] or 'Cliente Sin Nombre',
                 'telefono': cliente['telefono_cliente'],
-                'viajes': viajes,
+                'viajes': viajes, # ← Este es el conteo GLOBAL
+                'viajes_ciclo': progreso_restante,
                 'faltan': faltan,
                 'tiene_premio': tiene_premio_pendiente,
-                'porcentaje': min(100, (viajes / FidelizacionService.VIAJES_PARA_PREMIO) * 100) if faltan > 0 else 100,
-                'ultimo_viaje': cliente.get('ultimo_viaje')
+                'porcentaje': min(100, ((viajes % FidelizacionService.VIAJES_PARA_PREMIO) / FidelizacionService.VIAJES_PARA_PREMIO) * 100) if faltan > 0 else 100,
+                'ultimo_viaje': cliente.get('ultimo_viaje').strftime('%d/%m/%Y') if cliente.get('ultimo_viaje') else 'N/A'
             })
         
-        # 2. Aplicar filtros
+        # 3. Aplicar filtros de estado
         if filtro == 'premios':
             lista_clientes = [c for c in lista_clientes if c['tiene_premio']]
         elif filtro == 'cerca':
-            lista_clientes = [c for c in lista_clientes if 0 < c['faltan'] <= 3]
+            lista_clientes = [c for c in lista_clientes if 0 < c['faltan'] <= 2]
             
-        # 3. Ordenar por cantidad de viajes (descendente)
-        lista_clientes.sort(key=lambda x: x['viajes'], reverse=True)
+        # 4. Ordenar: Primero los que tienen premio pendiente, luego los más cercanos, luego por cantidad de viajes
+        lista_clientes.sort(key=lambda x: (not x['tiene_premio'], x['faltan'] if x['faltan'] > 0 else 999, -x['viajes']))
         
         logger.info(f"FIDELIZACION - {len(lista_clientes)} clientes encontrados.")
         return lista_clientes
     
     @staticmethod
-    def obtener_kpis_fidelizacion():
-        """Calcula KPIs rápidos para la vista admin"""
-        logger.info("FIDELIZACION - Calculando KPIs...")
+    def obtener_kpis_fidelizacion(sede=None):
+        """Calcula KPIs rápidos para la vista (Admin o Cajero)"""
+        logger.info(f"FIDELIZACION - Calculando KPIs (sede: {sede.nombre if sede else 'Global'})...")
         
-        # Total clientes únicos con al menos 1 venta
-        total_clientes = Venta.objects.values('numero_documento').distinct().count()
+        # Reutilizamos el método anterior para garantizar consistencia en los números
+        todos_los_clientes = FidelizacionService.obtener_progreso_clientes(filtro='todos', sede=sede)
         
-        # Clientes que ya completaron ciclos de 12 viajes
-        clientes = FidelizacionService.obtener_progreso_clientes()
-        premios_pendientes = sum(1 for c in clientes if c['tiene_premio'])
+        total_clientes = len(todos_los_clientes)
+        premios_pendientes = sum(1 for c in todos_los_clientes if c['tiene_premio'])
+        cercanos = sum(1 for c in todos_los_clientes if 0 < c['faltan'] <= 2)
         
-        # Para MVP: Los entregados se manejan externamente o por registro manual.
-        # Aquí retornamos 0, pero en producción iría a un modelo `PremioCanjeado`
+        # Claves alineadas con tu template (pendientes, entregados, cercanos)
         return {
             'total_clientes': total_clientes,
-            'premios_pendientes': premios_pendientes,
-            'premios_entregados_mes': 0 
+            'pendientes': premios_pendientes,
+            'entregados': 0, # Placeholder hasta que creemos el modelo de canjes
+            'cercanos': cercanos
         }

@@ -1,14 +1,12 @@
 {% extends 'base_cajero.html' %}
-
 {% block title %}Notificaciones - Otiza Tours{% endblock %}
 
 {% block content %}
 <div class="space-y-6">
-    
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-bold text-slate-800"> Centro de Alertas</h1>
+            <h1 class="text-2xl font-bold text-slate-800">Centro de Alertas</h1>
             <p class="text-slate-500 mt-1">Notificaciones automáticas del sistema y comunicados</p>
         </div>
         <button onclick="marcarTodasLeidas()" class="bg-white border-2 border-slate-200 text-slate-700 px-5 py-2.5 rounded-xl hover:border-otiza-green hover:text-otiza-green transition font-medium flex items-center gap-2 shadow-sm">
@@ -18,148 +16,105 @@
 
     <!-- Tabs de Filtros -->
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-2 flex gap-2">
-        <button onclick="filtrarNotificaciones('todas')" class="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition bg-otiza-green text-white" id="tab-todas">
-            Todas
-        </button>
+        <button onclick="filtrarNotificaciones('todas')" class="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition bg-otiza-green text-white" id="tab-todas">Todas</button>
         <button onclick="filtrarNotificaciones('no_leidas')" class="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition text-slate-600 hover:bg-slate-50" id="tab-no_leidas">
-            No Leídas <span id="badgeNoLeidas" class="ml-2 px-2 py-0.5 bg-red-500 text-white text-xs rounded-full">3</span>
+            No Leídas <span id="badgeNoLeidas" class="ml-2 px-2 py-0.5 bg-red-500 text-white text-xs rounded-full {% if no_leidas_count == 0 %}hidden{% endif %}">{{ no_leidas_count }}</span>
         </button>
-        <button onclick="filtrarNotificaciones('comunicados')" class="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition text-slate-600 hover:bg-slate-50" id="tab-comunicados">
-            Comunicados
-        </button>
+        <button onclick="filtrarNotificaciones('comunicados')" class="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition text-slate-600 hover:bg-slate-50" id="tab-comunicados">Comunicados</button>
     </div>
 
     <!-- Lista de Notificaciones -->
     <div class="space-y-3" id="listaNotificaciones">
-        
-        <!-- Notificación 1: Fidelización (Automática) -->
-        <div class="notif-item bg-white rounded-xl shadow-sm border-l-4 border-yellow-500 p-5 hover:shadow-md transition group" data-tipo="fidelizacion" data-leida="false" data-categoria="alerta">
+        {% for n in notificaciones %}
+        <div class="notif-item bg-white rounded-xl shadow-sm border-l-4 
+                    {% if n.tipo == 'fidelizacion' %}border-yellow-500
+                    {% elif n.tipo == 'operativa' %}border-red-500
+                    {% elif n.tipo == 'comunicado' %}border-blue-500
+                    {% else %}border-green-500{% endif %} 
+                    p-5 hover:shadow-md transition group {% if n.leida %}opacity-75{% endif %}" 
+             data-tipo="{{ n.tipo }}" 
+             data-leida="{{ n.leida|yesno:'true,false' }}" 
+             data-categoria="{{ n.categoria }}"
+             data-id="{{ n.id }}">
+            
             <div class="flex items-start gap-4">
-                <div class="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center text-yellow-600 text-xl flex-shrink-0">
-                    <i class="fas fa-gift"></i>
+                <!-- Ícono Dinámico -->
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center text-xl flex-shrink-0
+                            {% if n.tipo == 'fidelizacion' %}bg-yellow-100 text-yellow-600
+                            {% elif n.tipo == 'operativa' %}bg-red-100 text-red-600
+                            {% elif n.tipo == 'comunicado' %}bg-blue-100 text-blue-600
+                            {% else %}bg-green-100 text-green-600{% endif %}">
+                    <i class="fas {% if n.tipo == 'fidelizacion' %}fa-gift
+                               {% elif n.tipo == 'operativa' %}fa-exclamation-triangle
+                               {% elif n.tipo == 'comunicado' %}fa-bullhorn
+                               {% else %}fa-check-circle{% endif %}"></i>
                 </div>
+                
                 <div class="flex-1">
                     <div class="flex items-start justify-between">
                         <div>
                             <h3 class="font-bold text-slate-800 flex items-center gap-2">
-                                🎉 ¡Cliente Ganador!
+                                {{ n.titulo }}
+                                {% if not n.leida and n.categoria == 'alerta' %}
                                 <span class="px-2 py-0.5 bg-yellow-100 text-yellow-700 text-[10px] font-bold rounded-full">ACCIÓN REQUERIDA</span>
+                                {% endif %}
                             </h3>
-                            <p class="text-sm text-slate-600 mt-1">El cliente <strong>Juan Pérez (DNI: 12345678)</strong> completó 12 viajes. Entregar premio <strong>Rasca y Gana</strong>.</p>
+                            <p class="text-sm text-slate-600 mt-1">{{ n.descripcion }}</p>
                             <div class="flex items-center gap-3 mt-2 text-xs text-slate-400">
-                                <span><i class="far fa-clock mr-1"></i> Hace 5 minutos</span>
-                                <span class="text-yellow-600 font-medium"><i class="fas fa-exclamation-circle mr-1"></i>Pendiente</span>
+                                <span><i class="far fa-clock mr-1"></i> {{ n.fecha_creacion|timesince }} atrás</span>
+                                <span class="{% if n.leida %}text-green-600{% else %}text-red-600{% endif %} font-medium">
+                                    <i class="fas {% if n.leida %}fa-check-circle{% else %}fa-exclamation-circle{% endif %} mr-1"></i>
+                                    {% if n.leida %}Atendida{% else %}Pendiente{% endif %}
+                                </span>
                             </div>
                         </div>
+                        
+                        {% if not n.leida %}
                         <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onclick="marcarLeida(1)" class="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition" title="Marcar como atendida">
+                            <button onclick="marcarLeida({{ n.id }})" class="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition" title="Marcar como atendida">
                                 <i class="fas fa-check"></i>
                             </button>
                         </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
         </div>
-
-        <!-- Notificación 2: Retraso Operativo (Automática) -->
-        <div class="notif-item bg-white rounded-xl shadow-sm border-l-4 border-red-500 p-5 hover:shadow-md transition group" data-tipo="operativa" data-leida="false" data-categoria="alerta">
-            <div class="flex items-start gap-4">
-                <div class="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center text-red-600 text-xl flex-shrink-0">
-                    <i class="fas fa-exclamation-triangle"></i>
-                </div>
-                <div class="flex-1">
-                    <div class="flex items-start justify-between">
-                        <div>
-                            <h3 class="font-bold text-slate-800 flex items-center gap-2">
-                                ⚠️ Retraso en Viaje
-                                <span class="px-2 py-0.5 bg-red-100 text-red-700 text-[10px] font-bold rounded-full">URGENTE</span>
-                            </h3>
-                            <p class="text-sm text-slate-600 mt-1">Viaje <strong>08:00 Trujillo→Julcán</strong> (ABC-123) reportó 15 min de retraso por condiciones climáticas.</p>
-                            <div class="flex items-center gap-3 mt-2 text-xs text-slate-400">
-                                <span><i class="far fa-clock mr-1"></i> Hace 22 minutos</span>
-                                <span class="text-red-600 font-medium"><i class="fas fa-exclamation-circle mr-1"></i>Atención requerida</span>
-                            </div>
-                        </div>
-                        <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onclick="marcarLeida(2)" class="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition">
-                                <i class="fas fa-check"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
+        {% empty %}
+        <!-- Empty State por defecto si no hay nada en BD -->
+        <div id="emptyState" class="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
+            <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-check text-3xl text-green-600"></i>
             </div>
+            <h3 class="text-lg font-bold text-slate-800 mb-2">¡Todo al día!</h3>
+            <p class="text-slate-500">No hay alertas pendientes ni nuevos comunicados</p>
         </div>
-
-        <!-- Notificación 3: Comunicado del Admin -->
-        <div class="notif-item bg-white rounded-xl shadow-sm border-l-4 border-blue-500 p-5 hover:shadow-md transition group" data-tipo="comunicado" data-leida="true" data-categoria="comunicado">
-            <div class="flex items-start gap-4">
-                <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 text-xl flex-shrink-0">
-                    <i class="fas fa-bullhorn"></i>
-                </div>
-                <div class="flex-1">
-                    <div class="flex items-start justify-between">
-                        <div>
-                            <h3 class="font-bold text-slate-800"> Actualización de Precios</h3>
-                            <p class="text-sm text-slate-600 mt-1">A partir del 20/07/2026, el pasaje Trujillo→Mache tendrá un nuevo precio de <strong>S/ 30.00</strong>.</p>
-                            <div class="flex items-center gap-3 mt-2 text-xs text-slate-400">
-                                <span><i class="far fa-clock mr-1"></i> Hace 2 horas</span>
-                                <span class="text-blue-600 font-medium"><i class="fas fa-info-circle mr-1"></i>Comunicado</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Notificación 4: Fidelización (Otro cliente) -->
-        <div class="notif-item bg-white rounded-xl shadow-sm border-l-4 border-yellow-500 p-5 hover:shadow-md transition group" data-tipo="fidelizacion" data-leida="false" data-categoria="alerta">
-            <div class="flex items-start gap-4">
-                <div class="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center text-yellow-600 text-xl flex-shrink-0">
-                    <i class="fas fa-star"></i>
-                </div>
-                <div class="flex-1">
-                    <div class="flex items-start justify-between">
-                        <div>
-                            <h3 class="font-bold text-slate-800 flex items-center gap-2">
-                                ⚡ ¡Casi lo logra!
-                                <span class="px-2 py-0.5 bg-orange-100 text-orange-700 text-[10px] font-bold rounded-full">1 VIAJE FALTANTE</span>
-                            </h3>
-                            <p class="text-sm text-slate-600 mt-1">La cliente <strong>María López (DNI: 87654321)</strong> tiene 11 viajes. ¡Falta 1 para el Rasca y Gana!</p>
-                            <div class="flex items-center gap-3 mt-2 text-xs text-slate-400">
-                                <span><i class="far fa-clock mr-1"></i> Hace 1 hora</span>
-                                <span class="text-orange-600 font-medium"><i class="fas fa-clock mr-1"></i>Pendiente</span>
-                            </div>
-                        </div>
-                        <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onclick="marcarLeida(4)" class="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition">
-                                <i class="fas fa-check"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
+        {% endfor %}
     </div>
-
-    <!-- Empty State -->
-    <div id="emptyState" class="hidden bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
-        <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <i class="fas fa-check text-3xl text-green-600"></i>
-        </div>
-        <h3 class="text-lg font-bold text-slate-800 mb-2">¡Todo al día!</h3>
-        <p class="text-slate-500">No hay alertas pendientes ni nuevos comunicados</p>
-    </div>
-
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-let notificacionesActivas = 4; // Contador de no leídas
+// Obtener token CSRF de Django para las peticiones AJAX
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+const csrftoken = getCookie('csrftoken');
 
 function filtrarNotificaciones(filtro) {
-    // Actualizar tabs
+    // Actualizar tabs visualmente
     document.querySelectorAll('[id^="tab-"]').forEach(tab => {
         tab.classList.remove('bg-otiza-green', 'text-white');
         tab.classList.add('text-slate-600', 'hover:bg-slate-50');
@@ -167,7 +122,7 @@ function filtrarNotificaciones(filtro) {
     document.getElementById(`tab-${filtro}`).classList.remove('text-slate-600', 'hover:bg-slate-50');
     document.getElementById(`tab-${filtro}`).classList.add('bg-otiza-green', 'text-white');
     
-    // Filtrar notificaciones
+    // Filtrar elementos en el DOM
     document.querySelectorAll('.notif-item').forEach(notif => {
         const esLeida = notif.getAttribute('data-leida') === 'true';
         const categoria = notif.getAttribute('data-categoria');
@@ -186,55 +141,76 @@ function marcarLeida(id) {
     const notif = document.querySelector(`[data-id="${id}"]`);
     if (!notif) return;
     
-    notif.classList.remove('border-red-500', 'border-yellow-500');
-    notif.classList.add('border-green-500', 'opacity-75');
-    notif.setAttribute('data-leida', 'true');
-    
-    // Animación de desvanecimiento
-    notif.style.transition = 'all 0.3s ease';
-    notif.style.transform = 'translateX(10px)';
-    notif.style.opacity = '0.75';
-    
-    notificacionesActivas--;
-    actualizarBadge();
-    
-    // Verificar si no hay más no leídas
-    if (notificacionesActivas === 0) {
-        setTimeout(() => {
-            document.getElementById('emptyState').classList.remove('hidden');
-            document.getElementById('listaNotificaciones').classList.add('hidden');
-        }, 300);
-    }
-    
-    console.log(`Notificación ${id} marcada como atendida`);
+    // Llamada AJAX a Django
+    fetch(`/notificaciones/${id}/leer/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrftoken,
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            // Actualizar UI
+            notif.classList.remove('border-red-500', 'border-yellow-500');
+            notif.classList.add('border-green-500', 'opacity-75');
+            notif.setAttribute('data-leida', 'true');
+            
+            // Actualizar badge global
+            const badge = document.getElementById('badgeNoLeidas');
+            badge.textContent = data.no_leidas;
+            if (data.no_leidas === 0) badge.classList.add('hidden');
+            
+            // Ocultar botón de marcar leída
+            notif.querySelector('button[onclick^="marcarLeida"]').parentElement.remove();
+            
+            // Animación suave
+            notif.style.transition = 'all 0.3s ease';
+            notif.style.transform = 'translateX(10px)';
+        }
+    });
 }
 
 function marcarTodasLeidas() {
-    document.querySelectorAll('.notif-item[data-leida="false"]').forEach(notif => {
-        notif.classList.remove('border-red-500', 'border-yellow-500');
-        notif.classList.add('border-green-500', 'opacity-75');
-        notif.setAttribute('data-leida', 'true');
-    });
-    notificacionesActivas = 0;
-    actualizarBadge();
-    
-    document.getElementById('emptyState').classList.remove('hidden');
-    document.getElementById('listaNotificaciones').classList.add('hidden');
-}
-
-function actualizarBadge() {
-    const badge = document.getElementById('badgeNoLeidas');
-    if (badge) {
-        badge.textContent = notificacionesActivas;
-        if (notificacionesActivas === 0) {
-            badge.classList.add('hidden');
-        } else {
-            badge.classList.remove('hidden');
+    fetch(`/notificaciones/todas-leer/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrftoken,
+            'Content-Type': 'application/json'
         }
-    }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            document.querySelectorAll('.notif-item[data-leida="false"]').forEach(notif => {
+                notif.classList.remove('border-red-500', 'border-yellow-500');
+                notif.classList.add('border-green-500', 'opacity-75');
+                notif.setAttribute('data-leida', 'true');
+                const btn = notif.querySelector('button[onclick^="marcarLeida"]');
+                if (btn) btn.parentElement.remove();
+            });
+            
+            const badge = document.getElementById('badgeNoLeidas');
+            badge.textContent = '0';
+            badge.classList.add('hidden');
+            
+            // Si no hay elementos, mostrar empty state (si no estaba ya)
+            if (document.querySelectorAll('.notif-item').length === 0) {
+                document.getElementById('listaNotificaciones').innerHTML = `
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
+                        <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-check text-3xl text-green-600"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-800 mb-2">¡Todo al día!</h3>
+                        <p class="text-slate-500">No hay alertas pendientes ni nuevos comunicados</p>
+                    </div>`;
+            }
+        }
+    });
 }
 
-// Inicializar
+// Inicializar filtro
 filtrarNotificaciones('todas');
 </script>
 {% endblock %}

@@ -895,24 +895,141 @@ def procesar_venta(request):
         return JsonResponse({'success': False, 'error': f'Error al registrar: {str(e)}'}, status=500)
     
 # ==================== CLIENTES Y FIDELIZACIÓN ====================
-@login_required
-def historial_cliente(request, dni):
-    """Historial de viajes de un cliente por DNI"""
-    cliente = {
-        'dni': dni, 'nombre': 'Juan Pérez',
-        'total_viajes': 11, 'proximo_premio_en': 1
-    }
-    return render(request, 'clientes/historial.html', {'cliente': cliente})
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
+from core.models import Venta
+import logging
+
+logger = logging.getLogger('core.views')
 
 @login_required
 def fidelizacion_cliente(request):
-    """Vista de fidelización: clientes cercanos a completar 12 viajes"""
-    clientes_cercanos = [
-        {'dni': '12345678', 'nombre': 'Juan Pérez', 'viajes': 11, 'faltan': 1},
-        {'dni': '87654321', 'nombre': 'María López', 'viajes': 10, 'faltan': 2},
-    ]
-    return render(request, 'clientes/fidelizacion.html', {'clientes_cercanos': clientes_cercanos})
+    """
+    Vista de fidelización: Buscador por DNI con progreso GLOBAL (todas las sedes).
+    No muestra resultados hasta que se busca un DNI válido.
+    """
+    usuario = request.user
+    sede = usuario.sede
+    
+    # 1. Capturar la búsqueda
+    busqueda = request.GET.get('q', '').strip()
+    
+    cliente_detalle = None
+    viajes_cliente = []
+    progreso_porcentaje = 0
+    proximo_premio_en = 0
+    
+    # 2. Si hay una búsqueda por DNI (8 dígitos)
+    if busqueda and len(busqueda) == 8 and busqueda.isdigit():
+        
+        # Buscamos en TODAS las sedes (sin filtro de sede) para el conteo GLOBAL
+        ventas_qs = Venta.objects.filter(
+            numero_documento__iexact=busqueda
+        ).select_related('viaje__ruta', 'viaje__vehiculo', 'asiento').order_by('-fecha_venta')
+        
+        if ventas_qs.exists():
+            ultima_venta = ventas_qs.first()
+            total_viajes = ventas_qs.count()
+            
+            # 3. Lógica de fidelización global (cada 12 viajes = 1 premio)
+            viajes_para_premio = 12
+            progreso_restante = total_viajes % viajes_para_premio
+            proximo_premio_en = 0 if progreso_restante == 0 else (viajes_para_premio - progreso_restante)
+            progreso_porcentaje = min(100, (progreso_restante / viajes_para_premio) * 100) if proximo_premio_en > 0 else 100
+            
+            # 4. Datos del cliente
+            cliente_detalle = {
+                'dni': busqueda,
+                'nombre': ultima_venta.nombre_cliente or 'Cliente sin nombre',
+                'telefono': ultima_venta.telefono_cliente or '-',
+                'total_viajes': total_viajes,
+                'proximo_premio_en': proximo_premio_en
+            }
+            
+            # 5. Construir historial de viajes (últimos 20)
+            for v in ventas_qs[:20]:
+                viajes_cliente.append({
+                    'fecha': v.fecha_venta.strftime('%d/%m/%Y'),
+                    'hora': v.fecha_venta.strftime('%H:%M'),
+                    'ruta': f"{v.viaje.ruta.origen} → {v.viaje.ruta.destino}",
+                    'vehiculo': v.viaje.vehiculo.placa,
+                    'asiento': v.asiento.numero_asiento if v.asiento else '-',
+                    'monto': v.monto_total,
+                    'estado': 'Completado'
+                })
 
+    # 6. Enviar al template
+    contexto = {
+        'usuario': usuario,
+        'sede': sede,
+        'busqueda_actual': busqueda,
+        'cliente_detalle': cliente_detalle,
+        'progreso_porcentaje': progreso_porcentaje,
+        'viajes_cliente': viajes_cliente,
+    }
+    
+    return render(request, 'clientes/fidelizacion.html', contexto)
+
+
+from django.contrib import messages
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from core.models import Venta
+
+@login_required
+def historial_cliente(request, dni):
+    """Vista dedicada para ver el historial de un cliente específico por DNI (usada desde el botón de la tabla)"""
+    usuario = request.user
+    
+    # 1. Buscar ventas de este DNI en TODAS las sedes (conteo global)
+    ventas_qs = Venta.objects.filter(
+        numero_documento__iexact=dni
+    ).select_related('viaje__ruta', 'viaje__vehiculo', 'asiento').order_by('-fecha_venta')
+    
+    if not ventas_qs.exists():
+        messages.error(request, f'No se encontraron viajes para el DNI {dni}')
+        return redirect('core:fidelizacion')
+    
+    # 2. Datos del cliente y progreso
+    ultima_venta = ventas_qs.first()
+    total_viajes = ventas_qs.count()
+    
+    viajes_para_premio = 12
+    progreso_restante = total_viajes % viajes_para_premio
+    proximo_premio_en = 0 if progreso_restante == 0 else (viajes_para_premio - progreso_restante)
+    progreso_porcentaje = min(100, (progreso_restante / viajes_para_premio) * 100) if proximo_premio_en > 0 else 100
+    
+    cliente_detalle = {
+        'dni': dni,
+        'nombre': ultima_venta.nombre_cliente or 'Cliente sin nombre',
+        'telefono': ultima_venta.telefono_cliente or '-',
+        'total_viajes': total_viajes,
+        'proximo_premio_en': proximo_premio_en
+    }
+    
+    # 3. Construir historial (últimos 50 viajes)
+    viajes_cliente = []
+    for v in ventas_qs[:50]:
+        viajes_cliente.append({
+            'fecha': v.fecha_venta.strftime('%d/%m/%Y'),
+            'hora': v.fecha_venta.strftime('%H:%M'),
+            'ruta': f"{v.viaje.ruta.origen} → {v.viaje.ruta.destino}",
+            'vehiculo': v.viaje.vehiculo.placa,
+            'asiento': v.asiento.numero_asiento if v.asiento else '-',
+            'monto': v.monto_total,
+            'estado': 'Completado'
+        })
+        
+    contexto = {
+        'usuario': usuario,
+        'cliente': cliente_detalle,
+        'progreso_porcentaje': progreso_porcentaje,
+        'viajes_cliente': viajes_cliente,
+    }
+    
+    # ⚠️ IMPORTANTE: Cambia 'clientes/historial_cliente.html' por el nombre real 
+    # de tu archivo de historial si se llama diferente (ej: 'clientes/historial.html')
+    return render(request, 'clientes/historial_cliente.html', contexto)
 
 
 @login_required
@@ -1019,63 +1136,168 @@ def incidencias_lista_admin(request, usuario, sede):
     return render(request, 'admin/incidencias_lista.html', contexto)
 
 
+from django.contrib import messages
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from core.services.incidencia_service import IncidenciaService
+from core.forms.incidencia_forms import IncidenciaForm # Asegúrate de tener este import
+
 @login_required
 def incidencias_lista_cajero(request, usuario, sede):
     """Lista de incidencias para CAJERO (solo su sede)"""
+    estado_filtro = request.GET.get('estado', '')
+    tipo_filtro = request.GET.get('tipo', '')
+    
+    # Obtenemos solo las incidencias de esta sede
     incidencias = IncidenciaService.obtener_incidencias_filtradas(
-        sede=sede, es_admin=False
+        sede=sede, 
+        estado=estado_filtro, 
+        tipo=tipo_filtro, 
+        es_admin=False
     )
+    
     contexto = {
-        'usuario': usuario, 'sede': sede, 'es_admin': False,
+        'usuario': usuario,
+        'sede': sede,
+        'es_admin': False,
         'incidencias': incidencias,
         'total_incidencias': incidencias.count(),
         'pendientes': incidencias.filter(estado='pendiente').count(),
+        'en_proceso': incidencias.filter(estado='en_proceso').count(),
+        'resueltas': incidencias.filter(estado='resuelta').count(),
+        'estado_filtro': estado_filtro,
+        'tipo_filtro': tipo_filtro,
     }
-    return render(request, 'cajero/incidencias_lista.html', contexto)
+    # ⚠️ IMPORTANTE: Asegúrate de que este archivo exista en core/templates/cajero/
+    return render(request, 'incidencias/incidencias_lista.html', contexto)
 
+
+from django.contrib import messages
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from core.forms.incidencia_forms import IncidenciaForm
 
 @login_required
 def incidencia_nuevo(request):
-    """Crear nueva incidencia"""
+    """Crear nueva incidencia (Sirve para Admin y Cajero de forma unificada)"""
     usuario = request.user
+    sede = usuario.sede
+    
+    # Detectamos si es admin para aplicar lógicas diferentes
+    es_admin = usuario.is_superuser or sede.nombre == 'Oficina Central'
     
     if request.method == 'POST':
+        # Pasamos el usuario al form para que pueda bloquear campos si es cajero
         form = IncidenciaForm(request.POST, usuario=usuario)
-        if form.is_valid():
-            try:
-                incidencia = IncidenciaService.crear_incidencia(
-                    tipo=form.cleaned_data['tipo'],
-                    descripcion=form.cleaned_data['descripcion'],
-                    sede_reporte=form.cleaned_data['sede_reporte'],
-                    reportado_por=usuario
-                )
-                messages.success(request, 'Incidencia creada exitosamente')
-                return redirect('core:incidencias_lista')
-            except ValidationError as e:
-                messages.error(request, str(e))
-    else:
-        form = IncidenciaForm(usuario=usuario)
         
-    return render(request, 'admin/incidencia_form.html', {'form': form, 'usuario': usuario})
-
+        if form.is_valid():
+            incidencia = form.save(commit=False)
+            
+            # 🔒 SEGURIDAD: Si es cajero, forzamos su sede (aunque el form la bloquee)
+            if not es_admin:
+                incidencia.sede_reporte = sede
+                
+            incidencia.reportado_por = usuario
+            incidencia.estado = 'pendiente' # Siempre empieza así
+            incidencia.save()
+            
+            messages.success(request, '✅ Incidencia reportada correctamente. El administrador la revisará pronto.')
+            return redirect('core:incidencias_lista')
+        else:
+            # Si falla, le decimos al usuario POR QUÉ
+            errores = ", ".join([f"{field}: {error[0]}" for field, error in form.errors.items()])
+            messages.error(request, f'❌ Error al guardar: {errores}')
+    else:
+        # Prellenar la sede si es cajero (el form la mostrará deshabilitada)
+        initial_data = {}
+        if not es_admin:
+            initial_data['sede_reporte'] = sede
+            
+        form = IncidenciaForm(initial=initial_data, usuario=usuario)
+        
+    # 🎯 Determinar qué template usar según el rol
+    template_name = 'admin/incidencia_nuevo.html' if es_admin else 'cajero/incidencia_nuevo.html'
+    
+    contexto = {
+        'form': form,
+        'usuario': usuario,
+        'sede': sede,
+        'es_admin': es_admin
+    }
+    return render(request, template_name, contexto)
 
 @login_required
 def incidencia_actualizar_estado(request, id):
     """Actualizar estado de incidencia (Admin)"""
     usuario = request.user
-    incidencia = get_object_or_404(Incidencia, id=id)
     
-    if request.method == 'POST':
-        nuevo_estado = request.POST.get('estado')
-        solucion = request.POST.get('solucion', '')
+    # Verificar permisos de admin
+    if not usuario.is_superuser and usuario.sede.nombre != 'Oficina Central':
+        messages.error(request, 'No tienes permisos para cambiar el estado de incidencias')
+        return redirect('core:incidencias_lista')
+    
+    try:
+        incidencia = Incidencia.objects.get(id=id)
         
-        try:
-            IncidenciaService.actualizar_estado(id, nuevo_estado, solucion)
-            messages.success(request, f'Incidencia marcada como {nuevo_estado.replace("_", " ")}')
-        except ValidationError as e:
-            messages.error(request, str(e))
+        if request.method == 'POST':
+            nuevo_estado = request.POST.get('estado')
+            solucion = request.POST.get('solucion', '')
             
+            # Validar estado
+            estados_validos = ['pendiente', 'en_proceso', 'resuelta']
+            if nuevo_estado not in estados_validos:
+                messages.error(request, 'Estado no válido')
+                return redirect('core:incidencias_lista')
+            
+            # Actualizar
+            incidencia.estado = nuevo_estado
+            
+            # Si es resuelta, guardar la solución
+            if nuevo_estado == 'resuelta':
+                incidencia.solucion = solucion
+                incidencia.fecha_resolucion = timezone.now()
+            
+            incidencia.save()
+            
+            messages.success(request, f'✅ Estado actualizado a "{nuevo_estado}"')
+            
+    except Incidencia.DoesNotExist:
+        messages.error(request, 'Incidencia no encontrada')
+    except Exception as e:
+        messages.error(request, f'Error al actualizar: {str(e)}')
+    
     return redirect('core:incidencias_lista')
+
+
+@login_required
+def incidencia_ver_detalle(request, id):
+    """Ver detalle completo de incidencia (AJAX)"""
+    try:
+        incidencia = Incidencia.objects.select_related(
+            'sede_reporte', 
+            'reportado_por'
+        ).get(id=id)
+        
+        # Verificar permisos (admin o misma sede)
+        if not request.user.is_superuser and incidencia.sede_reporte != request.user.sede:
+            return JsonResponse({'error': 'No autorizado'}, status=403)
+        
+        data = {
+            'id': incidencia.id,
+            'tipo': incidencia.get_tipo_display(),
+            'descripcion': incidencia.descripcion,
+            'estado': incidencia.get_estado_display(),
+            'sede': incidencia.sede_reporte.nombre,
+            'reportado_por': incidencia.reportado_por.get_full_name() or incidencia.reportado_por.username,
+            'fecha_reporte': incidencia.fecha_reporte.strftime('%d/%m/%Y %H:%M'),
+            'solucion': incidencia.solucion or 'No aplica',
+            'fecha_resolucion': incidencia.fecha_resolucion.strftime('%d/%m/%Y %H:%M') if incidencia.fecha_resolucion else 'Pendiente',
+        }
+        
+        return JsonResponse(data)
+        
+    except Incidencia.DoesNotExist:
+        return JsonResponse({'error': 'Incidencia no encontrada'}, status=404)
 
 
 @login_required
@@ -1100,39 +1322,41 @@ def incidencia_eliminar(request, id):
 
 @login_required
 def fidelizacion_admin(request):
-    """Vista de fidelización para Admin"""
+    """Vista de fidelización para ADMIN (ve todos los clientes de todas las sedes)"""
     usuario = request.user
     sede = usuario.sede
     
+    # Verificar permisos de admin
     if sede.nombre != 'Oficina Central' and not usuario.is_superuser:
         messages.error(request, 'No tienes permisos para ver la fidelización global')
         return redirect('core:dashboard')
     
     filtro = request.GET.get('filtro', 'todos')
+    busqueda = request.GET.get('q', '').strip()
     
     try:
-        logger_fidelizacion.info(f"FIDELIZACION_VIEW - Cargando datos con filtro: {filtro}")
-        clientes = FidelizacionService.obtener_progreso_clientes(filtro)
-        kpis = FidelizacionService.obtener_kpis_fidelizacion()
+        # ← SEDE=None: Trae a TODOS los clientes del sistema sin filtros de sucursal
+        clientes = FidelizacionService.obtener_progreso_clientes(filtro=filtro, sede=None)
+        kpis = FidelizacionService.obtener_kpis_fidelizacion(sede=None)
         
-        contexto = {
-            'usuario': usuario,
-            'sede': sede,
-            'es_admin': True,
-            'clientes_cercanos': clientes,
-            'total_clientes': kpis['total_clientes'],
-            'premios_pendientes': kpis['premios_pendientes'],
-            'premios_entregados_mes': kpis['premios_entregados_mes'],
-            'filtro_actual': filtro,
-        }
-        
-        return render(request, 'admin/fidelizacion.html', contexto)
-        
+        if busqueda:
+            clientes = [c for c in clientes if busqueda in c['dni'] or busqueda.lower() in c['nombre'].lower()]
+            
     except Exception as e:
-        logger_fidelizacion.error(f"FIDELIZACION_VIEW - Error: {str(e)}", exc_info=True)
-        messages.error(request, f'Error al cargar datos de fidelización: {str(e)}')
-        return redirect('core:dashboard')
-
+        logger.error(f"FIDELIZACION_ADMIN_VIEW - Error: {str(e)}", exc_info=True)
+        clientes, kpis = [], {'total_clientes': 0, 'pendientes': 0, 'entregados': 0, 'cercanos': 0}
+    
+    contexto = {
+        'usuario': usuario,
+        'sede': sede,
+        'es_admin': True,
+        'clientes_fidelizacion': clientes,
+        'stats': kpis,
+        'filtro_actual': filtro,
+        'busqueda_actual': busqueda
+    }
+    
+    return render(request, 'admin/fidelizacion.html', contexto)
 
 # ==================== ADMIN - VEHÍCULOS ====================
 
@@ -1804,38 +2028,75 @@ def usuario_eliminar(request, id):
 
 
 # ==================== NOTIFICACIONES ====================
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from core.models import Notificacion
+
+# ==================== NOTIFICACIONES ====================
+
 @login_required
 def notificaciones_lista(request):
-    """Centro de notificaciones automáticas del sistema"""
+    """Muestra el centro de notificaciones del cajero/admin desde la Base de Datos"""
     usuario = request.user
     sede = usuario.sede
-
-    notificaciones = [
-        {
-            'id': 1, 'tipo': 'fidelizacion', 'categoria': 'alerta',
-            'titulo': '¡Cliente Ganador!',
-            'descripcion': 'El cliente Juan Pérez (DNI: 12345678) completó 12 viajes. Entregar premio Rasca y Gana.',
-            'prioridad': 'alta', 'leida': False, 'fecha': 'Hace 5 minutos',
-            'icono': 'fa-gift', 'color': 'yellow'
-        },
-        {
-            'id': 2, 'tipo': 'operativa', 'categoria': 'alerta',
-            'titulo': '⚠️ Retraso en Viaje',
-            'descripcion': 'Viaje 08:00 Trujillo→Julcán (ABC-123) reportó 15 min de retraso.',
-            'prioridad': 'urgente', 'leida': False, 'fecha': 'Hace 22 minutos',
-            'icono': 'fa-exclamation-triangle', 'color': 'red'
-        },
-    ]
-
-    no_leidas = sum(1 for n in notificaciones if not n['leida'])
-
+    
+    # Filtrar: Notificaciones de mi sede (o globales si sede=None) Y para mí (o para todos si usuario=None)
+    notificaciones_qs = Notificacion.objects.filter(
+        sede__in=[sede, None]
+    ).filter(
+        usuario_destino__in=[usuario, None]
+    ).order_by('-fecha_creacion')
+    
+    no_leidas_count = notificaciones_qs.filter(leida=False).count()
+    
     contexto = {
         'usuario': usuario,
         'sede': sede,
-        'notificaciones': notificaciones,
-        'no_leidas_count': no_leidas,
+        'notificaciones': notificaciones_qs,
+        'no_leidas_count': no_leidas_count,
     }
+    
+    # Asegúrate de que la ruta del template coincida con donde lo guardaste
     return render(request, 'notificaciones/lista.html', contexto)
+
+
+@login_required
+@require_POST
+def marcar_notificacion_leida(request, notif_id):
+    """AJAX: Marca una notificación específica como leída sin recargar la página"""
+    try:
+        notif = Notificacion.objects.get(id=notif_id)
+        
+        # Seguridad: solo el dueño o alguien de la misma sede puede marcarla
+        if notif.sede == request.user.sede or notif.sede is None:
+            notif.leida = True
+            notif.save()
+            
+            # Recalcular contador actualizado
+            no_leidas = Notificacion.objects.filter(
+                sede__in=[request.user.sede, None], 
+                leida=False
+            ).count()
+            
+            return JsonResponse({'status': 'success', 'no_leidas': no_leidas})
+            
+        return JsonResponse({'status': 'error', 'message': 'No autorizado'}, status=403)
+        
+    except Notificacion.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'No encontrada'}, status=404)
+
+
+@login_required
+@require_POST
+def marcar_todas_leidas(request):
+    """AJAX: Marca todas las notificaciones del usuario como leídas de una vez"""
+    Notificacion.objects.filter(
+        sede__in=[request.user.sede, None],
+        usuario_destino__in=[request.user, None],
+        leida=False
+    ).update(leida=True)
+    
+    return JsonResponse({'status': 'success', 'no_leidas': 0})
 
 
 # ==================== PERFIL DE USUARIO ====================
@@ -1854,54 +2115,169 @@ def mi_perfil(request):
 
 
 # ==================== REPORTES UNIFICADOS ====================
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
+from django.utils import timezone
+from django.db.models import Sum, Count
+from datetime import datetime, timedelta
+from core.models import Venta
+import logging
+
+logger = logging.getLogger('core.views')
+
 @login_required
 def reportes_unificados(request):
     usuario = request.user
     sede = usuario.sede
+    # Ajusta esta condición según cómo identifiques al admin en tu modelo
+    es_admin = (sede.nombre == 'Oficina Central' or getattr(usuario, 'is_superuser', False))
+    
     periodo = request.GET.get('periodo', 'diario')
-    fecha_seleccionada = request.GET.get('fecha', timezone.now().date().isoformat())
+    fecha_str = request.GET.get('fecha', timezone.now().date().isoformat())
+    
+    try:
+        fecha_seleccionada = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        fecha_seleccionada = timezone.now().date()
+        
+    hoy = timezone.now().date()
+    
+    # 1. QUERYSET BASE: Admin ve todo, Cajero SOLO su sede
+    qs = Venta.objects.all() if es_admin else Venta.objects.filter(sede_venta=sede)
+    
+    chart_labels = []
+    chart_data = []
+    metodos_pago_labels = ['Efectivo', 'Yape', 'Plin', 'Tarjeta']
+    metodos_pago_data = [0.0, 0.0, 0.0, 0.0]
+    rutas_detalle = []
+    ventas_detalle = []
+    dia_rentable = "--"
+    premios_entregados = 0 # Actualiza esto si tienes un modelo de canjes
+    
+    # 2. FILTROS POR PERÍODO Y CONSTRUCCIÓN DE GRÁFICOS
+    if periodo == 'diario':
+        qs = qs.filter(fecha_venta__date=fecha_seleccionada)
+        titulo_periodo = f"Reporte del día {fecha_seleccionada.strftime('%d/%m/%Y')}"
+        
+        horas = [f"{h:02d}:00" for h in range(6, 22)] # 6am a 10pm
+        chart_labels = horas
+        for h in range(6, 22):
+            monto = qs.filter(fecha_venta__hour=h).aggregate(total=Sum('monto_total'))['total'] or 0
+            chart_data.append(float(monto))
+            
+    elif periodo == 'semanal':
+        fecha_inicio = fecha_seleccionada - timedelta(days=6)
+        qs = qs.filter(fecha_venta__date__range=[fecha_inicio, fecha_seleccionada])
+        titulo_periodo = f"Reporte Semanal ({fecha_inicio.strftime('%d/%m')} - {fecha_seleccionada.strftime('%d/%m')})"
+        
+        dias_semana = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
+        chart_labels = dias_semana
+        data_semanal = []
+        for i in range(7):
+            dia = fecha_inicio + timedelta(days=i)
+            monto = qs.filter(fecha_venta__date=dia).aggregate(total=Sum('monto_total'))['total'] or 0
+            data_semanal.append(float(monto))
+        chart_data = data_semanal
+        
+        if data_semanal and max(data_semanal) > 0:
+            dia_rentable = dias_semana[data_semanal.index(max(data_semanal))]
+            
+    elif periodo == 'mensual':
+        mes = int(request.GET.get('mes', hoy.month))
+        anio = int(request.GET.get('anio', hoy.year))
+        qs = qs.filter(fecha_venta__year=anio, fecha_venta__month=mes)
+        titulo_periodo = f"Reporte de {datetime(anio, mes, 1).strftime('%B %Y')}"
+        
+        chart_labels = ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4']
+        for i in range(1, 5):
+            monto = qs.filter(fecha_venta__day__range=[(i-1)*7+1, i*7]).aggregate(total=Sum('monto_total'))['total'] or 0
+            chart_data.append(float(monto))
+            
+    else: # anual
+        anio = int(request.GET.get('anio', hoy.year))
+        qs = qs.filter(fecha_venta__year=anio)
+        titulo_periodo = f"Reporte Anual {anio}"
+        
+        chart_labels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+        for m in range(1, 13):
+            monto = qs.filter(fecha_venta__month=m).aggregate(total=Sum('monto_total'))['total'] or 0
+            chart_data.append(float(monto))
+
+    # 3. CALCULAR KPIs GLOBALES (sobre el queryset YA filtrado)
+    total_ventas = qs.aggregate(total=Sum('monto_total'))['total'] or 0
+    total_pasajeros = qs.count() # Asumiendo 1 venta = 1 pasajero
+    total_boletos = qs.count()
+    total_viajes = qs.values('viaje').distinct().count()
+    
+    # 4. TABLA DE DETALLE (Últimas 15 ventas del período)
+    ventas_qs_detalle = qs.select_related('viaje__ruta', 'viaje__vehiculo').order_by('-fecha_venta')[:15]
+    for v in ventas_qs_detalle:
+        # ⚠️ IMPORTANTE: Si tu campo se llama 'forma_pago' o similar, cámbialo aquí
+        metodo = getattr(v, 'metodo_pago', 'efectivo') or 'efectivo'
+        ventas_detalle.append({
+            'hora': v.fecha_venta.strftime('%d/%m %H:%M') if periodo != 'diario' else v.fecha_venta.strftime('%H:%M'),
+            'ruta': f"{v.viaje.ruta.origen} → {v.viaje.ruta.destino}" if v.viaje and v.viaje.ruta else 'N/A',
+            'vehiculo': v.viaje.vehiculo.placa if v.viaje and v.viaje.vehiculo else 'N/A',
+            'pasajeros': 1, 
+            'metodo_pago': metodo.lower(),
+            'monto': v.monto_total
+        })
+        
+        # Acumular para el gráfico de métodos de pago (convertimos Decimal a float para el gráfico)
+        monto_venta = float(v.monto_total) if v.monto_total else 0.0
+        
+        if metodo == 'efectivo': metodos_pago_data[0] += monto_venta
+        elif metodo == 'yape': metodos_pago_data[1] += monto_venta
+        elif metodo == 'plin': metodos_pago_data[2] += monto_venta
+        else: metodos_pago_data[3] += monto_venta
+
+    # 5. TABLA DE RENDIMIENTO POR RUTA (Solo Mensual/Anual)
+    if periodo in ['mensual', 'anual']:
+        rutas_qs = qs.values('viaje__ruta__origen', 'viaje__ruta__destino').annotate(
+            viajes=Count('viaje', distinct=True),
+            pasajeros=Count('id'),
+            ingresos=Sum('monto_total')
+        ).order_by('-ingresos')[:5]
+        
+        for r in rutas_qs:
+            origen = r['viaje__ruta__origen'] or 'N/A'
+            destino = r['viaje__ruta__destino'] or 'N/A'
+            # Cálculo aproximado de ocupación (ajusta el '20' si tienes un campo de capacidad en Vehiculo)
+            ocupacion = min(100, int((r['pasajeros'] / max(1, r['viajes'] * 20)) * 100))
+            rendimiento = 'Excelente' if ocupacion >= 70 else 'Regular'
+            
+            rutas_detalle.append({
+                'ruta': f"{origen} → {destino}",
+                'viajes': r['viajes'],
+                'pasajeros': r['pasajeros'],
+                'ingresos': r['ingresos'] or 0,
+                'ocupacion': ocupacion,
+                'rendimiento': rendimiento
+            })
 
     contexto = {
-        'usuario': usuario, 'sede': sede, 'es_admin': False,
-        'periodo': periodo, 'fecha_seleccionada': fecha_seleccionada,
+        'usuario': usuario,
+        'sede': sede,
+        'es_admin': es_admin,
+        'periodo': periodo,
+        'fecha_seleccionada': fecha_seleccionada.isoformat(),
+        'titulo_periodo': titulo_periodo,
+        'total_ventas': total_ventas,
+        'total_viajes': total_viajes,
+        'total_pasajeros': total_pasajeros,
+        'total_boletos': total_boletos,
+        'dia_rentable': dia_rentable,
+        'premios_entregados': premios_entregados,
+        'chart_labels': chart_labels,
+        'chart_data': chart_data,
+        'metodos_pago_labels': metodos_pago_labels,
+        'metodos_pago_data': metodos_pago_data,
+        'ventas_detalle': ventas_detalle,
+        'rutas_detalle': rutas_detalle,
     }
-
-    if periodo == 'diario':
-        contexto.update({
-            'titulo_periodo': f"Reporte del día {fecha_seleccionada}",
-            'total_ventas': 1540.00, 'total_viajes': 8, 'total_pasajeros': 142, 'total_boletos': 154,
-            'chart_labels': ['06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00'],
-            'chart_data': [250, 450, 380, 320, 290, 180, 120],
-            'ventas_detalle': [{'hora': '08:30', 'ruta': 'Trujillo → Julcán', 'vehiculo': 'ABC-123', 'pasajeros': 18, 'metodo_pago': 'efectivo', 'monto': 450.00}]
-        })
-    elif periodo == 'semanal':
-        contexto.update({
-            'titulo_periodo': "Reporte de la Semana Actual",
-            'total_ventas': 10780.00, 'total_viajes': 56, 'total_pasajeros': 994,
-            'dia_rentable': 'Viernes', 'monto_dia_rentable': 2100.00,
-            'chart_labels': ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'],
-            'chart_data': [1240, 1580, 1320, 1680, 2100, 1760, 1100],
-            'metodos_pago_labels': ['Efectivo', 'Yape', 'Plin', 'Transferencia'],
-            'metodos_pago_data': [65, 20, 10, 5]
-        })
-    elif periodo == 'mensual':
-        contexto.update({
-            'titulo_periodo': "Reporte del Mes Actual",
-            'total_ventas': 45680.00, 'total_viajes': 240, 'total_pasajeros': 4256, 'premios_entregados': 18,
-            'chart_labels': ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'],
-            'chart_data': [10500, 12300, 11800, 11080],
-            'rutas_detalle': [{'ruta': 'Trujillo → Julcán', 'viajes': 60, 'pasajeros': 1080, 'ingresos': 27000, 'ocupacion': 75, 'rendimiento': 'Excelente'}]
-        })
-    else:
-        contexto.update({
-            'titulo_periodo': "Reporte Anual 2026",
-            'total_ventas': 548160.00, 'total_viajes': 2880, 'total_pasajeros': 51072, 'premios_entregados': 216,
-            'chart_labels': ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
-            'chart_data': [40000, 42000, 45000, 43000, 46000, 48000, 45680, 0, 0, 0, 0, 0]
-        })
-
+    
+    # ⚠️ VERIFICA QUE ESTA RUTA COINCIDA CON DONDE GUARDASTE EL HTML
     return render(request, 'reportes/reportes_unificados.html', contexto)
-
 
 # ==================== PORTAL CHOFERES ====================
 @login_required
