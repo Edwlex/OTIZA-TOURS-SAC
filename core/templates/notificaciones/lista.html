@@ -7,7 +7,7 @@
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
             <h1 class="text-2xl font-bold text-slate-800">Centro de Alertas</h1>
-            <p class="text-slate-500 mt-1">Notificaciones automáticas del sistema y comunicados</p>
+            <p class="text-slate-500 mt-1">Notificaciones automáticas del sistema</p>
         </div>
         <button onclick="marcarTodasLeidas()" class="bg-white border-2 border-slate-200 text-slate-700 px-5 py-2.5 rounded-xl hover:border-otiza-green hover:text-otiza-green transition font-medium flex items-center gap-2 shadow-sm">
             <i class="fas fa-check-double"></i> Marcar todo leído
@@ -20,7 +20,6 @@
         <button onclick="filtrarNotificaciones('no_leidas')" class="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition text-slate-600 hover:bg-slate-50" id="tab-no_leidas">
             No Leídas <span id="badgeNoLeidas" class="ml-2 px-2 py-0.5 bg-red-500 text-white text-xs rounded-full {% if no_leidas_count == 0 %}hidden{% endif %}">{{ no_leidas_count }}</span>
         </button>
-        <button onclick="filtrarNotificaciones('comunicados')" class="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition text-slate-600 hover:bg-slate-50" id="tab-comunicados">Comunicados</button>
     </div>
 
     <!-- Lista de Notificaciones -->
@@ -29,7 +28,6 @@
         <div class="notif-item bg-white rounded-xl shadow-sm border-l-4 
                     {% if n.tipo == 'fidelizacion' %}border-yellow-500
                     {% elif n.tipo == 'operativa' %}border-red-500
-                    {% elif n.tipo == 'comunicado' %}border-blue-500
                     {% else %}border-green-500{% endif %} 
                     p-5 hover:shadow-md transition group {% if n.leida %}opacity-75{% endif %}" 
              data-tipo="{{ n.tipo }}" 
@@ -42,11 +40,9 @@
                 <div class="w-12 h-12 rounded-xl flex items-center justify-center text-xl flex-shrink-0
                             {% if n.tipo == 'fidelizacion' %}bg-yellow-100 text-yellow-600
                             {% elif n.tipo == 'operativa' %}bg-red-100 text-red-600
-                            {% elif n.tipo == 'comunicado' %}bg-blue-100 text-blue-600
                             {% else %}bg-green-100 text-green-600{% endif %}">
                     <i class="fas {% if n.tipo == 'fidelizacion' %}fa-gift
                                {% elif n.tipo == 'operativa' %}fa-exclamation-triangle
-                               {% elif n.tipo == 'comunicado' %}fa-bullhorn
                                {% else %}fa-check-circle{% endif %}"></i>
                 </div>
                 
@@ -87,7 +83,7 @@
                 <i class="fas fa-check text-3xl text-green-600"></i>
             </div>
             <h3 class="text-lg font-bold text-slate-800 mb-2">¡Todo al día!</h3>
-            <p class="text-slate-500">No hay alertas pendientes ni nuevos comunicados</p>
+            <p class="text-slate-500">No hay alertas pendientes</p>
         </div>
         {% endfor %}
     </div>
@@ -125,14 +121,11 @@ function filtrarNotificaciones(filtro) {
     // Filtrar elementos en el DOM
     document.querySelectorAll('.notif-item').forEach(notif => {
         const esLeida = notif.getAttribute('data-leida') === 'true';
-        const categoria = notif.getAttribute('data-categoria');
         
         if (filtro === 'todas') {
             notif.style.display = 'block';
         } else if (filtro === 'no_leidas') {
             notif.style.display = esLeida ? 'none' : 'block';
-        } else if (filtro === 'comunicados') {
-            notif.style.display = categoria === 'comunicado' ? 'block' : 'none';
         }
     });
 }
@@ -195,7 +188,7 @@ function marcarTodasLeidas() {
             badge.textContent = '0';
             badge.classList.add('hidden');
             
-            // Si no hay elementos, mostrar empty state (si no estaba ya)
+            // Si no hay elementos, mostrar empty state
             if (document.querySelectorAll('.notif-item').length === 0) {
                 document.getElementById('listaNotificaciones').innerHTML = `
                     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
@@ -203,7 +196,7 @@ function marcarTodasLeidas() {
                             <i class="fas fa-check text-3xl text-green-600"></i>
                         </div>
                         <h3 class="text-lg font-bold text-slate-800 mb-2">¡Todo al día!</h3>
-                        <p class="text-slate-500">No hay alertas pendientes ni nuevos comunicados</p>
+                        <p class="text-slate-500">No hay alertas pendientes</p>
                     </div>`;
             }
         }
