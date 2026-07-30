@@ -102,6 +102,35 @@
                 <span class="font-medium">Reportes Unificados</span>
             </a>
 
+            <!-- Documentos -->
+            <div class="pt-4 pb-2">
+                <p class="px-4 text-xs font-semibold text-green-200 uppercase tracking-wider">Documentos</p>
+            </div>
+
+            <a href="{% url 'core:viajes_disponibles_manifiesto' %}" 
+            class="sidebar-item flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white/10 transition">
+                <i class="fas fa-file-alt w-5"></i>
+                <span class="font-medium">Manifiesto Usuarios</span>
+            </a>
+
+            <a href="{% url 'core:manifiestos_lista' %}" 
+            class="sidebar-item flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white/10 transition">
+                <i class="fas fa-list w-5"></i>
+                <span class="font-medium">Historial Manifiestos</span>
+            </a>
+
+            <a href="{% url 'core:hoja_ruta_lista' %}" 
+            class="sidebar-item flex items-center space-x-3 px-4 py-3 rounded-lg {% if 'hoja_ruta' in request.resolver_match.url_name %}bg-white/20 border-l-4 border-yellow-400{% endif %} hover:bg-white/10 transition">
+                <i class="fas fa-route w-5"></i>
+                <span class="font-medium">Hoja de Ruta</span>
+            </a>
+
+            <a href="{% url 'core:hoja_ruta_historial' %}" 
+            class="sidebar-item flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white/10 transition">
+                <i class="fas fa-history w-5"></i>
+                <span class="font-medium">Historial Hojas de Ruta</span>
+            </a>
+            
             <!-- Sistema -->
             <div class="pt-4 pb-2">
                 <p class="px-4 text-xs font-semibold text-green-200 uppercase tracking-wider">Sistema</p>

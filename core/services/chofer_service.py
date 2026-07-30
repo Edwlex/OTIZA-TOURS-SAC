@@ -12,8 +12,8 @@ class ChoferService:
     
     @staticmethod
     def crear_chofer(username, password, email, first_name, last_name, dni, 
-                     licencia_conducir, categoria_licencia, fecha_vencimiento_licencia,
-                     telefono, sede_asignada, creado_por):
+                    licencia_conducir, categoria_licencia, fecha_vencimiento_licencia,
+                    telefono, sede_asignada, creado_por, **kwargs):
         """
         Crea un nuevo chofer (usuario con rol de chofer)
         
@@ -30,6 +30,7 @@ class ChoferService:
             telefono: Teléfono
             sede_asignada: Objeto Sede
             creado_por: Usuario que crea el chofer
+            **kwargs: Argumentos adicionales (ej: rutas_asignadas)
             
         Returns:
             Usuario: El chofer creado
@@ -84,13 +85,18 @@ class ChoferService:
             es_cajero=False,
             es_chofer=True,
             # 🔒 Flags de Django (CRÍTICO para que no aparezca como admin)
-            is_staff=False,        # ← AGREGAR: Sin acceso al admin de Django
-            is_superuser=False,    # ← AGREGAR: No es superusuario
+            is_staff=False,
+            is_superuser=False,
             activo=True,
             licencia_conducir=licencia_conducir.upper(),
             categoria_licencia=categoria_licencia.upper() if categoria_licencia else '',
             fecha_vencimiento_licencia=fecha_vencimiento_licencia
         )
+        
+        # ✅ NUEVO: Asignar rutas si vienen en kwargs
+        if 'rutas_asignadas' in kwargs and kwargs['rutas_asignadas']:
+            chofer.rutas_asignadas.set(kwargs['rutas_asignadas'])
+            logger.info(f"  - Rutas asignadas: {kwargs['rutas_asignadas'].count()} rutas")
         
         logger.info(f"  - Chofer creado con ID: {chofer.id}")
         logger.info("CREAR_CHOFER - Completado exitosamente")

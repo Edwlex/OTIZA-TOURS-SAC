@@ -64,10 +64,17 @@ class VentaAdmin(admin.ModelAdmin):
 # ==================== INCIDENCIA ====================
 @admin.register(Incidencia)
 class IncidenciaAdmin(admin.ModelAdmin):
-    list_display = ('tipo', 'sede_reporte', 'reportado_por', 'estado', 'fecha_reporte')
-    list_filter = ('tipo', 'estado', 'sede_reporte')
-    search_fields = ('descripcion', 'reportado_por__username')
-    date_hierarchy = 'fecha_reporte'
+    list_display = ('id', 'tipo', 'sede_reporte', 'reportado_por', 'estado', 'fecha_reporte')
+    list_filter = ('tipo', 'estado', 'sede_reporte', 'fecha_reporte')
+    search_fields = ('descripcion', 'reportado_por__username', 'sede_reporte__nombre')
+    ordering = ['-fecha_reporte']
+    
+    # ✅ Habilitar eliminación
+    actions = None  # O puedes agregar acciones personalizadas si quieres
+    
+    # Permitir eliminar desde el admin
+    def has_delete_permission(self, request, obj=None):
+        return True  # O agrega lógica personalizada si solo ciertos usuarios pueden eliminar
 
 
 @admin.register(HorarioFijo)

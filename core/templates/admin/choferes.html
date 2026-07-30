@@ -86,7 +86,7 @@
                         </span>
                     </td>
                     
-                    <!-- AQUÍ ESTÁ EL CAMBIO: COLUMNA DE RUTAS -->
+                    <!-- COLUMNA DE RUTAS -->
                     <td class="px-6 py-4">
                         {% if chofer.rutas_asignadas.all %}
                         <div class="flex flex-wrap gap-1">
@@ -112,14 +112,19 @@
                             {% if chofer.activo %}Activo{% else %}Inactivo{% endif %}
                         </span>
                     </td>
+                    
+                    <!-- ✅ AQUÍ ESTÁ EL CAMBIO: FORMULARIO DE ELIMINACIÓN SEGURO -->
                     <td class="px-6 py-4 text-center space-x-2">
-                        <a href="{% url 'core:chofer_editar' chofer.id %}" class="text-yellow-600 hover:text-yellow-800" title="Editar">
+                        <a href="{% url 'core:chofer_editar' chofer.id %}" class="text-yellow-600 hover:text-yellow-800 p-2 rounded-lg hover:bg-yellow-50 transition" title="Editar">
                             <i class="fas fa-edit"></i>
                         </a>
-                        <a href="{% url 'core:chofer_eliminar' chofer.id %}" class="text-red-600 hover:text-red-800" 
-                           onclick="return confirm('¿Estás seguro de desactivar este chofer?')" title="Desactivar">
-                            <i class="fas fa-trash"></i>
-                        </a>
+                        
+                        <form action="{% url 'core:chofer_eliminar' chofer.id %}" method="POST" style="display:inline;" onsubmit="return confirm('¿Estás seguro de eliminar a este chofer? Esta acción no se puede deshacer.');">
+                            {% csrf_token %}
+                            <button type="submit" class="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50 transition" title="Eliminar Chofer">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
                     </td>
                 </tr>
                 {% empty %}

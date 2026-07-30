@@ -1,0 +1,42 @@
+{% extends 'base_cajero.html' %}
+{% block title %}Generar Hoja de Ruta{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-slate-800">📋 Generar Hoja de Ruta</h1>
+        <p class="text-slate-500">Viaje: {{ viaje.ruta.origen }} → {{ viaje.ruta.destino }} | {{ viaje.fecha_salida }}</p>
+    </div>
+
+    <form method="POST" class="space-y-6">
+        {% csrf_token %}
+        
+        <!-- ✅ CAMPO OCULTO OBLIGATORIO -->
+        <input type="hidden" name="viaje" value="{{ viaje.id }}">
+
+        <!-- Datos del viaje (solo lectura) -->
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h3 class="font-bold text-blue-900 mb-2">📌 Datos del Viaje (Auto-llenados)</h3>
+            <div class="grid grid-cols-2 gap-4 text-sm">
+                <div><strong>Placa:</strong> {{ viaje.vehiculo.placa }}</div>
+                <div><strong>Fecha:</strong> {{ viaje.fecha_salida|date:"d/m/Y" }}</div>
+                <div><strong>Hora Salida:</strong> {{ viaje.hora_salida|date:"H:i" }}</div>
+                <div><strong>Ruta:</strong> {{ viaje.ruta.origen }} → {{ viaje.ruta.destino }}</div>
+            </div>
+        </div>
+
+        <!-- Formulario de conductores e incidentes -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <h3 class="text-lg font-bold text-slate-800 mb-4">👨‍️ Datos de Conductores</h3>
+            {{ form.as_p }}
+        </div>
+
+        <div class="flex justify-end gap-4">
+            <a href="{% url 'core:hoja_ruta_lista' %}" class="px-6 py-3 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition">Cancelar</a>
+            <button type="submit" class="px-6 py-3 bg-otiza-green text-white rounded-lg hover:bg-otiza-dark transition font-semibold">
+                <i class="fas fa-file-pdf mr-2"></i>Guardar y Generar PDF
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

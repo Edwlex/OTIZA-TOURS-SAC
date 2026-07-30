@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Hoja de Ruta - {{ hoja.numero_documento }}</title>
+<style>
+    @page { size: A4 portrait; margin: 8mm; }
+    body { font-family: Arial, sans-serif; font-size: 8pt; color: #000; margin: 0; padding: 0; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 5px; }
+    td, th { border: 1px solid #000; padding: 3px; vertical-align: top; }
+    .bold { font-weight: bold; }
+    .center { text-align: center; }
+    .right { text-align: right; }
+    .header { text-align: center; margin-bottom: 10px; }
+    .header h1 { margin: 0; font-size: 16pt; color: #003366; }
+    .header .num { font-size: 14pt; color: #cc0000; font-weight: bold; margin: 5px 0; }
+    .logo { width: 80px; height: auto; }
+    .section-title { background-color: #f0f0f0; font-weight: bold; padding: 3px; }
+    .line { border-bottom: 1px solid #000; display: inline-block; min-width: 150px; }
+</style>
+</head>
+<body>
+
+<!-- ENCABEZADO -->
+<div class="header">
+    <table style="border: none;">
+        <tr style="border: none;">
+            <td style="border: none; width: 30%; text-align: left;">
+                <img src="{% static 'images/otiza.png' %}" class="logo" alt="Otiza Tours">
+            </td>
+            <td style="border: none; width: 40%;">
+                <h1>HOJA DE RUTA</h1>
+                <div style="font-size: 8pt;">
+                    JULCAN: Cal. La Cultura S/N • 902430951<br>
+                    MACHE: Cal. Maravillas N° 102 • 921700432<br>
+                    TRUJILLO: Prolong. Unión N° 1477 • 929698732
+                </div>
+                <div class="num">{{ hoja.numero_documento }}</div>
+            </td>
+            <td style="border: none; width: 30%; text-align: right; font-size: 7pt;">
+                R.G.R. N° 259 - 2019-GR-LL/GRTC<br>
+                R.G.R. N° 209 - 2021-GR-LL-GGR/GRTC<br>
+                <img src="{% static 'images/carro.png' %}" style="width: 60px; height: auto;">
+            </td>
+        </tr>
+    </table>
+</div>
+
+<!-- DATOS DE LA EMPRESA -->
+<table>
+    <tr>
+        <td style="width: 20%;" class="bold">Razón Social:</td>
+        <td colspan="5">OTIZA TOURS S.A.C.</td>
+    </tr>
+    <tr>
+        <td class="bold">Dirección:</td>
+        <td colspan="5">Prolog. Unión N°1477 - La Libertad - Trujillo</td>
+    </tr>
+    <tr>
+        <td class="bold">Correo Electrónico:</td>
+        <td colspan="3">otizatourssac@gmail.com</td>
+        <td class="bold center" style="width: 15%;">N° Telefónico</td>
+        <td class="center" style="width: 15%;">974 276 980</td>
+    </tr>
+    <tr>
+        <td class="bold">N° de Placa:</td>
+        <td colspan="2" class="center bold" style="font-size: 11pt; letter-spacing: 3px;">{{ hoja.placa|upper }}</td>
+        <td class="bold">Fecha de Inicio de Viaje:</td>
+        <td class="center">{{ hoja.fecha_inicio|date:"d/m/Y" }}</td>
+        <td class="bold">Fecha de Llegada del Viaje:</td>
+        <td class="center">{{ hoja.fecha_llegada|date:"d/m/Y" }}</td>
+    </tr>
+    <tr>
+        <td colspan="7" class="bold">Modalidad del Servicio: AUTO COLECTIVO</td>
+    </tr>
+</table>
+
+<!-- LUGAR DE EMBARQUE Y DESEMBARQUE -->
+<table>
+    <tr>
+        <td style="width: 50%;">
+            <span class="bold">Lugar de Embarque:</span><br>
+            <span class="line" style="width: 90%;"></span> {{ hoja.lugar_embarque|upper }}<br><br>
+            <span class="bold">Hora de Salida:</span><br>
+            <span class="line" style="width: 90%;"></span> {{ hoja.hora_salida|date:"H:i" }}
+        </td>
+        <td style="width: 50%;">
+            <span class="bold">Lugar de Desembarque:</span><br>
+            <span class="line" style="width: 90%;"></span> {{ hoja.lugar_desembarque|upper }}<br><br>
+            <span class="bold">Hora de Llegada:</span><br>
+            <span class="line" style="width: 90%;"></span> {{ hoja.hora_llegada|date:"H:i" }}
+        </td>
+    </tr>
+</table>
+
+<!-- CONDUCTORES -->
+<div class="section-title">Datos Generales de los Conductores y Turnos de Conducción:</div>
+<table>
+    <tr>
+        <td style="width: 45%;" class="center">
+            <div style="border-bottom: 1px solid #000; min-height: 20px;">{{ hoja.conductor1_nombre|upper }}</div>
+            <div style="font-size: 7pt; margin-top: 2px;">NOMBRES Y APELLIDOS</div>
+        </td>
+        <td style="width: 20%;" class="center">
+            <div style="border-bottom: 1px solid #000; min-height: 20px;">{{ hoja.conductor1_licencia|upper }}</div>
+            <div style="font-size: 7pt; margin-top: 2px;">N° LIC. DE CONDUCIR</div>
+        </td>
+        <td style="width: 35%;" class="center" style="font-size: 7pt;">
+            H. DE INICIO: {{ hoja.conductor1_hora_inicio|default:"____" }}<br>
+            H. DE TÉRMINO: {{ hoja.conductor1_hora_fin|default:"____" }}<br>
+            <div style="margin-top: 3px; font-weight: bold;">TURNOS DE CONDUCCIÓN</div>
+        </td>
+    </tr>
+    {% if hoja.conductor2_nombre %}
+    <tr>
+        <td class="center">
+            <div style="border-bottom: 1px solid #000; min-height: 20px;">{{ hoja.conductor2_nombre|upper }}</div>
+            <div style="font-size: 7pt; margin-top: 2px;">NOMBRES Y APELLIDOS</div>
+        </td>
+        <td class="center">
+            <div style="border-bottom: 1px solid #000; min-height: 20px;">{{ hoja.conductor2_licencia|upper }}</div>
+            <div style="font-size: 7pt; margin-top: 2px;">N° LIC. DE CONDUCIR</div>
+        </td>
+        <td class="center" style="font-size: 7pt;">
+            H. DE INICIO: ____<br>
+            H. DE TÉRMINO: ____<br>
+            <div style="margin-top: 3px; font-weight: bold;">TURNOS DE CONDUCCIÓN</div>
+        </td>
+    </tr>
+    {% endif %}
+</table>
+
+<!-- INCIDENTES -->
+<div class="section-title">Incidentes del Viaje</div>
+<table>
+    <tr>
+        <td style="height: 80px; vertical-align: top;">
+            {% if hoja.incidente1_nombres %}
+            <div class="bold">{{ hoja.incidente1_nombres|upper }}</div>
+            <div style="margin: 5px 0;">DEJO CONSTANCIA QUE: {{ hoja.incidente1_constancia }}</div>
+            <div style="margin-top: 10px; text-align: right;">
+                FIRMA: {{ hoja.incidente1_firma|upper }} &nbsp;&nbsp; DNI: {{ hoja.incidente1_dni }}
+            </div>
+            {% else %}
+            <div style="border-bottom: 1px solid #000; margin-bottom: 10px;">_______________________________________</div>
+            <div style="border-bottom: 1px solid #000; margin-bottom: 10px;">DEJO CONSTANCIA QUE ______________________</div>
+            <div style="text-align: right; margin-top: 20px;">
+                FIRMA ______________________ &nbsp;&nbsp; DNI ____________
+            </div>
+            {% endif %}
+        </td>
+    </tr>
+</table>
+
+</body>
+</html>

@@ -1,0 +1,74 @@
+{% extends 'base_cajero.html' %}
+{% block title %}Historial de Manifiestos{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-slate-800">📑 Historial de Manifiestos</h1>
+        <p class="text-slate-500">Sede: {{ sede.nombre }}</p>
+    </div>
+
+    <!-- Filtro -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6">
+        <form method="get" class="flex items-center gap-4">
+            <label class="text-sm font-medium text-slate-700">Fecha:</label>
+            <input type="date" name="fecha" value="{{ fecha_filtro }}" 
+                   class="px-4 py-2 border border-slate-300 rounded-lg">
+            <button type="submit" class="px-4 py-2 bg-otiza-green text-white rounded-lg">
+                <i class="fas fa-search mr-2"></i>Buscar
+            </button>
+        </form>
+    </div>
+
+    <!-- Lista -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="p-4 border-b border-slate-200">
+            <h3 class="text-lg font-bold text-slate-800">Manifiestos del {{ fecha_filtro }}</h3>
+            <p class="text-sm text-slate-500">Total: {{ total }}</p>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-slate-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-semibold">N° Manifiesto</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold">Viaje</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold">Ruta</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold">Conductor</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold">Pasajeros</th>
+                        <th class="px-4 py-3 text-center text-xs font-semibold">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200">
+                    {% for manifiesto in manifiestos %}
+                    <tr class="hover:bg-slate-50">
+                        <td class="px-4 py-3 text-sm font-mono">{{ manifiesto.numero_documento }}</td>
+                        <td class="px-4 py-3 text-sm">{{ manifiesto.viaje.hora_salida }}</td>
+                        <td class="px-4 py-3 text-sm">
+                            {{ manifiesto.destino_origen }} → {{ manifiesto.destino_final }}
+                        </td>
+                        <td class="px-4 py-3 text-sm">{{ manifiesto.conductor_nombre }}</td>
+                        <td class="px-4 py-3">
+                            <span class="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-700">
+                                {{ manifiesto.pasajeros.count }} pasajeros
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            <a href="{% url 'core:manifiesto_pdf' manifiesto.id %}" target="_blank"
+                               class="px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700">
+                                <i class="fas fa-eye mr-1"></i>Ver
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-4 py-8 text-center text-slate-500">
+                            No hay manifiestos generados para esta fecha
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

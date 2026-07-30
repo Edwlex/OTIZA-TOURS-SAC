@@ -17,6 +17,15 @@ class Sede(models.Model):
     
     nombre = models.CharField(max_length=50, choices=NOMBRE_SEDES, unique=True)
     direccion = models.CharField(max_length=200, blank=True)
+    
+    # ✅ NUEVO CAMPO: Calle específica para la Hoja de Ruta
+    calle = models.CharField(
+        max_length=200, 
+        blank=True, 
+        null=True, 
+        help_text="Calle específica para hoja de ruta (ej: Cal. La Cultura S/N)"
+    )
+    
     telefono = models.CharField(max_length=20, blank=True)
     activa = models.BooleanField(default=True)
     creada_en = models.DateTimeField(auto_now_add=True)
@@ -377,3 +386,103 @@ class Notificacion(models.Model):
 
     def __str__(self):
         return f"[{self.get_tipo_display()}] {self.titulo}"
+
+
+
+
+
+
+
+
+class Manifiesto(models.Model):
+    sede = models.ForeignKey('Sede', on_delete=models.CASCADE, related_name='manifiestos')
+    viaje = models.ForeignKey('Viaje', on_delete=models.CASCADE, related_name='manifiesto', null=True, blank=True)  # ← Agregar null=True, blank=True
+    numero_documento = models.CharField(max_length=50, unique=True)
+    fecha_emision = models.DateField(default=timezone.now)  # ← Cambiar auto_now_add por default
+    fecha_viaje = models.DateField()
+    conductor_nombre = models.CharField(max_length=100)
+    placa = models.CharField(max_length=20)
+    hora_salida = models.TimeField()
+    brevete = models.CharField(max_length=50)
+    destino_origen = models.CharField(max_length=100)
+    destino_final = models.CharField(max_length=100)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-fecha_creacion']
+
+    def __str__(self):
+        return f"Manifiesto {self.numero_documento}"
+
+
+class PasajeroManifiesto(models.Model):
+    manifiesto = models.ForeignKey(Manifiesto, on_delete=models.CASCADE, related_name='pasajeros')
+    numero = models.IntegerField()
+    nombre = models.CharField(max_length=100)
+    dni = models.CharField(max_length=20)
+    destino = models.CharField(max_length=100)
+
+    class Meta:
+        ordering = ['numero']
+
+    def __str__(self):
+        return f"{self.numero}. {self.nombre}"
+
+
+class HojaRuta(models.Model):
+    sede = models.ForeignKey('Sede', on_delete=models.CASCADE, related_name='hojas_ruta')
+    viaje = models.ForeignKey('Viaje', on_delete=models.CASCADE, related_name='hoja_ruta')
+    numero_documento = models.CharField(max_length=50, unique=True)
+    fecha_emision = models.DateField(auto_now_add=True)
+    
+    # Datos del viaje (se copian para tener histórico)
+    placa = models.CharField(max_length=20)
+    fecha_inicio = models.DateField()
+    fecha_llegada = models.DateField()
+    hora_salida = models.TimeField()
+    hora_llegada = models.TimeField()
+    lugar_embarque = models.CharField(max_length=200)
+    lugar_desembarque = models.CharField(max_length=200)
+    
+    # Conductores (hasta 3)
+    conductor1_nombre = models.CharField(max_length=100, blank=True, null=True)
+    conductor1_licencia = models.CharField(max_length=50, blank=True, null=True)
+    conductor1_hora_inicio = models.CharField(max_length=10, blank=True, null=True)
+    conductor1_hora_fin = models.CharField(max_length=10, blank=True, null=True)
+    
+    conductor2_nombre = models.CharField(max_length=100, blank=True, null=True)
+    conductor2_licencia = models.CharField(max_length=50, blank=True, null=True)
+    conductor2_hora_inicio = models.CharField(max_length=10, blank=True, null=True)
+    conductor2_hora_fin = models.CharField(max_length=10, blank=True, null=True)
+    
+    conductor3_nombre = models.CharField(max_length=100, blank=True, null=True)
+    conductor3_licencia = models.CharField(max_length=50, blank=True, null=True)
+    
+    # Incidentes (hasta 4 bloques)
+    incidente1_nombres = models.CharField(max_length=100, blank=True, null=True)
+    incidente1_constancia = models.TextField(blank=True, null=True)
+    incidente1_firma = models.CharField(max_length=100, blank=True, null=True)
+    incidente1_dni = models.CharField(max_length=20, blank=True, null=True)
+    
+    incidente2_nombres = models.CharField(max_length=100, blank=True, null=True)
+    incidente2_constancia = models.TextField(blank=True, null=True)
+    incidente2_firma = models.CharField(max_length=100, blank=True, null=True)
+    incidente2_dni = models.CharField(max_length=20, blank=True, null=True)
+    
+    incidente3_nombres = models.CharField(max_length=100, blank=True, null=True)
+    incidente3_constancia = models.TextField(blank=True, null=True)
+    incidente3_firma = models.CharField(max_length=100, blank=True, null=True)
+    incidente3_dni = models.CharField(max_length=20, blank=True, null=True)
+    
+    incidente4_nombres = models.CharField(max_length=100, blank=True, null=True)
+    incidente4_constancia = models.TextField(blank=True, null=True)
+    incidente4_firma = models.CharField(max_length=100, blank=True, null=True)
+    incidente4_dni = models.CharField(max_length=20, blank=True, null=True)
+    
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-fecha_creacion']
+
+    def __str__(self):
+        return f"Hoja de Ruta {self.numero_documento} - {self.viaje}"

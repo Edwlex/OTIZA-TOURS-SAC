@@ -1,0 +1,92 @@
+{% extends 'base_cajero.html' %}
+{% block title %}Historial de Hojas de Ruta{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    
+    <!-- HEADER -->
+    <div class="mb-6 flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-800">📑 Historial de Hojas de Ruta</h1>
+            <p class="text-slate-500">Sede: {{ sede.nombre }}</p>
+        </div>
+        <a href="{% url 'core:hoja_ruta_lista' %}" 
+           class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium">
+            <i class="fas fa-arrow-left mr-2"></i>Volver a Hoja de Ruta
+        </a>
+    </div>
+
+    <!-- Filtro -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6">
+        <form method="get" class="flex items-center gap-4">
+            <label class="text-sm font-medium text-slate-700">Fecha:</label>
+            <input type="date" name="fecha" value="{{ fecha_filtro }}" 
+                   class="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-otiza-green">
+            <button type="submit" class="px-4 py-2 bg-otiza-green text-white rounded-lg hover:bg-otiza-dark">
+                <i class="fas fa-search mr-2"></i>Buscar
+            </button>
+            <a href="{% url 'core:hoja_ruta_historial' %}" 
+               class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition">
+                <i class="fas fa-times mr-2"></i>Limpiar
+            </a>
+        </form>
+    </div>
+
+    <!-- Lista de hojas de ruta -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="p-4 border-b border-slate-200 flex items-center justify-between">
+            <div>
+                <h3 class="text-lg font-bold text-slate-800">Hojas de Ruta del {{ fecha_filtro }}</h3>
+                <p class="text-sm text-slate-500">Total: {{ total }} documento(s)</p>
+            </div>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-slate-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-semibold">N° Documento</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold">Hora Viaje</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold">Ruta</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold">Placa</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold">Conductor</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold">Embarque</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold">Desembarque</th>
+                        <th class="px-4 py-3 text-center text-xs font-semibold">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200">
+                    {% for hoja in hojas %}
+                    <tr class="hover:bg-slate-50">
+                        <td class="px-4 py-3 text-sm font-mono font-bold text-slate-700">
+                            {{ hoja.numero_documento }}
+                        </td>
+                        <td class="px-4 py-3 text-sm">{{ hoja.hora_salida|date:"H:i" }}</td>
+                        <td class="px-4 py-3 text-sm">
+                            <span class="font-medium">{{ hoja.lugar_embarque }} → {{ hoja.lugar_desembarque }}</span>
+                        </td>
+                        <td class="px-4 py-3 text-sm font-bold">{{ hoja.placa|upper }}</td>
+                        <td class="px-4 py-3 text-sm">{{ hoja.conductor1_nombre|default:"-" }}</td>
+                        <td class="px-4 py-3 text-sm">{{ hoja.lugar_embarque }}</td>
+                        <td class="px-4 py-3 text-sm">{{ hoja.lugar_desembarque }}</td>
+                        <td class="px-4 py-3 text-center">
+                            <a href="{% url 'core:hoja_ruta_pdf' hoja.id %}" target="_blank" 
+                               class="px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 inline-flex items-center">
+                                <i class="fas fa-eye mr-1"></i>Ver PDF
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="px-4 py-8 text-center text-slate-500">
+                            <i class="fas fa-folder-open text-4xl text-slate-300 mb-2"></i>
+                            <p class="font-medium">No hay hojas de ruta generadas para esta fecha</p>
+                            <p class="text-sm text-slate-400 mt-1">Selecciona otra fecha o genera una nueva hoja de ruta</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

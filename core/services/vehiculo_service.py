@@ -9,33 +9,22 @@ class VehiculoService:
     """Servicio para manejar la lógica de negocio de vehículos"""
     
     @staticmethod
-    def crear_vehiculo(placa, marca, modelo, año, capacidad_asientos, sede_asignada, creado_por):
+    def crear_vehiculo(placa, marca, modelo, año, capacidad_asientos, creado_por, chofer_asignado=None, rutas_asignadas=None, **kwargs):
         """
-        Crea un nuevo vehículo
+        Crea un nuevo vehículo y asigna sus relaciones
+        """
+        from django.utils import timezone
+        from django.core.exceptions import ValidationError
         
-        Args:
-            placa: Placa del vehículo (única)
-            marca: Marca del vehículo
-            modelo: Modelo del vehículo
-            año: Año de fabricación
-            capacidad_asientos: Número de asientos
-            sede_asignada: Objeto Sede
-            creado_por: Usuario que crea el vehículo
-            
-        Returns:
-            Vehiculo: El vehículo creado
-            
-        Raises:
-            ValidationError: Si la placa ya existe o hay datos inválidos
-        """
         logger.info("=" * 60)
-        logger.info("CREAR_VEHICULO - Iniciando creación de vehículo")
+        logger.info("CREAR_VEHICULO - Iniciando creación de vehicle")
         logger.info(f"  - Placa: {placa}")
         logger.info(f"  - Marca: {marca}")
         logger.info(f"  - Modelo: {modelo}")
         logger.info(f"  - Año: {año}")
         logger.info(f"  - Capacidad: {capacidad_asientos} asientos")
-        logger.info(f"  - Sede asignada: {sede_asignada}")
+        logger.info(f"  - Chofer: {chofer_asignado.username if chofer_asignado else 'Ninguno'}")
+        logger.info(f"  - Rutas: {rutas_asignadas.count() if rutas_asignadas else 0} asignadas")
         logger.info(f"  - Creado por: {creado_por.username}")
         
         # 1. Validar que la placa no exista
@@ -44,7 +33,6 @@ class VehiculoService:
             raise ValidationError(f"La placa {placa} ya está registrada en el sistema")
         
         # 2. Validar año
-        from django.utils import timezone
         año_actual = timezone.now().year
         if año < 1990 or año > año_actual + 1:
             logger.error(f"  - ERROR: Año inválido: {año}")
@@ -55,7 +43,7 @@ class VehiculoService:
             logger.error(f"  - ERROR: Capacidad inválida: {capacidad_asientos}")
             raise ValidationError("La capacidad de asientos debe estar entre 1 y 100")
         
-        # 4. Crear el vehículo
+        # 4. Crear el vehículo (Sin las rutas, porque es ManyToMany)
         logger.info("  - Creando vehículo en BD...")
         vehiculo = Vehiculo.objects.create(
             placa=placa.upper(),
@@ -63,15 +51,22 @@ class VehiculoService:
             modelo=modelo,
             año=año,
             capacidad_asientos=capacidad_asientos,
-            sede_asignada=sede_asignada,
+            chofer_asignado=chofer_asignado,  # ✅ El ForeignKey SÍ se puede guardar aquí
             activo=True
         )
+        
+        # 5. ✅ ASIGNAR RUTAS (ManyToMany) DESPUÉS de que el vehículo ya tiene ID
+        if rutas_asignadas:
+            vehiculo.rutas_asignadas.set(rutas_asignadas)
+            logger.info(f"  - Se asignaron {rutas_asignadas.count()} rutas al vehículo")
         
         logger.info(f"  - Vehículo creado con ID: {vehiculo.id}")
         logger.info("CREAR_VEHICULO - Completado exitosamente")
         logger.info("=" * 60)
         
         return vehiculo
+
+    
     
     @staticmethod
     def editar_vehiculo(vehiculo_id, **kwargs):

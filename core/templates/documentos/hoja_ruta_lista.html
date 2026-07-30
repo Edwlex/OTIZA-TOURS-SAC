@@ -1,0 +1,135 @@
+{% extends 'base_cajero.html' %}
+{% block title %}Hoja de Ruta{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    
+    <!-- HEADER -->
+    <div class="mb-6 flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-800">📋 Hoja de Ruta</h1>
+            <p class="text-slate-500">Sede: {{ sede.nombre }} | Fecha: {{ fecha }}</p>
+        </div>
+        <div class="flex gap-3">
+            <a href="{% url 'core:hoja_ruta_historial' %}" 
+               class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition text-sm font-medium">
+                <i class="fas fa-history mr-2"></i>Ver Historial
+            </a>
+        </div>
+    </div>
+
+    <!-- Filtro de fecha -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6">
+        <form method="get" class="flex items-center gap-4">
+            <label class="text-sm font-medium text-slate-700">Fecha:</label>
+            <input type="date" name="fecha" value="{{ fecha }}" 
+                   class="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-otiza-green">
+            <button type="submit" class="px-4 py-2 bg-otiza-green text-white rounded-lg hover:bg-otiza-dark">
+                <i class="fas fa-filter mr-2"></i>Filtrar
+            </button>
+        </form>
+    </div>
+
+    <!-- TABLA UNIFICADA DE VIAJES -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="p-4 border-b border-slate-200 bg-yellow-50">
+            <h3 class="text-lg font-bold text-slate-800">🚌 Gestión de Hojas de Ruta</h3>
+            <p class="text-sm text-slate-600">Genera nuevas hojas o elimina las existentes para re-generarlas</p>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-slate-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-semibold">Hora</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold">Ruta</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold">Vehículo</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold">Conductor</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold">Pasajeros</th>
+                        <th class="px-4 py-3 text-center text-xs font-semibold">Estado / Acción</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200">
+                    {% for viaje in viajes %}
+                    <tr class="hover:bg-slate-50">
+                        <td class="px-4 py-3 text-sm">{{ viaje.hora_salida|date:"H:i" }}</td>
+                        <td class="px-4 py-3">
+                            <span class="font-medium">{{ viaje.ruta.origen }} → {{ viaje.ruta.destino }}</span>
+                        </td>
+                        <td class="px-4 py-3 text-sm">{{ viaje.vehiculo.placa }}</td>
+                        <td class="px-4 py-3 text-sm">
+                            {{ viaje.chofer_asignado.get_full_name|default:"Sin asignar" }}
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="px-2 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700">
+                                {{ viaje.asientos_vendidos }}/{{ viaje.total_asientos }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            {% if viaje.tiene_hoja_ruta > 0 %}
+                                <!-- SI YA TIENE HOJA: Mostrar botones de Ver y Eliminar -->
+                                <div class="flex items-center justify-center gap-2">
+                                    <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-bold mr-2">
+                                        <i class="fas fa-check"></i> Generada
+                                    </span>
+                                    
+                                    <!-- Botón Ver PDF -->
+                                    <a href="{% url 'core:hoja_ruta_pdf' viaje.hoja_ruta.first.id %}" 
+                                       target="_blank"
+                                       class="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs font-medium inline-flex items-center">
+                                        <i class="fas fa-eye mr-1"></i> PDF
+                                    </a>
+
+                                    <!-- Botón Eliminar (Deshacer) -->
+                                    <form action="{% url 'core:hoja_ruta_eliminar' viaje.hoja_ruta.first.id %}" method="POST" style="display:inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" 
+                                                onclick="return confirm('⚠️ ¿Estás seguro de eliminar esta hoja de ruta? El viaje volverá a estar pendiente.');"
+                                                class="px-3 py-1.5 bg-red-500 text-white rounded hover:bg-red-600 text-xs font-medium inline-flex items-center" title="Eliminar para volver a generar">
+                                            <i class="fas fa-trash-alt mr-1"></i> Eliminar
+                                        </button>
+                                    </form>
+                                </div>
+                            {% else %}
+                                <!-- SI NO TIENE HOJA: Botón Generar -->
+                                <a href="{% url 'core:hoja_ruta_nuevo' %}?viaje_id={{ viaje.id }}" 
+                                   class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium inline-flex items-center">
+                                    <i class="fas fa-file-alt mr-2"></i>Generar
+                                </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-4 py-8 text-center text-slate-500">
+                            <i class="fas fa-calendar-day text-4xl text-slate-300 mb-2"></i>
+                            <p class="font-medium">No hay viajes programados para esta fecha</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Script para abrir PDF automáticamente en nueva pestaña -->
+{% if request.session.ultima_hoja_ruta_id %}
+<script>
+    // Abrir el PDF en nueva pestaña automáticamente
+    const hojaId = {{ request.session.ultima_hoja_ruta_id }};
+    if (hojaId) {
+        window.open('/documentos/hoja-ruta/' + hojaId + '/pdf/', '_blank');
+        
+        // Limpiar la sesión para que no se abra de nuevo al recargar
+        fetch('/documentos/hoja-ruta/limpiar-sesion/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json'
+            }
+        });
+    }
+</script>
+{% endif %}
+
+{% endblock %}

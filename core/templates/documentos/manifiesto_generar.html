@@ -1,0 +1,86 @@
+{% extends 'base_cajero.html' %}
+{% block title %}Editar Manifiesto{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-slate-800">✏️ Editar Manifiesto - Viaje {{ viaje }}</h1>
+        <p class="text-slate-500">Verifica y corrige los datos antes de generar el PDF</p>
+    </div>
+
+    <form method="POST" class="space-y-6">
+        {% csrf_token %}
+        
+        <!-- Datos del Viaje -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <h3 class="text-lg font-bold text-slate-800 mb-4">📋 Datos del Viaje</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-2">Conductor</label>
+                    {{ form.conductor_nombre }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-2">Placa</label>
+                    {{ form.placa }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-2">Hora Salida</label>
+                    {{ form.hora_salida }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-2">Brevete</label>
+                    {{ form.brevete }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-2">Origen</label>
+                    {{ form.destino_origen }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-2">Destino</label>
+                    {{ form.destino_final }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Pasajeros -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <h3 class="text-lg font-bold text-slate-800 mb-4">👥 Lista de Pasajeros (Editable)</h3>
+            {{ formset.management_form }}
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-slate-100">
+                        <tr>
+                            <th class="px-3 py-2 text-left text-xs font-semibold">N°</th>
+                            <th class="px-3 py-2 text-left text-xs font-semibold">Nombre</th>
+                            <th class="px-3 py-2 text-left text-xs font-semibold">DNI</th>
+                            <th class="px-3 py-2 text-left text-xs font-semibold">Destino</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for form_pasajero in formset %}
+                        <tr class="border-b hover:bg-slate-50">
+                            <td class="px-3 py-2">{{ form_pasajero.numero }}</td>
+                            <td class="px-3 py-2">{{ form_pasajero.nombre }}</td>
+                            <td class="px-3 py-2">{{ form_pasajero.dni }}</td>
+                            <td class="px-3 py-2">{{ form_pasajero.destino }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Botones -->
+        <div class="flex justify-end gap-4">
+            <a href="{% url 'core:viajes_disponibles_manifiesto' %}" 
+               class="px-6 py-3 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition">
+                Cancelar
+            </a>
+            <button type="submit" 
+                    class="px-6 py-3 bg-otiza-green text-white rounded-lg hover:bg-otiza-dark transition font-semibold">
+                <i class="fas fa-file-pdf mr-2"></i>Generar PDF y Guardar
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

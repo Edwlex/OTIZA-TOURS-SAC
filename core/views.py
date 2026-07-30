@@ -49,9 +49,12 @@ from core.forms.usuario_forms import UsuarioForm
 from core.forms.venta_forms import VentaFiltroForm
 from core.forms.vehiculo_forms import VehiculoForm
 from core.forms.viaje_forms import ViajeForm
+from core.forms import ManifiestoForm, PasajeroFormSet
+from core.models import HojaRuta
+from core.forms import HojaRutaForm
 
 # ==================== MODELOS ====================
-from core.models import Incidencia, Ruta, Sede, Usuario, Vehiculo, Viaje, Venta, AsientoViaje, HorarioFijo
+from core.models import Incidencia, Ruta, Sede, Usuario, Vehiculo, Viaje, Venta, AsientoViaje, HorarioFijo, Manifiesto, PasajeroManifiesto
 
 # ==================== LOGGERS ====================
 logger = logging.getLogger('core.views')
@@ -1179,52 +1182,46 @@ from core.forms.incidencia_forms import IncidenciaForm
 
 @login_required
 def incidencia_nuevo(request):
-    """Crear nueva incidencia (Sirve para Admin y Cajero de forma unificada)"""
+    """Crear nueva incidencia"""
     usuario = request.user
-    sede = usuario.sede
-    
-    # Detectamos si es admin para aplicar lógicas diferentes
-    es_admin = usuario.is_superuser or sede.nombre == 'Oficina Central'
     
     if request.method == 'POST':
-        # Pasamos el usuario al form para que pueda bloquear campos si es cajero
-        form = IncidenciaForm(request.POST, usuario=usuario)
+        form = IncidenciaForm(request.POST)
         
         if form.is_valid():
+            # 1. Crear incidencia sin guardar aún en la BD
             incidencia = form.save(commit=False)
             
-            # 🔒 SEGURIDAD: Si es cajero, forzamos su sede (aunque el form la bloquee)
-            if not es_admin:
-                incidencia.sede_reporte = sede
-                
+            # 2. ✅ ASIGNAR LOS CAMPOS CON LOS NOMBRES EXACTOS DE TU MODELO
             incidencia.reportado_por = usuario
-            incidencia.estado = 'pendiente' # Siempre empieza así
+            
+            # Asignar la sede del usuario
+            if hasattr(usuario, 'sede') and usuario.sede:
+                incidencia.sede_reporte = usuario.sede
+            else:
+                # Fallback por si el usuario no tiene sede asignada
+                from core.models import Sede
+                incidencia.sede_reporte = Sede.objects.first()
+            
+            # 3. Guardar finalmente en la base de datos
             incidencia.save()
             
-            messages.success(request, '✅ Incidencia reportada correctamente. El administrador la revisará pronto.')
-            return redirect('core:incidencias_lista')
+            messages.success(request, '✅ Incidencia registrada correctamente')
+            return redirect('core:incidencias_lista')  # Asegúrate que este nombre de URL sea el correcto
         else:
-            # Si falla, le decimos al usuario POR QUÉ
-            errores = ", ".join([f"{field}: {error[0]}" for field, error in form.errors.items()])
-            messages.error(request, f'❌ Error al guardar: {errores}')
+            messages.error(request, '❌ Por favor corrige los errores en el formulario')
     else:
-        # Prellenar la sede si es cajero (el form la mostrará deshabilitada)
-        initial_data = {}
-        if not es_admin:
-            initial_data['sede_reporte'] = sede
-            
-        form = IncidenciaForm(initial=initial_data, usuario=usuario)
-        
-    # 🎯 Determinar qué template usar según el rol
-    template_name = 'admin/incidencia_nuevo.html' if es_admin else 'cajero/incidencia_nuevo.html'
+        # GET: Mostrar formulario vacío (la sede se asignará automáticamente al guardar)
+        form = IncidenciaForm()
     
     contexto = {
         'form': form,
         'usuario': usuario,
-        'sede': sede,
-        'es_admin': es_admin
     }
-    return render(request, template_name, contexto)
+    
+    return render(request, 'incidencias/incidencia_nuevo.html', contexto)
+
+
 
 @login_required
 def incidencia_actualizar_estado(request, id):
@@ -1301,20 +1298,23 @@ def incidencia_ver_detalle(request, id):
 
 
 @login_required
-def incidencia_eliminar(request, id):
-    """Eliminar incidencia (Admin)"""
-    usuario = request.user
-    if not usuario.is_superuser:
-        messages.error(request, 'Solo administradores pueden eliminar incidencias')
-        return redirect('core:incidencias_lista')
+def incidencia_eliminar(request, incidencia_id):
+    """Eliminar una incidencia"""
+    try:
+        incidencia = Incidencia.objects.get(id=incidencia_id)
         
-    if request.method == 'POST':
-        try:
-            IncidenciaService.eliminar_incidencia(id)
-            messages.success(request, 'Incidencia eliminada')
-        except ValidationError as e:
-            messages.error(request, str(e))
+        # Verificar permisos (solo admin o el que la reportó)
+        if request.user.is_superuser or incidencia.reportado_por == request.user:
+            incidencia.delete()
+            messages.success(request, '✅ Incidencia eliminada correctamente')
+        else:
+            messages.error(request, '❌ No tienes permisos para eliminar esta incidencia')
             
+    except Incidencia.DoesNotExist:
+        messages.error(request, '❌ La incidencia no existe')
+    except Exception as e:
+        messages.error(request, f'❌ Error al eliminar: {str(e)}')
+    
     return redirect('core:incidencias_lista')
 
 
@@ -1407,15 +1407,20 @@ def vehiculo_nuevo(request):
             try:
                 logger_vehiculo.info("VEHICULO_NUEVO - Formulario válido, creando vehículo...")
                 
-                vehiculo = VehiculoService.crear_vehiculo(
-                    placa=form.cleaned_data['placa'],
-                    marca=form.cleaned_data['marca'],
-                    modelo=form.cleaned_data['modelo'],
-                    año=form.cleaned_data['año'],
-                    capacidad_asientos=form.cleaned_data['capacidad_asientos'],
-                    sede_asignada=form.cleaned_data['sede_asignada'],
-                    creado_por=usuario
-                )
+                # ✅ EXTRAEMOS TODOS LOS CAMPOS, INCLUYENDO CHOFER Y RUTAS
+                kwargs_vehiculo = {
+                    'placa': form.cleaned_data['placa'],
+                    'marca': form.cleaned_data['marca'],
+                    'modelo': form.cleaned_data['modelo'],
+                    'año': form.cleaned_data['año'],
+                    'capacidad_asientos': form.cleaned_data['capacidad_asientos'],
+                    'chofer_asignado': form.cleaned_data.get('chofer_asignado'),       # <-- AGREGADO
+                    'rutas_asignadas': form.cleaned_data.get('rutas_asignadas'),       # <-- AGREGADO
+                    'creado_por': usuario
+                }
+                
+                # Llamamos al servicio desempaquetando el diccionario
+                vehiculo = VehiculoService.crear_vehiculo(**kwargs_vehiculo)
                 
                 messages.success(
                     request, 
@@ -1571,6 +1576,10 @@ def chofer_nuevo(request):
                 # Generar contraseña temporal
                 password_temporal = secrets.token_urlsafe(8)
                 
+                # 1. Determinar la sede asignada (la que eligió en el formulario o la del admin por defecto)
+                sede_asignada = form.cleaned_data.get('sede') or usuario.sede
+                
+                # 2. Creamos el chofer (¡Ahora sí pasamos sede_asignada y rutas_asignadas!)
                 chofer = ChoferService.crear_chofer(
                     username=form.cleaned_data['username'],
                     password=password_temporal,
@@ -1582,24 +1591,20 @@ def chofer_nuevo(request):
                     categoria_licencia=form.cleaned_data['categoria_licencia'],
                     fecha_vencimiento_licencia=form.cleaned_data['fecha_vencimiento_licencia'],
                     telefono=form.cleaned_data.get('telefono', ''),
-                    # ✅ CAMBIO: Usar rutas_asignadas en lugar de sede_asignada
-                    rutas_asignadas=form.cleaned_data.get('rutas_asignadas', []),
-                    creado_por=usuario
+                    sede_asignada=sede_asignada,          # ✅ ¡ESTE ERA EL QUE FALTABA!
+                    creado_por=usuario,
+                    rutas_asignadas=form.cleaned_data.get('rutas_asignadas') # ✅ El servicio lo procesa con **kwargs
                 )
-                
-                messages.success(
-                    request, 
-                    f'Chofer {chofer.first_name} {chofer.last_name} creado exitosamente.\n'
-                    f'Contraseña temporal: {password_temporal}'
-                )
-                logger_chofer.info(f"CHOFER_NUEVO - Chofer {chofer.id} creado exitosamente")
-                
-                return redirect('core:choferes_lista')
+
+                # 3. Mensaje de éxito y redirección
+                messages.success(request, f'Chofer {chofer.get_full_name()} creado exitosamente. Contraseña temporal: {password_temporal}')
+                return redirect('core:choferes_lista') 
                 
             except ValidationError as e:
                 logger_chofer.error(f"CHOFER_NUEVO - Error de validación: {str(e)}")
                 messages.error(request, str(e))
             except Exception as e:
+                # Nota: Quité el emoji ❌ del log para evitar el error UnicodeEncodeError de Windows
                 logger_chofer.error(f"CHOFER_NUEVO - Error inesperado: {str(e)}", exc_info=True)
                 messages.error(request, f'Error al crear el chofer: {str(e)}')
     else:
@@ -1674,31 +1679,34 @@ def chofer_editar(request, id):
     return render(request, 'admin/chofer_form.html', contexto)
 
 
-@login_required
-def chofer_eliminar(request, id):
-    """Eliminar/Desactivar chofer"""
-    usuario = request.user
-    chofer = get_object_or_404(Usuario, id=id, es_chofer=True)
-    
-    if not usuario.is_superuser and usuario.sede.nombre != 'Oficina Central':
-        messages.error(request, 'No tienes permisos para eliminar choferes')
-        return redirect('core:choferes_lista')
-    
-    if request.method == 'POST':
-        try:
-            logger_chofer.info(f"CHOFER_ELIMINAR - Desactivando chofer {id}")
-            ChoferService.eliminar_chofer(id)
-            messages.success(request, f'Chofer {chofer.first_name} {chofer.last_name} desactivado exitosamente')
-            logger_chofer.info(f"CHOFER_ELIMINAR - Chofer {id} desactivado")
-        except ValidationError as e:
-            logger_chofer.error(f"CHOFER_ELIMINAR - Error: {str(e)}")
-            messages.error(request, str(e))
-        except Exception as e:
-            logger_chofer.error(f"CHOFER_ELIMINAR - Error inesperado: {str(e)}", exc_info=True)
-            messages.error(request, f'Error al desactivar: {str(e)}')
-    
-    return redirect('core:choferes_lista')
+from django.shortcuts import get_object_or_404, redirect
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth import get_user_model
 
+@login_required
+def chofer_eliminar(request, id):  # ✅ CAMBIADO: de 'chofer_id' a 'id'
+    """Eliminar permanentemente un chofer de la base de datos"""
+    if request.method == 'POST':
+        Usuario = get_user_model()
+        
+        try:
+            # 1. Buscamos al chofer usando 'id'
+            chofer = Usuario.objects.get(id=id, es_chofer=True)
+            
+            # 2. ELIMINACIÓN PERMANENTE (Hard Delete)
+            chofer.delete()
+            
+            messages.success(request, '✅ Chofer eliminado permanentemente de la base de datos.')
+            
+        except Usuario.DoesNotExist:
+            messages.error(request, '❌ El chofer no existe.')
+        except Exception as e:
+            # Si el chofer está asignado a un vehículo o viaje, Django lo bloqueará
+            messages.error(request, f'❌ No se puede eliminar: {str(e)}. Primero desasígnalo de vehículos o viajes.')
+            
+    # Redirigir a la lista (Asegúrate de que 'choferes_lista' sea el nombre correcto en tu urls.py)
+    return redirect('core:choferes_lista')
 
 # ==================== ADMIN - RUTAS ====================
 
@@ -2642,7 +2650,9 @@ def viaje_nuevo(request):
                 logger_viaje.error(f"VIAJE_NUEVO - Error: {str(e)}", exc_info=True)
                 messages.error(request, f'❌ Error al crear: {str(e)}')
         else:
-            logger_viaje.error(f"VIAJE_NUEVO - Formulario inválido: {form.errors}")
+            # Convierte los errores a texto plano sin emojis ni caracteres raros para el log
+            error_msg = str(form.errors).replace('⚠️', '[WARNING]').encode('ascii', 'ignore').decode('ascii')
+            logger_viaje.error(f"VIAJE_NUEVO - Formulario inválido: {error_msg}")
             for field, errors in form.errors.items():
                 for error in errors:
                     messages.error(request, f'{field}: {error}')
@@ -3273,3 +3283,416 @@ def confirmar_pago_reserva(request, asiento_id):
     except Exception as e:
         logger.error(f"Error al confirmar pago: {str(e)}", exc_info=True)
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+
+from django.utils import timezone
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from core.models import HojaRuta, Viaje
+from core.forms import HojaRutaForm
+
+@login_required
+def hoja_ruta_nuevo(request):
+    """Crear nueva hoja de ruta"""
+    sede = request.user.sede
+    
+    viaje_id = request.GET.get('viaje_id') or request.POST.get('viaje')
+    
+    if not viaje_id:
+        messages.error(request, '⚠️ Debes seleccionar un viaje primero.')
+        return redirect('core:hoja_ruta_lista')
+        
+    try:
+        viaje = Viaje.objects.get(id=viaje_id, sede_salida=sede)
+    except Viaje.DoesNotExist:
+        messages.error(request, '❌ El viaje no es válido.')
+        return redirect('core:hoja_ruta_lista')
+
+    if HojaRuta.objects.filter(viaje=viaje).exists():
+        messages.warning(request, '⚠️ Ya existe una hoja de ruta para este viaje.')
+        return redirect('core:hoja_ruta_lista')
+
+    if request.method == 'POST':
+        form = HojaRutaForm(request.POST)
+        if form.is_valid():
+            hoja = form.save(commit=False)
+            hoja.sede = sede
+            hoja.viaje = viaje
+            
+            # Auto-llenar datos
+            hoja.fecha_inicio = viaje.fecha_salida
+            hoja.fecha_llegada = getattr(viaje, 'fecha_llegada_estimada', None) or viaje.fecha_salida
+            hoja.hora_salida = viaje.hora_salida
+            hoja.hora_llegada = getattr(viaje, 'hora_llegada_estimada', None) or viaje.hora_salida
+            hoja.placa = viaje.vehiculo.placa if viaje.vehiculo else 'S/N'
+            
+            if not hoja.lugar_embarque:
+                hoja.lugar_embarque = viaje.ruta.origen if viaje.ruta else sede.nombre
+            if not hoja.lugar_desembarque:
+                hoja.lugar_desembarque = viaje.ruta.destino if viaje.ruta else 'Destino'
+
+            contador = HojaRuta.objects.filter(sede=sede).count() + 1
+            hoja.numero_documento = f"HR-{sede.nombre[:3].upper()}-{timezone.now().strftime('%Y%m%d')}-{contador:04d}"
+            
+            hoja.save()
+            
+            # ✅ ACTUALIZAR LA SESIÓN CON EL NUEVO ID
+            request.session['ultima_hoja_ruta_id'] = hoja.id
+            
+            messages.success(request, '✅ Hoja de Ruta generada exitosamente.')
+            return redirect('core:hoja_ruta_lista')
+    else:
+        initial_data = {
+            'lugar_embarque': viaje.ruta.origen if viaje.ruta else '',
+            'lugar_desembarque': viaje.ruta.destino if viaje.ruta else '',
+        }
+        chofer = viaje.chofer_asignado
+        if chofer:
+            initial_data['conductor1_nombre'] = chofer.get_full_name()
+            initial_data['conductor1_licencia'] = getattr(chofer, 'licencia_conducir', getattr(chofer, 'brevete', ''))
+        
+        form = HojaRutaForm(initial=initial_data)
+        
+    return render(request, 'documentos/hoja_ruta_form.html', {
+        'form': form,
+        'sede': sede,
+        'viaje': viaje
+    })
+
+
+@login_required
+def hoja_ruta_pdf(request, id):
+    hoja = get_object_or_404(HojaRuta, id=id, sede=request.user.sede)
+    context = {'hoja': hoja}
+    html_string = render(request, 'documentos/hoja_ruta_pdf.html', context).content.decode('utf-8')
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="Hoja_Ruta_{hoja.numero_documento}.pdf"'
+    pisa_status = pisa.CreatePDF(BytesIO(html_string.encode('UTF-8')), response, encoding='UTF-8')
+    if pisa_status.err:
+        return HttpResponse('Error al generar el PDF', status=500)
+    return response
+
+
+# ==================== MANIFIESTO ====================
+
+logger = logging.getLogger('core.manifiestos')
+
+
+# ==================== 1. LISTA DE VIAJES DISPONIBLES ====================
+
+@login_required
+def viajes_disponibles_manifiesto(request):
+    """Lista de viajes para generar manifiesto (Unificada)"""
+    sede = request.user.sede
+    fecha = request.GET.get('fecha', timezone.now().date().isoformat())
+    
+    # Obtenemos TODOS los viajes de la fecha
+    viajes = Viaje.objects.filter(
+        sede_salida=sede,
+        fecha_salida=fecha
+    ).select_related('ruta', 'vehiculo', 'chofer_asignado').annotate(
+        total_asientos=Count('asientos'),
+        asientos_vendidos=Count('asientos', filter=Q(asientos__estado='vendido')),
+        tiene_manifiesto=Count('manifiesto')
+    ).order_by('hora_salida')
+    
+    contexto = {
+        'sede': sede,
+        'viajes': viajes,
+        'fecha': fecha,
+    }
+    return render(request, 'documentos/viajes_disponibles.html', contexto)
+
+@login_required
+def manifiesto_eliminar(request, manifiesto_id):
+    """Elimina un manifiesto para que el viaje vuelva a estar pendiente"""
+    if request.method == 'POST':
+        try:
+            manifiesto = Manifiesto.objects.get(id=manifiesto_id, sede=request.user.sede)
+            manifiesto.delete()
+            
+            # ✅ LIMPIAR LA SESIÓN SI EL ID ELIMINADO ERA EL ÚLTIMO
+            if request.session.get('ultimo_manifiesto_id') == manifiesto_id:
+                del request.session['ultimo_manifiesto_id']
+            
+            messages.success(request, '✅ Manifiesto eliminado. El viaje está disponible nuevamente.')
+        except Manifiesto.DoesNotExist:
+            messages.error(request, '❌ El manifiesto no existe.')
+            
+    return redirect('core:viajes_disponibles_manifiesto')
+
+# ==================== 2. GENERAR / EDITAR MANIFIESTO ====================
+@login_required
+def manifiesto_generar(request, viaje_id):
+    """Generar manifiesto desde un viaje (auto-llenado)"""
+    sede = request.user.sede
+    viaje = get_object_or_404(Viaje, id=viaje_id, sede_salida=sede)
+    
+    # Verificar si ya existe manifiesto para este viaje
+    if Manifiesto.objects.filter(viaje=viaje).exists():
+        messages.warning(request, '⚠️ Ya existe un manifiesto para este viaje')
+        return redirect('core:viajes_disponibles_manifiesto')
+    
+    if request.method == 'POST':
+        form = ManifiestoForm(request.POST)
+        formset = PasajeroFormSet(request.POST)
+        
+        if form.is_valid() and formset.is_valid():
+            manifiesto = form.save(commit=False)
+            manifiesto.sede = sede
+            manifiesto.viaje = viaje
+            manifiesto.fecha_viaje = viaje.fecha_salida
+            
+            # Generar número único
+            contador = Manifiesto.objects.filter(sede=sede).count() + 1
+            manifiesto.numero_documento = f"MAN-{sede.nombre[:3].upper()}-{timezone.now().strftime('%Y%m%d')}-{contador:04d}"
+            manifiesto.save()
+            
+            # Guardar pasajeros
+            pasajeros = formset.save(commit=False)
+            for p in pasajeros:
+                p.manifiesto = manifiesto
+                p.save()
+            
+            # ✅ ACTUALIZAR LA SESIÓN CON EL NUEVO ID
+            request.session['ultimo_manifiesto_id'] = manifiesto.id
+            
+            messages.success(request, '✅ Manifiesto generado exitosamente. El PDF se abrirá en una nueva pestaña.')
+            return redirect('core:viajes_disponibles_manifiesto')
+    else:
+        # Auto-llenar formulario con datos del viaje
+        chofer = viaje.chofer_asignado
+        initial_data = {
+            'conductor_nombre': chofer.get_full_name() if chofer else '',
+            'placa': viaje.vehiculo.placa if viaje.vehiculo else '',
+            'hora_salida': viaje.hora_salida,
+            'brevete': chofer.licencia_conducir if chofer else '',
+            'destino_origen': viaje.ruta.origen if viaje.ruta else '',
+            'destino_final': viaje.ruta.destino if viaje.ruta else '',
+        }
+        
+        # Auto-llenar pasajeros desde ventas
+        ventas = Venta.objects.filter(
+            viaje=viaje,
+        ).select_related('asiento').order_by('asiento__numero_asiento')
+        
+        initial_pasajeros = []
+        for idx, v in enumerate(ventas[:16], start=1):
+            initial_pasajeros.append({
+                'numero': idx,
+                'nombre': (v.nombre_cliente or 'CLIENTE').strip(),
+                'dni': (v.numero_documento or '00000000').strip().replace('/', ''),
+                'destino': (viaje.ruta.destino if viaje.ruta else '').strip()
+            })
+        
+        form = ManifiestoForm(initial=initial_data)
+        formset = PasajeroFormSet(initial=initial_pasajeros)
+    
+    contexto = {
+        'form': form,
+        'formset': formset,
+        'viaje': viaje,
+        'sede': sede,
+    }
+    return render(request, 'documentos/manifiesto_generar.html', contexto)
+
+
+
+# ==================== 3. GENERAR PDF ====================
+@login_required
+def manifiesto_pdf(request, id):
+    """Genera y descarga el PDF del manifiesto"""
+    manifiesto = get_object_or_404(Manifiesto, id=id, sede=request.user.sede)
+    
+    context = {'manifiesto': manifiesto}
+    html_string = render(request, 'documentos/manifiesto_pdf.html', context).content.decode('utf-8')
+    
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="Manifiesto_{manifiesto.numero_documento}.pdf"'
+    
+    pisa_status = pisa.CreatePDF(BytesIO(html_string.encode('UTF-8')), response, encoding='UTF-8')
+    
+    if pisa_status.err:
+        return HttpResponse('Error al generar el PDF', status=500)
+    
+    return response
+
+
+# ==================== 4. HISTORIAL DE MANIFIESTOS ====================
+@login_required
+def manifiestos_lista(request):
+    """Lista histórica de manifiestos generados, filtrable por fecha"""
+    sede = request.user.sede
+    fecha_filtro = request.GET.get('fecha', timezone.now().date().isoformat())
+    
+    manifiestos_qs = Manifiesto.objects.filter(
+        sede=sede,
+        fecha_emision=fecha_filtro
+    ).select_related('viaje', 'viaje__ruta').order_by('-fecha_creacion')
+    
+    contexto = {
+        'sede': sede,
+        'manifiestos': manifiestos_qs,
+        'fecha_filtro': fecha_filtro,
+        'total': manifiestos_qs.count(),
+    }
+    return render(request, 'documentos/manifiestos_lista.html', contexto)
+
+
+@login_required
+def manifiesto_limpiar_sesion(request):
+    """Limpia el ID del último manifiesto de la sesión"""
+    if request.method == 'POST' and 'ultimo_manifiesto_id' in request.session:
+        del request.session['ultimo_manifiesto_id']
+    from django.http import JsonResponse
+    return JsonResponse({'status': 'ok'})
+
+@login_required
+def hoja_ruta_lista(request):
+    """Lista de viajes para generar hoja de ruta (Unificada)"""
+    sede = request.user.sede
+    fecha = request.GET.get('fecha', timezone.now().date().isoformat())
+    
+    # Obtenemos TODOS los viajes de la fecha
+    viajes = Viaje.objects.filter(
+        sede_salida=sede,
+        fecha_salida=fecha
+    ).select_related('ruta', 'vehiculo', 'chofer_asignado').annotate(
+        total_asientos=Count('asientos'),
+        asientos_vendidos=Count('asientos', filter=Q(asientos__estado='vendido')),
+        tiene_hoja_ruta=Count('hoja_ruta') # Cuenta si tiene hoja asociada
+    ).order_by('hora_salida')
+    
+    contexto = {
+        'sede': sede,
+        'viajes': viajes,
+        'fecha': fecha,
+    }
+    return render(request, 'documentos/hoja_ruta_lista.html', contexto)
+
+@login_required
+def hoja_ruta_eliminar(request, hoja_id):
+    """Elimina una hoja de ruta"""
+    if request.method == 'POST':
+        try:
+            hoja = HojaRuta.objects.get(id=hoja_id, sede=request.user.sede)
+            hoja.delete()
+            
+            # ✅ LIMPIAR LA SESIÓN SI EL ID ELIMINADO ERA EL ÚLTIMO
+            if request.session.get('ultima_hoja_ruta_id') == hoja_id:
+                del request.session['ultima_hoja_ruta_id']
+            
+            messages.success(request, '✅ Hoja de ruta eliminada. El viaje está disponible nuevamente.')
+        except HojaRuta.DoesNotExist:
+            messages.error(request, ' La hoja de ruta no existe.')
+            
+    return redirect('core:hoja_ruta_lista')
+
+
+@login_required
+def hoja_ruta_historial(request):
+    """Historial de hojas de ruta generadas con filtro por fecha"""
+    sede = request.user.sede
+    fecha_filtro = request.GET.get('fecha', timezone.now().date().isoformat())
+    
+    # Filtrar hojas de ruta de esta sede por fecha de emision
+    hojas_qs = HojaRuta.objects.filter(
+        sede=sede,
+        fecha_emision=fecha_filtro
+    ).select_related('viaje').order_by('-fecha_creacion')
+    
+    contexto = {
+        'sede': sede,
+        'hojas': hojas_qs,
+        'fecha_filtro': fecha_filtro,
+        'total': hojas_qs.count(),
+    }
+    return render(request, 'documentos/hoja_ruta_historial.html', contexto)
+
+@login_required
+def hoja_ruta_generar(request, viaje_id):
+    """Generar hoja de ruta desde un viaje específico"""
+    sede = request.user.sede
+    viaje = get_object_or_404(Viaje, id=viaje_id, sede_salida=sede)
+    
+    # Verificar si ya existe hoja de ruta
+    if HojaRuta.objects.filter(viaje=viaje).exists():
+        messages.warning(request, '⚠️ Ya existe una hoja de ruta para este viaje')
+        return redirect('core:hoja_ruta_lista')
+    
+    if request.method == 'POST':
+        form = HojaRutaForm(request.POST)
+        if form.is_valid():
+            hoja = form.save(commit=False)
+            hoja.sede = sede
+            hoja.viaje = viaje
+            
+            # ✅ AUTO-LLENAR CAMPOS OBLIGATORIOS
+            hoja.fecha_inicio = viaje.fecha_salida
+            hoja.fecha_llegada = getattr(viaje, 'fecha_llegada_estimada', viaje.fecha_salida) or viaje.fecha_salida
+            hoja.hora_salida = viaje.hora_salida
+            hoja.hora_llegada = getattr(viaje, 'hora_llegada_estimada', viaje.hora_salida) or viaje.hora_salida
+            hoja.placa = viaje.vehiculo.placa if viaje.vehiculo else ''
+            
+            # Lugares (del formulario o de la ruta)
+            hoja.lugar_embarque = form.cleaned_data.get('lugar_embarque', viaje.ruta.origen if viaje.ruta else '')
+            hoja.lugar_desembarque = form.cleaned_data.get('lugar_desembarque', viaje.ruta.destino if viaje.ruta else '')
+            
+            # Número único
+            contador = HojaRuta.objects.filter(sede=sede).count() + 1
+            hoja.numero_documento = f"HR-{sede.nombre[:3].upper()}-{timezone.now().strftime('%Y%m%d')}-{contador:04d}"
+            
+            hoja.save()
+            
+            messages.success(request, '✅ Hoja de Ruta generada exitosamente')
+            return redirect('core:hoja_ruta_pdf', id=hoja.id)
+    else:
+        # Formulario pre-llenado
+        initial_data = {
+            'lugar_embarque': viaje.ruta.origen if viaje.ruta else '',
+            'lugar_desembarque': viaje.ruta.destino if viaje.ruta else '',
+        }
+        
+        chofer = viaje.chofer_asignado
+        if chofer:
+            initial_data.update({
+                'conductor1_nombre': chofer.get_full_name(),
+                'conductor1_licencia': getattr(chofer, 'licencia_conducir', getattr(chofer, 'brevete', '')),
+            })
+        
+        form = HojaRutaForm(initial=initial_data)
+    
+    return render(request, 'documentos/hoja_ruta_generar.html', {
+        'form': form,
+        'viaje': viaje,
+        'sede': sede
+    })
+
+
+@login_required
+def hoja_ruta_pdf(request, id):
+    """Generar PDF de hoja de ruta"""
+    hoja = get_object_or_404(HojaRuta, id=id, sede=request.user.sede)
+    
+    context = {'hoja': hoja}
+    html_string = render(request, 'documentos/hoja_ruta_pdf.html', context).content.decode('utf-8')
+    
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="Hoja_Ruta_{hoja.numero_documento}.pdf"'
+    
+    pisa_status = pisa.CreatePDF(BytesIO(html_string.encode('UTF-8')), response, encoding='UTF-8')
+    
+    if pisa_status.err:
+        return HttpResponse('Error al generar el PDF', status=500)
+    
+    return response
+
+@login_required
+def hoja_ruta_limpiar_sesion(request):
+    """Limpia el ID de la última hoja de ruta de la sesión (llamado vía AJAX)"""
+    if request.method == 'POST' and 'ultima_hoja_ruta_id' in request.session:
+        del request.session['ultima_hoja_ruta_id']
+    from django.http import JsonResponse
+    return JsonResponse({'status': 'ok'})

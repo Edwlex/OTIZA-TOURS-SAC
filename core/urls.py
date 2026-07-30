@@ -60,7 +60,7 @@ urlpatterns = [
     path('incidencias/nuevo/', views.incidencia_nuevo, name='incidencia_nuevo'), # ← ESTA ES LA ÚNICA QUE NECESITAS
     path('incidencias/actualizar/<int:id>/', views.incidencia_actualizar_estado, name='incidencia_actualizar_estado'),
     path('incidencias/detalle/<int:id>/', views.incidencia_ver_detalle, name='incidencia_ver_detalle'),
-    path('incidencias/eliminar/<int:id>/', views.incidencia_eliminar, name='incidencia_eliminar'),
+    path('incidencias/<int:incidencia_id>/eliminar/', views.incidencia_eliminar, name='incidencia_eliminar'),
 
     # ==================== ADMIN - GESTIÓN DE CHOFERES ====================
     path('panel-admin/choferes/', views.choferes_lista, name='choferes_lista'),
@@ -100,8 +100,35 @@ urlpatterns = [
     path('panel-admin/usuarios/nuevo/', views.usuario_nuevo, name='usuario_nuevo'),
     path('panel-admin/usuarios/editar/<int:id>/', views.usuario_editar, name='usuario_editar'),
     path('panel-admin/usuarios/eliminar/<int:id>/', views.usuario_eliminar, name='usuario_eliminar'),
+
+    
     # ==================== INCIDENCIAS ====================
     path('incidencias/', views.incidencias_lista, name='incidencias_lista'),
+
+        # ==================== DOCUMENTOS (HOJA DE RUTA Y MANIFIESTO) ====================
+    path('documentos/hoja-ruta/nuevo/', views.hoja_ruta_nuevo, name='hoja_ruta_nuevo'),
+    path('documentos/hoja-ruta/<int:id>/pdf/', views.hoja_ruta_pdf, name='hoja_ruta_pdf'),
+    path('documentos/hoja-ruta/generar/<int:viaje_id>/', views.hoja_ruta_generar, name='hoja_ruta_generar'),
+
+
+        # ==================== DOCUMENTOS: MANIFIESTOS ====================
+    path('manifiestos/', views.manifiestos_lista, name='manifiestos_lista'),
+    path('manifiestos/viajes-disponibles/', views.viajes_disponibles_manifiesto, name='viajes_disponibles_manifiesto'),
+    path('manifiestos/generar/<int:viaje_id>/', views.manifiesto_generar, name='manifiesto_generar'),
+    path('manifiestos/<int:id>/pdf/', views.manifiesto_pdf, name='manifiesto_pdf'),
+    path('manifiestos/limpiar-sesion/', views.manifiesto_limpiar_sesion, name='manifiesto_limpiar_sesion'),
+    path('manifiestos/<int:manifiesto_id>/eliminar/', views.manifiesto_eliminar, name='manifiesto_eliminar'),
+
+    # Hoja de Ruta
+    path('documentos/hoja-ruta/', views.hoja_ruta_lista, name='hoja_ruta_lista'),
+    path('documentos/hoja-ruta/nuevo/', views.hoja_ruta_nuevo, name='hoja_ruta_nuevo'),
+    path('documentos/hoja-ruta/generar/<int:viaje_id>/', views.hoja_ruta_generar, name='hoja_ruta_generar'),
+    path('documentos/hoja-ruta/<int:id>/pdf/', views.hoja_ruta_pdf, name='hoja_ruta_pdf'),
+    path('documentos/hoja-ruta/historial/', views.hoja_ruta_historial, name='hoja_ruta_historial'),
+    path('documentos/hoja-ruta/limpiar-sesion/', views.hoja_ruta_limpiar_sesion, name='hoja_ruta_limpiar_sesion'),
+    path('documentos/hoja-ruta/<int:hoja_id>/eliminar/', views.hoja_ruta_eliminar, name='hoja_ruta_eliminar'),
+
+
 
     # ==================== PORTAL CHOFERES ====================
     path('chofer/reservar/', views.chofer_reservar, name='chofer_reservar'),
