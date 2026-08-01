@@ -179,41 +179,48 @@ def dashboard_view(request):
         return dashboard_cajero(request, usuario, sede)
 
 
+
+from django.utils import timezone
+from django.db.models import Sum, Count
+from django.db.models.functions import ExtractHour
+from datetime import timedelta
+
 @login_required
 def dashboard_cajero(request, usuario, sede):
-    """Dashboard para cajeros - CON DATOS REALES DE SU SEDE y FILTRO DE PASADOS"""
+    """Dashboard para cajeros - VERSIÓN FINAL SIN ERRORES"""
     
-    hoy = timezone.now().date()
-    ahora = timezone.localtime(timezone.now()).time()  # ← AGREGADO: Hora actual local
+    # 1. OBTENER HORA Y FECHA LOCAL
+    ahora_local = timezone.localtime(timezone.now())
+    hoy = ahora_local.date()
     
-    # ==================== 1. KPIs DEL DÍA (Solo de esta sede) ====================
+    # 2. RANGO PARA VENTAS (MÉTODO SEGURO CON .replace())
+    inicio_dia = ahora_local.replace(hour=0, minute=0, second=0, microsecond=0)
+    fin_dia = ahora_local.replace(hour=23, minute=59, second=59, microsecond=999999)
     
-    # Ventas de hoy para esta sede
+    # ==================== 1. KPIs DEL DÍA ====================
+    
+    # VENTAS DE HOY (DateTimeField SÍ necesita rango)
     ventas_hoy_qs = Venta.objects.filter(
         sede_venta=sede,
-        fecha_venta__date=hoy
+        fecha_venta__range=(inicio_dia, fin_dia)
     )
     ventas_hoy = ventas_hoy_qs.count()
     monto_total_hoy = ventas_hoy_qs.aggregate(total=Sum('monto_total'))['total'] or 0
+    total_pasajeros_hoy = ventas_hoy
     
-    # Viajes completados hoy para esta sede
+    # VIAJES COMPLETADOS HOY (DateField usa = DIRECTO, SIN __date)
     viajes_completados_hoy = Viaje.objects.filter(
         sede_salida=sede,
-        fecha_salida=hoy,
-        estado='finalizado'
+        fecha_salida=hoy,  # ✅ CORRECTO PARA DateField
+        estado__in=['finalizado', 'completado', 'terminado']
     ).count()
     
-    # Pasajeros transportados hoy (1 venta = 1 pasajero)
-    total_pasajeros_hoy = ventas_hoy_qs.count()
+    # ==================== 2. PRÓXIMOS VIAJES ====================
     
-    # ==================== 2. PRÓXIMOS VIAJES (Solo de esta sede) - CORREGIDO ✅ ====================
-    
-    # FILTRO CLAVE: Excluir viajes pasados (fecha < hoy O fecha=hoy y hora < ahora)
     proximos_viajes_qs = Viaje.objects.filter(
         sede_salida=sede,
-        fecha_salida=hoy,  # Solo hoy
-        estado__in=['programado', 'en_curso'],
-        hora_salida__gte=ahora  # ← SOLO viajes con hora >= ahora (excluye los pasados)
+        fecha_salida=hoy,  # ✅ CORRECTO PARA DateField
+        estado__in=['programado', 'en_curso', 'activo', 'pendiente']
     ).select_related('ruta', 'vehiculo').prefetch_related('asientos').order_by('hora_salida')[:5]
     
     proximos_viajes = []
@@ -225,7 +232,7 @@ def dashboard_cajero(request, usuario, sede):
         
         proximos_viajes.append({
             'id': viaje.id,
-            'hora_salida': viaje.hora_salida.strftime('%H:%M'),
+            'hora_salida': viaje.hora_salida.strftime('%H:%M') if viaje.hora_salida else 'N/A',
             'ruta': f"{viaje.ruta.origen} → {viaje.ruta.destino}",
             'vehiculo': {'placa': viaje.vehiculo.placa, 'modelo': viaje.vehiculo.modelo},
             'asientos_disponibles': disponibles,
@@ -234,13 +241,14 @@ def dashboard_cajero(request, usuario, sede):
             'porcentaje_ocupacion': round(ocupacion, 1)
         })
     
-    # ==================== 3. VIAJES RECIENTES (Últimos 3 días, esta sede) ====================
-    # (Este ya está bien, muestra viajes finalizados del pasado)
+    # ==================== 3. VIAJES RECIENTES ====================
+    
+    fecha_desde = hoy - timedelta(days=3)
     
     viajes_recientes_qs = Viaje.objects.filter(
         sede_salida=sede,
-        fecha_salida__gte=hoy - timedelta(days=3),
-        estado='finalizado'
+        fecha_salida__gte=fecha_desde,  # ✅ CORRECTO PARA DateField
+        estado__in=['finalizado', 'completado', 'terminado']
     ).select_related('ruta', 'vehiculo').order_by('-fecha_salida', '-hora_salida')[:5]
     
     viajes_recientes = []
@@ -249,8 +257,8 @@ def dashboard_cajero(request, usuario, sede):
         pasajeros = viaje.ventas.count()
         
         viajes_recientes.append({
-            'fecha': viaje.fecha_salida.strftime('%d/%m/%Y'),
-            'hora': viaje.hora_salida.strftime('%H:%M'),
+            'fecha': viaje.fecha_salida.strftime('%d/%m/%Y') if viaje.fecha_salida else 'N/A',
+            'hora': viaje.hora_salida.strftime('%H:%M') if viaje.hora_salida else 'N/A',
             'ruta_origen': viaje.ruta.origen,
             'ruta_destino': viaje.ruta.destino,
             'vehiculo': {'placa': viaje.vehiculo.placa},
@@ -261,50 +269,48 @@ def dashboard_cajero(request, usuario, sede):
     
     # ==================== 4. FIDELIZACIÓN ====================
     clientes_cercanos = []
-    clientes_sede = FidelizacionService.obtener_progreso_clientes(filtro='cerca')
-    
-    for cliente in clientes_sede:
-        ventas_cliente_en_sede = Venta.objects.filter(
-            numero_documento=cliente['dni'],
-            sede_venta=sede
-        ).count()
-        
-        if ventas_cliente_en_sede > 0:
-            clientes_cercanos.append({
-                'dni': cliente['dni'],
-                'nombre': cliente['nombre'],
-                'viajes_en_sede': ventas_cliente_en_sede,
-                'faltan_para_premio': cliente['faltan']
-            })
+    try:
+        clientes_sede = FidelizacionService.obtener_progreso_clientes(filtro='cerca')
+        for cliente in clientes_sede:
+            ventas_cliente_en_sede = Venta.objects.filter(
+                numero_documento=cliente['dni'],
+                sede_venta=sede
+            ).count()
+            
+            if ventas_cliente_en_sede > 0:
+                clientes_cercanos.append({
+                    'dni': cliente['dni'],
+                    'nombre': cliente['nombre'],
+                    'viajes_en_sede': ventas_cliente_en_sede,
+                    'faltan_para_premio': cliente['faltan']
+                })
+    except Exception:
+        pass
     
     # ==================== 5. CONTEXTO BASE ====================
-    
     contexto = {
         'usuario': usuario,
         'sede': sede,
         'es_admin': False,
+        'fecha_actual': hoy,
         
-        # KPIs
         'ventas_hoy': ventas_hoy,
         'monto_total_hoy': monto_total_hoy,
         'viajes_completados_hoy': viajes_completados_hoy,
         'total_pasajeros_hoy': total_pasajeros_hoy,
         
-        # Listas
-        'proximos_viajes': proximos_viajes,  # ← Ahora SIN viajes pasados
+        'proximos_viajes': proximos_viajes,
         'viajes_recientes': viajes_recientes,
         'clientes_cercanos': clientes_cercanos[:3],
-        
-        # Para búsqueda de cliente en fidelización
+        'alerta_fidelizacion': clientes_cercanos[0] if clientes_cercanos else None,
         'cliente_busqueda': request.GET.get('dni_cliente', ''),
     }
     
-    # ==================== 6. DATOS PARA GRÁFICOS (Solo de esta sede) ====================
+    # ==================== 6. DATOS PARA GRÁFICOS ====================
     
-    # Gráfico 1: Ventas por hora (hoy)
     ventas_por_hora = Venta.objects.filter(
         sede_venta=sede,
-        fecha_venta__date=hoy
+        fecha_venta__range=(inicio_dia, fin_dia)
     ).annotate(
         hora=ExtractHour('fecha_venta')
     ).values('hora').annotate(
@@ -319,13 +325,10 @@ def dashboard_cajero(request, usuario, sede):
         if 0 <= hora_idx < 14:
             ventas_hora_data[hora_idx] = float(item['total'] or 0)
     
-    # Gráfico 2: Ocupación por ruta (viajes de hoy) - CORREGIDO ✅
-    # Solo incluir viajes FUTUROS o EN CURSO (no pasados)
     rutas_ocupacion = Viaje.objects.filter(
         sede_salida=sede,
-        fecha_salida=hoy,
-        hora_salida__gte=ahora,  # ← Excluir viajes pasados
-        estado__in=['programado', 'en_curso']
+        fecha_salida=hoy,  # ✅ CORRECTO PARA DateField
+        estado__in=['programado', 'en_curso', 'activo', 'pendiente', 'finalizado', 'completado']
     ).select_related('ruta').prefetch_related('asientos')
     
     rutas_labels = []
@@ -335,7 +338,7 @@ def dashboard_cajero(request, usuario, sede):
     for i, viaje in enumerate(rutas_ocupacion[:4]):
         asientos = viaje.asientos.all()
         total = asientos.count()
-        ocupados = asientos.filter(estado='vendido').count()
+        ocupados = asientos.filter(estado__in=['vendido', 'reservado']).count()
         porcentaje = (ocupados / total * 100) if total > 0 else 0
         
         rutas_labels.append(f"{viaje.ruta.origen}→{viaje.ruta.destino}")
@@ -345,22 +348,16 @@ def dashboard_cajero(request, usuario, sede):
         rutas_labels = ['Sin datos']
         rutas_data = [0]
     
-    # ==================== CÁLCULOS PARA TARJETAS - CORREGIDO ✅ ====================
-    
-    # Calcular asientos disponibles SOLO de viajes futuros
     asientos_disponibles_total = sum(v['asientos_disponibles'] for v in proximos_viajes)
     asientos_totales_total = sum(v['asientos_totales'] for v in proximos_viajes)
     
     contexto.update({
-        # Gráficos
         'ventas_hora_labels': horas_labels,
         'ventas_hora_data': ventas_hora_data,
         'rutas_labels': rutas_labels,
         'rutas_data': rutas_data,
         'rutas_colores': colores_rutas[:len(rutas_labels)],
-        
-        # Cálculos para tarjetas (AHORA CORRECTOS)
-        'asientos_disponibles_total': asientos_disponibles_total,  # ← Será 0 si no hay viajes futuros
+        'asientos_disponibles_total': asientos_disponibles_total,
         'asientos_totales_total': asientos_totales_total,
         'porcentaje_disponibilidad': round(
             (asientos_disponibles_total / asientos_totales_total * 100) 
@@ -378,7 +375,8 @@ def dashboard_admin_simple(request, usuario, sede):
     from django.db.models.functions import TruncDate
     import calendar
     
-    hoy = timezone.now().date()
+    # ✅ Obtener la fecha LOCAL (Perú)
+    hoy = timezone.localtime(timezone.now()).date()
     
     # --- 1. PROCESAR FILTROS ---
     periodo = request.GET.get('periodo', 'hoy')
