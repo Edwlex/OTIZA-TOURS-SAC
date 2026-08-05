@@ -41,6 +41,7 @@ urlpatterns = [
     path('notificaciones/', views.notificaciones_lista, name='notificaciones_lista'),
     path('notificaciones/<int:notif_id>/leer/', views.marcar_notificacion_leida, name='marcar_notificacion_leida'),
     path('notificaciones/todas-leer/', views.marcar_todas_leidas, name='marcar_todas_leidas'),
+    path('notificaciones/api/contador/', views.notificaciones_contador_api, name='notificaciones_contador_api'),
 
     # ==================== PERFIL ====================
     path('perfil/', views.mi_perfil, name='mi_perfil'),
@@ -89,6 +90,7 @@ urlpatterns = [
     path('ventas/procesar-reserva/<int:asiento_id>/', views.procesar_reserva_pago, name='procesar_reserva_pago'),
     path('ventas/liberar-reserva/<int:asiento_id>/', views.liberar_reserva, name='liberar_reserva'),
     path('ventas/confirmacion/<int:venta_id>/', views.confirmacion_venta, name='confirmacion_venta'),
+    path('ventas/confirmar-pago-reserva-chofer/<int:asiento_id>/', views.confirmar_pago_reserva_chofer, name='confirmar_pago_reserva_chofer'),
 
 
     path('panel-admin/horarios-fijos/', views.horarios_fijos_lista, name='horarios_fijos_lista'),
@@ -131,7 +133,11 @@ urlpatterns = [
 
 
     # ==================== PORTAL CHOFERES ====================
-    path('chofer/reservar/', views.chofer_reservar, name='chofer_reservar'),
-    path('chofer/confirmar-reserva/', views.chofer_confirmar_reserva, name='chofer_confirmar_reserva'),
-    path('chofer/cancelar-reserva/<int:reserva_id>/', views.chofer_cancelar_reserva, name='chofer_cancelar_reserva'),
+    path('chofer/login/', views.login_chofer_view, name='login_chofer'),
+    path('chofer/seleccionar-identidad/', views.chofer_seleccionar_identidad, name='chofer_seleccionar_identidad'),
+    path('chofer/panel/', views.panel_chofer, name='panel_chofer'),
+    path('chofer/reservar/<int:viaje_id>/', views.chofer_reservar_asientos, name='chofer_reservar_asientos'),
+    path('chofer/logout/', views.chofer_logout, name='chofer_logout'),
+    path('chofer/incidencias/', views.chofer_incidencias, name='chofer_incidencias'),
+    path('chofer/incidencias/nueva/', views.chofer_nueva_incidencia, name='chofer_nueva_incidencia'),
 ]

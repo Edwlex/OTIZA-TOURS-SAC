@@ -17,16 +17,16 @@ class AuthService:
         logger.info(f"   - Username: {username}")
         logger.info(f"   - Sede solicitada: {sede_nombre}")
         
-        # Verificar que la sede exista
+        # 1. Verificar que la sede exista (necesario para validar a los demás usuarios)
         try:
             logger.debug(f"Buscando sede: {sede_nombre}")
             sede = Sede.objects.get(nombre=sede_nombre, activa=True)
-            logger.info(f"[OK] Sede encontrada: {sede}")
+            logger.info(f"[OK] Sede encontrada: {sede.nombre}")
         except Sede.DoesNotExist:
             logger.error(f"[ERROR] Sede NO encontrada: {sede_nombre} (o está inactiva)")
             raise ValidationError(f"La sede seleccionada no existe o está inactiva")
         
-        # Autenticar usuario
+        # 2. Autenticar usuario con Django
         logger.debug(f"Intentando autenticar usuario: {username}")
         user = authenticate(username=username, password=password)
         
@@ -36,21 +36,22 @@ class AuthService:
         
         logger.info(f"[OK] Autenticación Django exitosa para: {user.username}")
         
-        # Verificar que el usuario pertenezca a la sede seleccionada
-        logger.debug(f"Verificando pertenencia a sede...")
-        logger.debug(f"   - User.sede: {user.sede}")
-        logger.debug(f"   - Sede buscada: {sede}")
+        # 3. ✅ AQUÍ ESTÁ LA NUEVA LÓGICA DE VALIDACIÓN DE SEDE ✅
+        if username == 'chofer':
+            # Si es el usuario genérico "chofer", omitimos la validación estricta.
+            # Su sede real es "Unidad Móvil", pero el formulario puede enviar "Oficina Central" u otra.
+            logger.info(f"[OK] Usuario 'chofer' omitiendo validación estricta de sede (pertenece a Unidad Móvil)")
+        else:
+            # Para TODOS los demás usuarios (cajeros, admin), la validación es estricta
+            if user.sede != sede:
+                logger.error(f"[ERROR] Usuario {username} NO pertenece a la sede {sede_nombre}")
+                logger.error(f"   - Pertenece a: {user.sede.nombre if user.sede else 'Ninguna'}")
+                raise ValidationError(
+                    f"El usuario {username} no pertenece a la sede {sede.get_nombre_display()}"
+                )
+            logger.info(f"[OK] Usuario {username} pertenece correctamente a {sede.nombre}")
         
-        if user.sede != sede:
-            logger.error(f"[ERROR] Usuario {username} NO pertenece a la sede {sede}")
-            logger.error(f"   - Pertenece a: {user.sede}")
-            raise ValidationError(
-                f"El usuario {username} no pertenece a la sede {sede.get_nombre_display()}"
-            )
-        
-        logger.info(f"[OK] Usuario {username} pertenece correctamente a {sede}")
-        
-        # Verificar que el usuario esté activo
+        # 4. Verificar que el usuario esté activo
         if not user.is_active:
             logger.error(f" Cuenta de {username} está DESACTIVADA")
             raise ValidationError(f"La cuenta de {username} está desactivada")
@@ -63,4 +64,4 @@ class AuthService:
     @staticmethod
     def get_user_sede(user):
         """Obtiene la sede del usuario de forma segura"""
-        return getattr(user, 'sede', None)
+        return getattr(user, 'sede', None) 

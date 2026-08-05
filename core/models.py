@@ -213,7 +213,12 @@ class Viaje(models.Model):
         verbose_name = 'Viaje'
         verbose_name_plural = 'Viajes'
         ordering = ['fecha_salida', 'hora_salida']
+
+
 # ==================== ASIENTOS DE VIAJE ====================
+
+from django.db import models
+
 class AsientoViaje(models.Model):
     ESTADO_ASIENTO = [
         ('disponible', 'Disponible'),
@@ -222,37 +227,57 @@ class AsientoViaje(models.Model):
         ('bloqueado', 'Bloqueado'),
     ]
     
-    viaje = models.ForeignKey(Viaje, on_delete=models.CASCADE, related_name='asientos')
-    numero_asiento = models.CharField(max_length=10)  # Ej: "A4", "B12"
+    viaje = models.ForeignKey('Viaje', on_delete=models.CASCADE, related_name='asientos')
+    numero_asiento = models.CharField(max_length=10)  # Ej: "A4", "B12", "5"
     estado = models.CharField(max_length=20, choices=ESTADO_ASIENTO, default='disponible')
     precio = models.DecimalField(max_digits=8, decimal_places=2)
     vendido_en = models.DateTimeField(null=True, blank=True)
     
     # ==========================================
-    # ✅ NUEVOS CAMPOS PARA RESERVA
+    # ✅ CAMPOS PARA RESERVA (Cajera o Chofer)
     # ==========================================
-    nombre_reserva = models.CharField(max_length=100, blank=True, null=True, help_text="Nombre del pasajero que reservó")
-    telefono_reserva = models.CharField(max_length=20, blank=True, null=True, help_text="Celular para notificar llegada")
-    numero_documento_reserva = models.CharField(max_length=20, blank=True, null=True, help_text="DNI del pasajero que reservó")  # ← AGREGADO
-    fecha_reserva = models.DateTimeField(blank=True, null=True, help_text="Fecha y hora en que se realizó la reserva")
-    nota_reserva = models.TextField(blank=True, null=True, help_text="Ej: 'Paga al llegar', 'Viene con maleta grande'")
+    nombre_reserva = models.CharField(max_length=100, blank=True, null=True, help_text="Nombre del pasajero")
+    telefono_reserva = models.CharField(max_length=20, blank=True, null=True, help_text="Celular del pasajero")
+    numero_documento_reserva = models.CharField(max_length=20, blank=True, null=True, help_text="DNI del pasajero")
+    fecha_reserva = models.DateTimeField(blank=True, null=True, help_text="Fecha y hora de la reserva")
+    nota_reserva = models.TextField(blank=True, null=True, help_text="Ej: 'Paga al llegar', 'Equipaje extra'")
+    
+    # ✅ CAMPOS ADICIONALES PARA FACTURACIÓN Y PAGO
+    email_reserva = models.EmailField(blank=True, null=True, help_text="Correo electrónico del pasajero")
+    ruc_reserva = models.CharField(max_length=20, blank=True, null=True, help_text="RUC del cliente")
+    razon_social_reserva = models.CharField(max_length=150, blank=True, null=True, help_text="Razón social")
+    metodo_pago_reserva = models.CharField(max_length=20, blank=True, null=True, help_text="Método de pago: efectivo, yape, plin")
+    
+    # ==========================================
+    # ✅ CAMPOS ESPECÍFICOS PARA LÓGICA DE CHOFER
+    # ==========================================
+    reservado_por_chofer = models.BooleanField(default=False, help_text="True si la reserva la hizo un chofer en ruta")
+    
+    tipo_reserva_chofer = models.CharField(max_length=20, blank=True, null=True, choices=[
+        ('con_cobro', 'Con Cobro (Chofer ya cobró)'),
+        ('sin_cobro', 'Sin Cobro (Pendiente de pago en sede)')
+    ], help_text="Estado del pago de la reserva del chofer")
+    
+    # ✅ CORRECCIÓN: Usamos ForeignKey para jalar el chofer desde la BD
+    chofer_reserva = models.ForeignKey(
+        'Usuario',  # Apunta a tu modelo de usuarios
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        limit_choices_to={'es_chofer': True},  # ⚠️ CLAVE: Solo muestra en la lista a los usuarios que son choferes
+        related_name='asientos_reservados',
+        help_text="Chofer real de la base de datos que hizo la reserva"
+    )
     # ==========================================
     
-    #  CONSTRAINT ANTI-CONCURRENCIA: Un asiento no puede venderse 2 veces en el mismo viaje
     class Meta:
         verbose_name = 'Asiento de Viaje'
         verbose_name_plural = 'Asientos de Viaje'
         unique_together = ['viaje', 'numero_asiento']
-        constraints = [
-            models.UniqueConstraint(
-                fields=['viaje', 'numero_asiento', 'estado'],
-                condition=models.Q(estado='vendido'),
-                name='unique_asiento_vendido_por_viaje'
-            )
-        ]
+        ordering = ['numero_asiento']
     
     def __str__(self):
-        return f"{self.viaje} - Asiento {self.numero_asiento} ({self.estado})"
+        return f"Viaje {self.viaje.id} - Asiento {self.numero_asiento} ({self.get_estado_display()})"
 
     
 # ==================== VENTAS ====================

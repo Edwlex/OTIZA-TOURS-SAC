@@ -5,153 +5,448 @@
 <meta charset="UTF-8">
 <title>Hoja de Ruta - {{ hoja.numero_documento }}</title>
 <style>
-    @page { size: A4 portrait; margin: 8mm; }
-    body { font-family: Arial, sans-serif; font-size: 8pt; color: #000; margin: 0; padding: 0; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 5px; }
-    td, th { border: 1px solid #000; padding: 3px; vertical-align: top; }
+    @page {
+        size: A4 portrait;
+        margin: 4mm 6mm;
+    }
+
+    body {
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 7pt;
+        color: #0b2e83;
+        line-height: 1.1;
+        margin: 0;
+        padding: 0;
+        background-color: #ffffff;
+    }
+
+    *, *::before, *::after {
+        box-sizing: border-box;
+    }
+
+    .hoja-a4 {
+        width: 100%;
+        margin: 0 auto;
+        padding: 0;
+        background: #ffffff;
+    }
+
     .bold { font-weight: bold; }
-    .center { text-align: center; }
-    .right { text-align: right; }
-    .header { text-align: center; margin-bottom: 10px; }
-    .header h1 { margin: 0; font-size: 16pt; color: #003366; }
-    .header .num { font-size: 14pt; color: #cc0000; font-weight: bold; margin: 5px 0; }
-    .logo { width: 80px; height: auto; }
-    .section-title { background-color: #f0f0f0; font-weight: bold; padding: 3px; }
-    .line { border-bottom: 1px solid #000; display: inline-block; min-width: 150px; }
+    .text-center { text-align: center; }
+    .text-right { text-align: right; }
+
+    /* ENCABEZADO */
+    table.header-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 2px;
+    }
+
+    .logo-img {
+        width: 130px;
+        height: auto;
+    }
+
+    .header-title {
+        font-size: 16pt;
+        font-weight: 900;
+        color: #0b2e83;
+        letter-spacing: 0.5px;
+    }
+
+    .header-subtext {
+        font-size: 6.5pt;
+        color: #0b2e83;
+        line-height: 1.15;
+        font-weight: bold;
+    }
+
+    .num-hoja {
+        font-size: 14pt;
+        font-weight: 900;
+        color: #dc2626;
+        margin-top: 1px;
+        letter-spacing: 0.5px;
+    }
+
+    .resolucion {
+        font-size: 5.5pt;
+        font-weight: bold;
+        color: #0b2e83;
+        margin-top: 2px;
+        line-height: 1.1;
+    }
+
+    /* BORDES Y TABLAS */
+    table.table-bordered {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: -1px;
+    }
+
+    table.table-bordered td, table.table-bordered th {
+        border: 1px solid #0b2e83;
+        padding: 2px 4px;
+        vertical-align: middle;
+        color: #0b2e83;
+        font-size: 6.8pt;
+    }
+
+    /* PLACA Y CASILLAS */
+    .placa-box {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .placa-box td {
+        border: none !important;
+        border-right: 1px solid #0b2e83 !important;
+        text-align: center;
+        width: 16.66%;
+        height: 14px;
+        padding: 0 !important;
+        font-weight: bold;
+        color: #000000;
+        font-size: 7.5pt;
+    }
+    .placa-box td:last-child {
+        border-right: none !important;
+    }
+
+    /* BANNERS DE SECCION */
+    .section-banner {
+        border: 1px solid #0b2e83;
+        font-weight: bold;
+        font-size: 7pt;
+        padding: 2px 5px;
+        color: #0b2e83;
+        background-color: #ffffff;
+        margin-top: -1px;
+    }
+
+    /* EMBARQUE Y DESEMBARQUE */
+    .table-embarque {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: -1px;
+    }
+    .table-embarque td {
+        border: 1px solid #0b2e83;
+        padding: 4px 6px;
+        vertical-align: top;
+        width: 50%;
+    }
+
+    .line-field {
+        border-bottom: 1px solid #0b2e83;
+        min-height: 12px;
+        margin-bottom: 3px;
+    }
+
+    /* CONDUCTORES */
+    .table-conductores {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: -1px;
+    }
+    .table-conductores td {
+        border: 1px solid #0b2e83;
+        padding: 2px 4px;
+        color: #0b2e83;
+    }
+
+    .line-above-text {
+        border-top: 1px solid #0b2e83;
+        margin-top: 10px;
+        padding-top: 1px;
+        text-align: center;
+        font-weight: bold;
+        font-size: 6pt;
+    }
+
+    /* BLOQUE DE INCIDENTES (FORMATO EXACTO A LA IMAGEN) */
+    .incidente-container {
+        border: 1px solid #0b2e83;
+        border-top: none;
+        margin-top: -1px;
+    }
+
+    .incidente-block {
+        border-bottom: 1px solid #0b2e83;
+        padding: 4px 8px 3px 8px;
+    }
+
+    .incidente-block:last-child {
+        border-bottom: none;
+    }
+
+    .field-line {
+        border-bottom: 1px solid #0b2e83;
+        display: block;
+        min-height: 11px;
+    }
+
+    .label-sub {
+        font-size: 5.5pt;
+        font-weight: bold;
+        color: #0b2e83;
+        text-align: center;
+        margin-top: 1px;
+    }
+
+    .val-text {
+        font-weight: bold;
+        color: #000000;
+    }
 </style>
 </head>
 <body>
 
-<!-- ENCABEZADO -->
-<div class="header">
-    <table style="border: none;">
-        <tr style="border: none;">
-            <td style="border: none; width: 30%; text-align: left;">
-                <img src="{% static 'images/otiza.png' %}" class="logo" alt="Otiza Tours">
+<div class="hoja-a4">
+
+    <!-- 1. ENCABEZADO -->
+    <table class="header-table">
+        <tr>
+            <td style="width: 25%; vertical-align: middle;">
+                <img src="{% static 'otiza.png' %}" class="logo-img" alt="Otiza Tours">
             </td>
-            <td style="border: none; width: 40%;">
-                <h1>HOJA DE RUTA</h1>
-                <div style="font-size: 8pt;">
-                    JULCAN: Cal. La Cultura S/N • 902430951<br>
-                    MACHE: Cal. Maravillas N° 102 • 921700432<br>
-                    TRUJILLO: Prolong. Unión N° 1477 • 929698732
+
+            <td style="width: 50%; text-align: center; vertical-align: top;">
+                <div class="header-title">HOJA DE RUTA</div>
+                <div class="header-subtext">
+                    JULCAN: Cal. La Cultura S/N &bull; 902430951<br>
+                    MACHE: Cal. Maravillas N° 102 &bull; 921700432<br>
+                    TRUJILLO: Prolong. Unión N° 1477 &bull; 929698732
                 </div>
-                <div class="num">{{ hoja.numero_documento }}</div>
+                <div class="num-hoja">
+                    {{ hoja.numero_documento|default:"001- Nº 0000" }}
+                </div>
             </td>
-            <td style="border: none; width: 30%; text-align: right; font-size: 7pt;">
-                R.G.R. N° 259 - 2019-GR-LL/GRTC<br>
-                R.G.R. N° 209 - 2021-GR-LL-GGR/GRTC<br>
-                <img src="{% static 'images/carro.png' %}" style="width: 60px; height: auto;">
+
+            <td style="width: 25%; text-align: right; vertical-align: top;">
+                <div class="resolucion" style="margin-top: 10px;">
+                    R.G.R. N° 259 - 2019-GR-LL/GRTC<br>
+                    R.G.R. N° 209 - 2021-GR-LL-GGR/GRTC
+                </div>
             </td>
         </tr>
     </table>
+
+    <!-- 2. DATOS DE LA EMPRESA Y VEHÍCULO -->
+    <table class="table-bordered">
+        <tr>
+            <td style="width: 14%;" class="bold">Razón Social:</td>
+            <td colspan="5" class="bold" style="font-size: 7.5pt;">OTIZA TOURS S.A.C.</td>
+        </tr>
+        <tr>
+            <td class="bold">Dirección:</td>
+            <td colspan="5">Prolog. Unión N°1477 - La Libertad - Trujillo - Trujillo</td>
+        </tr>
+        <tr>
+            <td class="bold">Correo Electrónico:</td>
+            <td style="width: 36%;">otizatourssac@gmail.com</td>
+            <td style="width: 14%; text-align: center;" class="bold">N° Telefónico</td>
+            <td colspan="3" style="text-align: center;" class="bold">974 276 980</td>
+        </tr>
+        <tr>
+            <td class="bold">N° de Placa:</td>
+            <td style="padding: 0; width: 18%;">
+                <table class="placa-box">
+                    <tr>
+                        <td>{{ hoja.placa|slice:"0:1"|upper }}</td>
+                        <td>{{ hoja.placa|slice:"1:2"|upper }}</td>
+                        <td>{{ hoja.placa|slice:"2:3"|upper }}</td>
+                        <td>{{ hoja.placa|slice:"3:4"|upper }}</td>
+                        <td>{{ hoja.placa|slice:"4:5"|upper }}</td>
+                        <td>{{ hoja.placa|slice:"5:6"|upper }}</td>
+                    </tr>
+                </table>
+            </td>
+            <td class="bold" style="width: 18%;">Fecha de Inicio de Viaje:</td>
+            <td class="text-center bold val-text" style="width: 10%;">
+                {{ hoja.fecha_inicio|date:"d / m / Y"|default:"/ /" }}
+            </td>
+            <td class="bold" style="width: 22%;">Fecha de Llegada del Viaje:</td>
+            <td class="text-center bold val-text" style="width: 18%;">
+                {{ hoja.fecha_llegada|date:"d / m / Y"|default:"/ /" }}
+            </td>
+        </tr>
+    </table>
+
+    <!-- MODALIDAD DE SERVICIO -->
+    <div class="section-banner">
+        Modalidad del Servicio: <span class="bold">AUTO COLECTIVO</span>
+    </div>
+
+    <!-- 3. LUGAR DE EMBARQUE Y DESEMBARQUE -->
+    <table class="table-embarque">
+        <tr>
+            <td>
+                <div style="margin-bottom: 2px;">
+                    <span class="bold">Lugar de Embarque</span>
+                    <div class="line-field val-text" style="text-align: center;">{{ hoja.lugar_embarque|upper }}</div>
+                </div>
+                <div class="line-field"></div>
+                <div>
+                    <span class="bold">Hora de Salida</span>
+                    <div class="line-field val-text" style="text-align: center;">{{ hoja.hora_salida|date:"H:i" }}</div>
+                </div>
+            </td>
+            <td>
+                <div style="margin-bottom: 2px;">
+                    <span class="bold">Lugar de Desembarque</span>
+                    <div class="line-field val-text" style="text-align: center;">{{ hoja.lugar_desembarque|upper }}</div>
+                </div>
+                <div class="line-field"></div>
+                <div>
+                    <span class="bold">Hora de Llegada</span>
+                    <div class="line-field val-text" style="text-align: center;">{{ hoja.hora_llegada|date:"H:i" }}</div>
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <!-- 4. CONDUCTORES Y TURNOS -->
+    <div class="section-banner">Datos Generales de los Conductores y Turnos de Conducción:</div>
+    <table class="table-conductores">
+        <!-- Conductor 1 -->
+        <tr>
+            <td style="width: 42%; vertical-align: bottom;">
+                <div class="text-center val-text" style="min-height: 10px;">
+                    {% if hoja.conductor1_nombre and hoja.conductor1_nombre != "NONE" %}{{ hoja.conductor1_nombre|upper }}{% endif %}
+                </div>
+                <div class="line-above-text">NOMBRES Y APELLIDOS</div>
+            </td>
+            <td style="width: 24%; vertical-align: bottom;">
+                <div class="text-center val-text" style="min-height: 10px;">
+                    {% if hoja.conductor1_licencia and hoja.conductor1_licencia != "NONE" %}{{ hoja.conductor1_licencia|upper }}{% endif %}
+                </div>
+                <div class="line-above-text">N° LIC. DE CONDUCIR</div>
+            </td>
+            <td style="width: 34%; vertical-align: top;">
+                <div style="font-size: 6pt; font-weight: bold; text-align: center; margin-bottom: 1px;">
+                    H. DE INICIO: <span class="val-text" style="text-decoration: underline; display: inline-block; width: 40px;">{{ hoja.conductor1_hora_inicio|default:"" }}</span>
+                    H. DE TERMINO: <span class="val-text" style="text-decoration: underline; display: inline-block; width: 40px;">{{ hoja.conductor1_hora_fin|default:"" }}</span>
+                </div>
+                <div class="text-center bold" style="font-size: 6pt;">TURNOS DE CONDUCCIÓN</div>
+            </td>
+        </tr>
+
+        <!-- Conductor 2 -->
+        <tr>
+            <td style="vertical-align: bottom;">
+                <div class="text-center val-text" style="min-height: 10px;">
+                    {% if hoja.conductor2_nombre and hoja.conductor2_nombre != "NONE" %}{{ hoja.conductor2_nombre|upper }}{% endif %}
+                </div>
+                <div class="line-above-text">NOMBRES Y APELLIDOS</div>
+            </td>
+            <td style="vertical-align: bottom;">
+                <div class="text-center val-text" style="min-height: 10px;">
+                    {% if hoja.conductor2_licencia and hoja.conductor2_licencia != "NONE" %}{{ hoja.conductor2_licencia|upper }}{% endif %}
+                </div>
+                <div class="line-above-text">N° LIC. DE CONDUCIR</div>
+            </td>
+            <td style="vertical-align: top;">
+                <div style="font-size: 6pt; font-weight: bold; text-align: center; margin-bottom: 1px;">
+                    H. DE INICIO: <span style="text-decoration: underline; display: inline-block; width: 40px;"></span>
+                    H. DE TERMINO: <span style="text-decoration: underline; display: inline-block; width: 40px;"></span>
+                </div>
+                <div class="text-center bold" style="font-size: 6pt;">TURNOS DE CONDUCCIÓN</div>
+            </td>
+        </tr>
+
+        <!-- Conductor 3 -->
+        <tr>
+            <td style="vertical-align: bottom;">
+                <div class="text-center val-text" style="min-height: 10px;">
+                    {% if hoja.conductor3_nombre and hoja.conductor3_nombre != "NONE" %}{{ hoja.conductor3_nombre|upper }}{% endif %}
+                </div>
+                <div class="line-above-text">NOMBRES Y APELLIDOS</div>
+            </td>
+            <td style="vertical-align: bottom;">
+                <div class="text-center val-text" style="min-height: 10px;">
+                    {% if hoja.conductor3_licencia and hoja.conductor3_licencia != "NONE" %}{{ hoja.conductor3_licencia|upper }}{% endif %}
+                </div>
+                <div class="line-above-text">N° LIC. DE CONDUCIR</div>
+            </td>
+            <td style="vertical-align: top;">
+                <div style="font-size: 6pt; font-weight: bold; text-align: center; margin-bottom: 1px;">
+                    H. DE INICIO: <span style="text-decoration: underline; display: inline-block; width: 40px;"></span>
+                    H. DE TERMINO: <span style="text-decoration: underline; display: inline-block; width: 40px;"></span>
+                </div>
+                <div class="text-center bold" style="font-size: 6pt;">TURNOS DE CONDUCCIÓN</div>
+            </td>
+        </tr>
+    </table>
+
+    <!-- 5. INCIDENTES DEL VIAJE (REDISEÑADO SEGÚN TU IMAGEN) -->
+    <div class="section-banner">Incidentes del Viaje</div>
+
+    <div class="incidente-container">
+        {% for i in "1234" %}
+        <div class="incidente-block">
+            <!-- Fila 1: Línea NOMBRES Y APELLIDOS ------- EN ------- Línea NOMBRES Y APELLIDOS -->
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <td style="width: 44%; vertical-align: top; padding: 0;">
+                        <div class="field-line" style="text-align: center;">
+                            <span class="val-text">{% if forloop.first and hoja.incidente1_nombres %}{{ hoja.incidente1_nombres|upper }}{% endif %}</span>
+                        </div>
+                        <div class="label-sub">NOMBRES Y APELLIDOS</div>
+                    </td>
+                    <td style="width: 8%; text-align: center; vertical-align: top; font-weight: bold; font-size: 6.5pt; color: #0b2e83; padding-top: 2px;">
+                        EN
+                    </td>
+                    <td style="width: 48%; vertical-align: top; padding: 0;">
+                        <div class="field-line" style="text-align: center;">
+                            <span class="val-text">{% if forloop.first and hoja.incidente1_lugar %}{{ hoja.incidente1_lugar|upper }}{% endif %}</span>
+                        </div>
+                        <div class="label-sub">NOMBRES Y APELLIDOS</div>
+                    </td>
+                </tr>
+            </table>
+
+            <!-- Fila 2: DEJO CONSTANCIA QUE ____________________________________________ -->
+            <table style="width: 100%; border-collapse: collapse; margin-top: 2px;">
+                <tr>
+                    <td style="width: 18%; font-weight: bold; font-size: 6.5pt; color: #0b2e83; vertical-align: bottom; padding: 0;">
+                        DEJO CONSTANCIA QUE
+                    </td>
+                    <td style="width: 82%; vertical-align: bottom; padding: 0;">
+                        <div class="field-line" style="padding-left: 5px;">
+                            <span class="val-text">{% if forloop.first and hoja.incidente1_constancia %}{{ hoja.incidente1_constancia }}{% endif %}</span>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+
+            <!-- Fila 3: Línea de escritura adicional en blanco -->
+            <div class="field-line" style="width: 100%; margin-top: 5px;"></div>
+
+            <!-- Fila 4: Línea larga ------- FIRMA ------- N° DNI -->
+            <table style="width: 100%; border-collapse: collapse; margin-top: 4px;">
+                <tr>
+                    <td style="width: 48%; vertical-align: bottom; padding: 0;">
+                        <div class="field-line" style="width: 100%;"></div>
+                    </td>
+                    <td style="width: 24%; padding: 0 0 0 10px; vertical-align: bottom;">
+                        <div class="field-line" style="text-align: center;">
+                            <span class="val-text">{% if forloop.first and hoja.incidente1_firma %}{{ hoja.incidente1_firma }}{% endif %}</span>
+                        </div>
+                        <div class="label-sub">FIRMA</div>
+                    </td>
+                    <td style="width: 28%; padding: 0 0 0 10px; vertical-align: bottom;">
+                        <div class="field-line" style="text-align: center;">
+                            <span class="val-text">{% if forloop.first and hoja.incidente1_dni %}{{ hoja.incidente1_dni }}{% endif %}</span>
+                        </div>
+                        <div class="label-sub">N° DNI</div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        {% endfor %}
+    </div>
+
 </div>
-
-<!-- DATOS DE LA EMPRESA -->
-<table>
-    <tr>
-        <td style="width: 20%;" class="bold">Razón Social:</td>
-        <td colspan="5">OTIZA TOURS S.A.C.</td>
-    </tr>
-    <tr>
-        <td class="bold">Dirección:</td>
-        <td colspan="5">Prolog. Unión N°1477 - La Libertad - Trujillo</td>
-    </tr>
-    <tr>
-        <td class="bold">Correo Electrónico:</td>
-        <td colspan="3">otizatourssac@gmail.com</td>
-        <td class="bold center" style="width: 15%;">N° Telefónico</td>
-        <td class="center" style="width: 15%;">974 276 980</td>
-    </tr>
-    <tr>
-        <td class="bold">N° de Placa:</td>
-        <td colspan="2" class="center bold" style="font-size: 11pt; letter-spacing: 3px;">{{ hoja.placa|upper }}</td>
-        <td class="bold">Fecha de Inicio de Viaje:</td>
-        <td class="center">{{ hoja.fecha_inicio|date:"d/m/Y" }}</td>
-        <td class="bold">Fecha de Llegada del Viaje:</td>
-        <td class="center">{{ hoja.fecha_llegada|date:"d/m/Y" }}</td>
-    </tr>
-    <tr>
-        <td colspan="7" class="bold">Modalidad del Servicio: AUTO COLECTIVO</td>
-    </tr>
-</table>
-
-<!-- LUGAR DE EMBARQUE Y DESEMBARQUE -->
-<table>
-    <tr>
-        <td style="width: 50%;">
-            <span class="bold">Lugar de Embarque:</span><br>
-            <span class="line" style="width: 90%;"></span> {{ hoja.lugar_embarque|upper }}<br><br>
-            <span class="bold">Hora de Salida:</span><br>
-            <span class="line" style="width: 90%;"></span> {{ hoja.hora_salida|date:"H:i" }}
-        </td>
-        <td style="width: 50%;">
-            <span class="bold">Lugar de Desembarque:</span><br>
-            <span class="line" style="width: 90%;"></span> {{ hoja.lugar_desembarque|upper }}<br><br>
-            <span class="bold">Hora de Llegada:</span><br>
-            <span class="line" style="width: 90%;"></span> {{ hoja.hora_llegada|date:"H:i" }}
-        </td>
-    </tr>
-</table>
-
-<!-- CONDUCTORES -->
-<div class="section-title">Datos Generales de los Conductores y Turnos de Conducción:</div>
-<table>
-    <tr>
-        <td style="width: 45%;" class="center">
-            <div style="border-bottom: 1px solid #000; min-height: 20px;">{{ hoja.conductor1_nombre|upper }}</div>
-            <div style="font-size: 7pt; margin-top: 2px;">NOMBRES Y APELLIDOS</div>
-        </td>
-        <td style="width: 20%;" class="center">
-            <div style="border-bottom: 1px solid #000; min-height: 20px;">{{ hoja.conductor1_licencia|upper }}</div>
-            <div style="font-size: 7pt; margin-top: 2px;">N° LIC. DE CONDUCIR</div>
-        </td>
-        <td style="width: 35%;" class="center" style="font-size: 7pt;">
-            H. DE INICIO: {{ hoja.conductor1_hora_inicio|default:"____" }}<br>
-            H. DE TÉRMINO: {{ hoja.conductor1_hora_fin|default:"____" }}<br>
-            <div style="margin-top: 3px; font-weight: bold;">TURNOS DE CONDUCCIÓN</div>
-        </td>
-    </tr>
-    {% if hoja.conductor2_nombre %}
-    <tr>
-        <td class="center">
-            <div style="border-bottom: 1px solid #000; min-height: 20px;">{{ hoja.conductor2_nombre|upper }}</div>
-            <div style="font-size: 7pt; margin-top: 2px;">NOMBRES Y APELLIDOS</div>
-        </td>
-        <td class="center">
-            <div style="border-bottom: 1px solid #000; min-height: 20px;">{{ hoja.conductor2_licencia|upper }}</div>
-            <div style="font-size: 7pt; margin-top: 2px;">N° LIC. DE CONDUCIR</div>
-        </td>
-        <td class="center" style="font-size: 7pt;">
-            H. DE INICIO: ____<br>
-            H. DE TÉRMINO: ____<br>
-            <div style="margin-top: 3px; font-weight: bold;">TURNOS DE CONDUCCIÓN</div>
-        </td>
-    </tr>
-    {% endif %}
-</table>
-
-<!-- INCIDENTES -->
-<div class="section-title">Incidentes del Viaje</div>
-<table>
-    <tr>
-        <td style="height: 80px; vertical-align: top;">
-            {% if hoja.incidente1_nombres %}
-            <div class="bold">{{ hoja.incidente1_nombres|upper }}</div>
-            <div style="margin: 5px 0;">DEJO CONSTANCIA QUE: {{ hoja.incidente1_constancia }}</div>
-            <div style="margin-top: 10px; text-align: right;">
-                FIRMA: {{ hoja.incidente1_firma|upper }} &nbsp;&nbsp; DNI: {{ hoja.incidente1_dni }}
-            </div>
-            {% else %}
-            <div style="border-bottom: 1px solid #000; margin-bottom: 10px;">_______________________________________</div>
-            <div style="border-bottom: 1px solid #000; margin-bottom: 10px;">DEJO CONSTANCIA QUE ______________________</div>
-            <div style="text-align: right; margin-top: 20px;">
-                FIRMA ______________________ &nbsp;&nbsp; DNI ____________
-            </div>
-            {% endif %}
-        </td>
-    </tr>
-</table>
 
 </body>
 </html>

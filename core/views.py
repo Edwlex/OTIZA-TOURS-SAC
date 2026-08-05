@@ -72,17 +72,36 @@ logger_viaje = logging.getLogger('core.viajes_views')
 # ==================== AUTH ====================
 
 def login_view(request):
-    """Vista de login con autenticación por sede y logging detallado"""
+    """Vista de login con autenticación por sede, roles y logging detallado"""
     
     logger_auth.info("=" * 60)
-    logger_auth.info("INTENTO DE LOGIN INICIADO")
+    logger_auth.info("INTENTO DE ACCESO A LOGIN")
     logger_auth.info(f"IP: {request.META.get('REMOTE_ADDR')}")
     logger_auth.info(f"Método: {request.method}")
     
+    # ✅ 1. LÓGICA DE REDIRECCIÓN SI YA ESTÁ AUTENTICADO
     if request.user.is_authenticated:
-        logger_auth.warning(f"Usuario {request.user.username} ya está autenticado. Redirigiendo...")
+        logger_auth.info(f"Usuario {request.user.username} ya está autenticado. Evaluando redirección por rol...")
+        
+        # A) Si es Chofer
+        if hasattr(request.user, 'es_chofer') and request.user.es_chofer:
+            if request.session.get('chofer_actual'):
+                logger_auth.info("-> Es Chofer con identidad activa. Redirigiendo a Panel Chofer.")
+                return redirect('core:panel_chofer')
+            else:
+                logger_auth.info("-> Es Chofer sin identidad. Redirigiendo a Selección de Identidad.")
+                return redirect('core:chofer_seleccionar_identidad')
+        
+        # B) Si es Administrador o Staff
+        if request.user.is_superuser or request.user.is_staff:
+            logger_auth.info("-> Es Admin/Staff. Redirigiendo a Dashboard.")
+            return redirect('core:dashboard') 
+        
+        # C) Si es Cajero / Encargado de Sede (Por defecto)
+        logger_auth.info("-> Es usuario de Sede. Redirigiendo a Dashboard.")
         return redirect('core:dashboard')
     
+    # ✅ 2. PROCESAMIENTO DEL FORMULARIO (POST)
     if request.method == 'POST':
         logger_auth.info("-" * 60)
         logger_auth.info("PROCESANDO FORMULARIO DE LOGIN")
@@ -98,7 +117,7 @@ def login_view(request):
         form = LoginForm(request.POST)
         
         if form.is_valid():
-            logger_auth.info("[OK] Formulario es VALIDO")
+            logger_auth.info("[OK] Formulario es VÁLIDO")
             user = form.get_user()
             
             if user:
@@ -106,31 +125,47 @@ def login_view(request):
                 logger_auth.info(f"   - Email: {user.email}")
                 logger_auth.info(f"   - Sede: {user.sede}")
                 logger_auth.info(f"   - Activo: {user.is_active}")
-                logger_auth.info(f"   - Staff: {user.is_staff}")
+                logger_auth.info(f"   - Es Chofer: {getattr(user, 'es_chofer', False)}")
                 
                 try:
                     login(request, user)
-                    logger_auth.info(f"[OK] SESION INICIADA EXITOSAMENTE")
+                    logger_auth.info(f"[OK] SESIÓN INICIADA EXITOSAMENTE")
                     
-                    request.session['sede_usuario'] = user.sede.nombre
-                    request.session['sede_id'] = user.sede.id
-                    logger_auth.info(f"   - Sede guardada en sesión: {user.sede.nombre}")
+                    # Guardar datos en sesión
+                    if user.sede:
+                        request.session['sede_usuario'] = user.sede.nombre
+                        request.session['sede_id'] = user.sede.id
+                        logger_auth.info(f"   - Sede guardada en sesión: {user.sede.nombre}")
+                    
                     logger_auth.info(f"   - Session ID: {request.session.session_key}")
                     
                     messages.success(
                         request, 
-                        f'¡Bienvenido {user.get_full_name() or user.username}! Sede: {user.sede.get_nombre_display()}'
+                        f'¡Bienvenido {user.get_full_name() or user.username}!'
                     )
                     
-                    next_url = request.GET.get('next', 'core:dashboard')
-                    logger_auth.info(f" Redirigiendo a: {next_url}")
+                    # 🎯 3. LÓGICA DE REDIRECCIÓN INTELIGENTE SEGÚN EL ROL
+                    next_url = request.GET.get('next')
+                    if not next_url:
+                        # ✅ AQUÍ ESTÁ LA CLAVE: Si es chofer, lo mandamos a elegir identidad
+                        if getattr(user, 'es_chofer', False) or user.username == 'chofer':
+                            next_url = 'core:chofer_seleccionar_identidad'
+                            logger_auth.info("-> Redirigiendo a: Selección de Identidad de Chofer")
+                        elif user.is_superuser or user.is_staff:
+                            next_url = 'core:dashboard'
+                            logger_auth.info("-> Redirigiendo a: Dashboard Admin")
+                        else:
+                            next_url = 'core:dashboard'
+                            logger_auth.info("-> Redirigiendo a: Dashboard Sede")
+                            
+                    logger_auth.info(f"-> Redirigiendo a: {next_url}")
                     logger_auth.info("=" * 60)
                     
                     return redirect(next_url)
                     
                 except Exception as e:
-                    logger_auth.error(f"[ERROR] Error al iniciar sesión: {str(e)}")
-                    messages.error(request, f"Error al iniciar sesión: {str(e)}")
+                    logger_auth.error(f"[ERROR] Excepción al iniciar sesión: {str(e)}")
+                    messages.error(request, f"Error interno al iniciar sesión: {str(e)}")
             else:
                 logger_auth.error("[ERROR] form.get_user() retornó None")
                 messages.error(request, "Error interno al obtener usuario")
@@ -146,6 +181,8 @@ def login_view(request):
             for error in form.non_field_errors():
                 logger_auth.error(f"   - Non-field error: {error}")
                 messages.error(request, error)
+                
+    # ✅ 4. MOSTRAR FORMULARIO (GET)
     else:
         logger_auth.info("Método GET - Mostrando formulario de login")
         form = LoginForm()
@@ -187,7 +224,7 @@ from datetime import timedelta
 
 @login_required
 def dashboard_cajero(request, usuario, sede):
-    """Dashboard para cajeros - VERSIÓN FINAL SIN ERRORES"""
+    """Dashboard para cajeros - VERSIÓN FINAL CON NOTIFICACIONES"""
     
     # 1. OBTENER HORA Y FECHA LOCAL
     ahora_local = timezone.localtime(timezone.now())
@@ -211,7 +248,7 @@ def dashboard_cajero(request, usuario, sede):
     # VIAJES COMPLETADOS HOY (DateField usa = DIRECTO, SIN __date)
     viajes_completados_hoy = Viaje.objects.filter(
         sede_salida=sede,
-        fecha_salida=hoy,  # ✅ CORRECTO PARA DateField
+        fecha_salida=hoy,
         estado__in=['finalizado', 'completado', 'terminado']
     ).count()
     
@@ -219,7 +256,7 @@ def dashboard_cajero(request, usuario, sede):
     
     proximos_viajes_qs = Viaje.objects.filter(
         sede_salida=sede,
-        fecha_salida=hoy,  # ✅ CORRECTO PARA DateField
+        fecha_salida=hoy,
         estado__in=['programado', 'en_curso', 'activo', 'pendiente']
     ).select_related('ruta', 'vehiculo').prefetch_related('asientos').order_by('hora_salida')[:5]
     
@@ -247,7 +284,7 @@ def dashboard_cajero(request, usuario, sede):
     
     viajes_recientes_qs = Viaje.objects.filter(
         sede_salida=sede,
-        fecha_salida__gte=fecha_desde,  # ✅ CORRECTO PARA DateField
+        fecha_salida__gte=fecha_desde,
         estado__in=['finalizado', 'completado', 'terminado']
     ).select_related('ruta', 'vehiculo').order_by('-fecha_salida', '-hora_salida')[:5]
     
@@ -287,7 +324,20 @@ def dashboard_cajero(request, usuario, sede):
     except Exception:
         pass
     
-    # ==================== 5. CONTEXTO BASE ====================
+    # ==================== 5. NOTIFICACIONES ====================
+    notificaciones_no_leidas = Notificacion.objects.filter(
+        sede_id=sede.id,  # ✅ Usar ID en lugar del objeto
+        leida=False
+    ).order_by('-fecha_creacion')[:10]
+    
+    notificaciones_leidas = Notificacion.objects.filter(
+        sede_id=sede.id,  # ✅ Usar ID en lugar del objeto
+        leida=True
+    ).order_by('-fecha_creacion')[:5]
+    
+    total_notificaciones = notificaciones_no_leidas.count()
+    
+    # ==================== 6. CONTEXTO BASE ====================
     contexto = {
         'usuario': usuario,
         'sede': sede,
@@ -304,9 +354,14 @@ def dashboard_cajero(request, usuario, sede):
         'clientes_cercanos': clientes_cercanos[:3],
         'alerta_fidelizacion': clientes_cercanos[0] if clientes_cercanos else None,
         'cliente_busqueda': request.GET.get('dni_cliente', ''),
+        
+        # ✅ NOTIFICACIONES AGREGADAS
+        'notificaciones_no_leidas': notificaciones_no_leidas,
+        'notificaciones_leidas': notificaciones_leidas,
+        'total_notificaciones': total_notificaciones,
     }
     
-    # ==================== 6. DATOS PARA GRÁFICOS ====================
+    # ==================== 7. DATOS PARA GRÁFICOS ====================
     
     ventas_por_hora = Venta.objects.filter(
         sede_venta=sede,
@@ -327,7 +382,7 @@ def dashboard_cajero(request, usuario, sede):
     
     rutas_ocupacion = Viaje.objects.filter(
         sede_salida=sede,
-        fecha_salida=hoy,  # ✅ CORRECTO PARA DateField
+        fecha_salida=hoy,
         estado__in=['programado', 'en_curso', 'activo', 'pendiente', 'finalizado', 'completado']
     ).select_related('ruta').prefetch_related('asientos')
     
@@ -1529,18 +1584,24 @@ def vehiculo_eliminar(request, id):
 
 @login_required
 def choferes_lista(request):
-    """Lista de choferes"""
+    """Lista de choferes reales (excluye la cuenta genérica 'chofer')"""
     usuario = request.user
     sede = usuario.sede
     
+    # 1. Consulta base: Solo usuarios que son choferes, EXCLUYENDO la cuenta genérica
+    base_query = Usuario.objects.filter(es_chofer=True).exclude(username='chofer')
+    
+    # 2. Aplicar filtro según el rol del usuario
     if sede.nombre == 'Oficina Central' or usuario.is_superuser:
-        choferes = Usuario.objects.filter(es_chofer=True).select_related('sede')
-        total_choferes = choferes.count()
-        activos = choferes.filter(activo=True).count()
+        # El admin ve todos los choferes reales de todas las sedes
+        choferes = base_query.select_related('sede')
     else:
-        choferes = Usuario.objects.filter(sede=sede, es_chofer=True).select_related('sede')
-        total_choferes = choferes.count()
-        activos = choferes.filter(activo=True).count()
+        # El encargado ve solo los choferes reales de su propia sede
+        choferes = base_query.filter(sede=sede).select_related('sede')
+    
+    # 3. Cálculos de estadísticas basados en la lista ya filtrada
+    total_choferes = choferes.count()
+    activos = choferes.filter(activo=True).count()
     
     contexto = {
         'usuario': usuario,
@@ -2046,11 +2107,9 @@ def notificaciones_lista(request):
     usuario = request.user
     sede = usuario.sede
     
-    # Filtrar: Notificaciones de mi sede (o globales si sede=None) Y para mí (o para todos si usuario=None)
+    # ✅ FILTRO MEJORADO: Usamos el ID de la sede para evitar problemas de nombres
     notificaciones_qs = Notificacion.objects.filter(
-        sede__in=[sede, None]
-    ).filter(
-        usuario_destino__in=[usuario, None]
+        sede_id=sede.id  
     ).order_by('-fecha_creacion')
     
     no_leidas_count = notificaciones_qs.filter(leida=False).count()
@@ -2062,9 +2121,7 @@ def notificaciones_lista(request):
         'no_leidas_count': no_leidas_count,
     }
     
-    # Asegúrate de que la ruta del template coincida con donde lo guardaste
     return render(request, 'notificaciones/lista.html', contexto)
-
 
 @login_required
 @require_POST
@@ -2073,14 +2130,14 @@ def marcar_notificacion_leida(request, notif_id):
     try:
         notif = Notificacion.objects.get(id=notif_id)
         
-        # Seguridad: solo el dueño o alguien de la misma sede puede marcarla
-        if notif.sede == request.user.sede or notif.sede is None:
+        # ✅ Seguridad: verificar por ID de sede
+        if notif.sede_id == request.user.sede.id or notif.sede is None:
             notif.leida = True
             notif.save()
             
             # Recalcular contador actualizado
             no_leidas = Notificacion.objects.filter(
-                sede__in=[request.user.sede, None], 
+                sede_id=request.user.sede.id, 
                 leida=False
             ).count()
             
@@ -2095,15 +2152,19 @@ def marcar_notificacion_leida(request, notif_id):
 @login_required
 @require_POST
 def marcar_todas_leidas(request):
-    """AJAX: Marca todas las notificaciones del usuario como leídas de una vez"""
-    Notificacion.objects.filter(
-        sede__in=[request.user.sede, None],
-        usuario_destino__in=[request.user, None],
-        leida=False
-    ).update(leida=True)
+    """Elimina todas las notificaciones leídas del usuario"""
+    # ✅ ELIMINAR en lugar de solo marcar
+    eliminadas = Notificacion.objects.filter(
+        sede_id=request.user.sede.id,
+        leida=True
+    ).delete()[0]
     
-    return JsonResponse({'status': 'success', 'no_leidas': 0})
-
+    return JsonResponse({
+        'status': 'success', 
+        'no_leidas': 0,
+        'eliminadas': eliminadas,
+        'mensaje': f'Se eliminaron {eliminadas} notificaciones'
+    })
 
 # ==================== PERFIL DE USUARIO ====================
 @login_required
@@ -2284,57 +2345,6 @@ def reportes_unificados(request):
     
     # ⚠️ VERIFICA QUE ESTA RUTA COINCIDA CON DONDE GUARDASTE EL HTML
     return render(request, 'reportes/reportes_unificados.html', contexto)
-
-# ==================== PORTAL CHOFERES ====================
-@login_required
-def chofer_reservar(request):
-    """Portal exclusivo para choferes - Reservar asiento"""
-    if not hasattr(request.user, 'rol') or request.user.rol != 'chofer':
-        messages.error(request, 'Acceso denegado. Solo choferes pueden acceder.')
-        return redirect('core:dashboard')
-
-    viajes = [
-        {'id': 1, 'ruta': 'Trujillo → Julcán', 'hora': '08:00 AM', 'vehiculo': 'ABC-123', 'libres': 12},
-        {'id': 2, 'ruta': 'Trujillo → Mache', 'hora': '10:30 AM', 'vehiculo': 'XYZ-789', 'libres': 3},
-        {'id': 3, 'ruta': 'Julcán → Trujillo', 'hora': '14:00 PM', 'vehiculo': 'DEF-456', 'libres': 0},
-    ]
-
-    mis_reservas = [
-        {'id': 1, 'asiento': '02A', 'ruta': 'Trujillo → Julcán', 'hora': '08:00 AM', 'fecha': 'Hoy'},
-    ]
-
-    contexto = {
-        'usuario': request.user,
-        'vehiculo': {'placa': 'ABC-123'},
-        'viajes': viajes,
-        'mis_reservas': mis_reservas,
-        'reservas_count': len(mis_reservas),
-        'fecha_actual': timezone.now(),
-    }
-
-    return render(request, 'chofer/reservar_asiento.html', contexto)
-
-
-@login_required
-def chofer_confirmar_reserva(request):
-    """Confirmar reserva de asiento por chofer"""
-    if request.method == 'POST' and hasattr(request.user, 'rol') and request.user.rol == 'chofer':
-        asiento = request.POST.get('asiento')
-        viaje_id = request.POST.get('viaje_id')
-
-        messages.success(request, f'✅ Asiento {asiento} reservado exitosamente')
-        return redirect('core:chofer_reservar')
-
-    return redirect('core:dashboard')
-
-
-@login_required
-def chofer_cancelar_reserva(request, reserva_id):
-    """Cancelar reserva del chofer"""
-    if hasattr(request.user, 'rol') and request.user.rol == 'chofer':
-        messages.success(request, 'Reserva cancelada correctamente')
-
-    return redirect('core:chofer_reservar')
 
 
 # ==================== BOLETOS ====================
@@ -3360,19 +3370,6 @@ def hoja_ruta_nuevo(request):
     })
 
 
-@login_required
-def hoja_ruta_pdf(request, id):
-    hoja = get_object_or_404(HojaRuta, id=id, sede=request.user.sede)
-    context = {'hoja': hoja}
-    html_string = render(request, 'documentos/hoja_ruta_pdf.html', context).content.decode('utf-8')
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = f'inline; filename="Hoja_Ruta_{hoja.numero_documento}.pdf"'
-    pisa_status = pisa.CreatePDF(BytesIO(html_string.encode('UTF-8')), response, encoding='UTF-8')
-    if pisa_status.err:
-        return HttpResponse('Error al generar el PDF', status=500)
-    return response
-
-
 # ==================== MANIFIESTO ====================
 
 logger = logging.getLogger('core.manifiestos')
@@ -3627,14 +3624,14 @@ def hoja_ruta_generar(request, viaje_id):
             hoja.sede = sede
             hoja.viaje = viaje
             
-            # ✅ AUTO-LLENAR CAMPOS OBLIGATORIOS
+            # Auto-llenar campos obligatorios
             hoja.fecha_inicio = viaje.fecha_salida
             hoja.fecha_llegada = getattr(viaje, 'fecha_llegada_estimada', viaje.fecha_salida) or viaje.fecha_salida
             hoja.hora_salida = viaje.hora_salida
             hoja.hora_llegada = getattr(viaje, 'hora_llegada_estimada', viaje.hora_salida) or viaje.hora_salida
             hoja.placa = viaje.vehiculo.placa if viaje.vehiculo else ''
             
-            # Lugares (del formulario o de la ruta)
+            # Lugares
             hoja.lugar_embarque = form.cleaned_data.get('lugar_embarque', viaje.ruta.origen if viaje.ruta else '')
             hoja.lugar_desembarque = form.cleaned_data.get('lugar_desembarque', viaje.ruta.destino if viaje.ruta else '')
             
@@ -3644,10 +3641,13 @@ def hoja_ruta_generar(request, viaje_id):
             
             hoja.save()
             
-            messages.success(request, '✅ Hoja de Ruta generada exitosamente')
-            return redirect('core:hoja_ruta_pdf', id=hoja.id)
+            messages.success(request, '✅ Hoja de Ruta generada exitosamente.')
+            
+            # 💡 REDIRECCIÓN CORREGIDA: Guarda y regresa al historial/lista.
+            # No redirigir directamente al PDF para evitar descargas/aperturas no deseadas.
+            return redirect('core:hoja_ruta_historial') 
+            
     else:
-        # Formulario pre-llenado
         initial_data = {
             'lugar_embarque': viaje.ruta.origen if viaje.ruta else '',
             'lugar_desembarque': viaje.ruta.destino if viaje.ruta else '',
@@ -3671,16 +3671,18 @@ def hoja_ruta_generar(request, viaje_id):
 
 @login_required
 def hoja_ruta_pdf(request, id):
-    """Generar PDF de hoja de ruta"""
+    """Generar vista de PDF de la hoja de ruta"""
     hoja = get_object_or_404(HojaRuta, id=id, sede=request.user.sede)
     
+    # Renderizamos la plantilla HTML ajustada
     context = {'hoja': hoja}
-    html_string = render(request, 'documentos/hoja_ruta_pdf.html', context).content.decode('utf-8')
+    html_string = render_to_string('documentos/hoja_ruta_pdf.html', context)
     
     response = HttpResponse(content_type='application/pdf')
+    # inline = Visualizar en pestaña nueva sin forzar descarga local automática
     response['Content-Disposition'] = f'inline; filename="Hoja_Ruta_{hoja.numero_documento}.pdf"'
     
-    pisa_status = pisa.CreatePDF(BytesIO(html_string.encode('UTF-8')), response, encoding='UTF-8')
+    pisa_status = pisa.CreatePDF(BytesIO(html_string.encode('UTF-8')), dest=response, encoding='UTF-8')
     
     if pisa_status.err:
         return HttpResponse('Error al generar el PDF', status=500)
@@ -3694,3 +3696,444 @@ def hoja_ruta_limpiar_sesion(request):
         del request.session['ultima_hoja_ruta_id']
     from django.http import JsonResponse
     return JsonResponse({'status': 'ok'})
+
+
+
+# ==================== PORTAL CHOFERES (LÓGICA DE ORO) ====================
+from django.contrib.auth import authenticate, login, logout
+
+# 1. LOGIN PERSONALIZADO PARA DETECTAR AL CHOFER GENÉRICO
+def login_chofer_view(request):
+    """Login para el usuario genérico 'chofer'"""
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        
+        # Autenticar al usuario genérico
+        user = authenticate(request, username=username, password=password)
+        
+        if user is not None and user.username == 'chofer':
+            login(request, user)
+            
+            # ✅ SIEMPRE mandar a seleccionar identidad, no al panel directo
+            # Limpiamos cualquier sesión previa de chofer
+            if 'chofer_id' in request.session:
+                del request.session['chofer_id']
+            if 'chofer_nombre' in request.session:
+                del request.session['chofer_nombre']
+            
+            messages.success(request, '✅ Login exitoso. Selecciona tu identidad.')
+            return redirect('core:chofer_seleccionar_identidad')
+        else:
+            messages.error(request, '❌ Credenciales incorrectas')
+    
+    return render(request, 'chofer/login_chofer.html')
+
+# 2. SELECCIÓN DE IDENTIDAD (Jala los choferes reales de la BD)
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from core.models import Usuario
+
+@login_required
+def chofer_seleccionar_identidad(request):
+    """El chofer genérico selecciona su identidad y verifica con DNI"""
+    
+    # Si ya tiene identidad en sesión, que pase directo al panel
+    if request.session.get('chofer_id'):
+        return redirect('core:panel_chofer')
+    
+    # Jalamos los choferes reales de la BD (excluyendo la cuenta genérica 'chofer')
+    choferes_reales = Usuario.objects.filter(
+        es_chofer=True, 
+        activo=True
+    ).exclude(username='chofer').order_by('first_name')
+    
+    if request.method == 'POST':
+        chofer_id = request.POST.get('chofer_id')
+        dni_ingresado = request.POST.get('dni_ingresado', '').strip()
+        
+        if not chofer_id or not dni_ingresado:
+            messages.error(request, '❌ Debes seleccionar tu nombre e ingresar tu DNI.')
+            return render(request, 'chofer/seleccionar_identidad.html', {'choferes': choferes_reales})
+        
+        try:
+            # Buscamos al chofer seleccionado en la BD
+            chofer_obj = Usuario.objects.get(id=chofer_id, es_chofer=True, activo=True)
+            
+            # 🔒 VALIDACIÓN DE SEGURIDAD ESTRICTA:
+            # El DNI ingresado debe ser EXACTAMENTE IGUAL al username (DNI) del chofer en la BD
+            if chofer_obj.username != dni_ingresado:
+                messages.error(
+                    request, 
+                    f'❌ ACCESO DENEGADO: El DNI ingresado NO coincide con {chofer_obj.get_full_name()}. Verifica tus datos.'
+                )
+                # Retornamos el formulario de nuevo para que lo intente correctamente
+                return render(request, 'chofer/seleccionar_identidad.html', {'choferes': choferes_reales})
+            
+            # Si todo está correcto, guardamos en sesión
+            request.session['chofer_id'] = chofer_obj.id
+            request.session['chofer_nombre'] = chofer_obj.get_full_name() or chofer_obj.username
+            request.session['chofer_dni'] = chofer_obj.username
+            
+            messages.success(request, f'✅ Identidad verificada. Bienvenido, {request.session["chofer_nombre"]}')
+            return redirect('core:panel_chofer')
+            
+        except Usuario.DoesNotExist:
+            messages.error(request, '❌ Error al verificar la identidad en el sistema.')
+            
+    return render(request, 'chofer/seleccionar_identidad.html', {'choferes': choferes_reales})
+
+# 2. Panel Principal del Chofer
+from django.utils import timezone
+from zoneinfo import ZoneInfo
+
+@login_required
+def panel_chofer(request):
+    """Panel principal del chofer - Muestra viajes de todas las sedes con filtros"""
+    if not request.session.get('chofer_id'):
+        return redirect('core:chofer_seleccionar_identidad')
+    
+    # ✅ FECHA Y HORA DE HOY (Lima, Perú)
+    lima_tz = ZoneInfo('America/Lima')
+    ahora_local = timezone.now().astimezone(lima_tz)
+    hoy = ahora_local.date()
+    hora_actual = ahora_local.time()
+    
+    # Filtros
+    fecha_filtro = request.GET.get('fecha', hoy.isoformat())
+    ruta_filtro = request.GET.get('ruta', '')
+    
+    # Query base
+    viajes_qs = Viaje.objects.filter(
+        fecha_salida=fecha_filtro
+    ).select_related('ruta', 'vehiculo', 'chofer_asignado', 'sede_salida')
+    
+    if ruta_filtro:
+        viajes_qs = viajes_qs.filter(ruta_id=ruta_filtro)
+    
+    # ✅ FILTRO CLAVE: Si la fecha es HOY, solo mostrar viajes con hora_salida >= hora_actual
+    from datetime import date as date_type
+    if fecha_filtro == hoy.isoformat():
+        viajes_qs = viajes_qs.filter(hora_salida__gte=hora_actual)
+    
+    viajes_qs = viajes_qs.order_by('hora_salida')
+    rutas = Ruta.objects.filter(activa=True).order_by('origen', 'destino')
+    
+    contexto = {
+        'viajes': viajes_qs,
+        'rutas': rutas,
+        'fecha_filtro': fecha_filtro,
+        'ruta_filtro': ruta_filtro,
+        'total_viajes': viajes_qs.count(),
+        'hoy': hoy,
+        'chofer_nombre': request.session.get('chofer_nombre'),
+    }
+    
+    return render(request, 'chofer/panel_chofer.html', contexto)
+
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.utils import timezone
+from core.models import Viaje, AsientoViaje, Notificacion
+
+@login_required
+def chofer_reservar_asientos(request, viaje_id):
+    """Vista para que el chofer reserve asientos (CON o SIN pago)"""
+    if not request.session.get('chofer_id'):
+        return redirect('core:chofer_seleccionar_identidad')
+    
+    viaje = get_object_or_404(Viaje, id=viaje_id)
+    
+    # Obtener o crear asientos del viaje
+    asientos = []
+    for i in range(1, viaje.vehiculo.capacidad_asientos + 1):
+        asiento, creado = AsientoViaje.objects.get_or_create(
+            viaje=viaje,
+            numero_asiento=str(i),
+            defaults={
+                'estado': 'disponible',
+                'precio': viaje.ruta.precio_base
+            }
+        )
+        asientos.append(asiento)
+    
+    if request.method == 'POST':
+        asiento_numero = request.POST.get('asiento_numero')
+        tipo_reserva = request.POST.get('tipo_reserva')  # 'con_cobro' o 'sin_cobro'
+        dni_pasajero = request.POST.get('dni_pasajero', '').strip()
+        nombre_pasajero = request.POST.get('nombre_pasajero', '').strip().upper()
+        telefono_pasajero = request.POST.get('telefono_pasajero', '').strip()
+        
+        # Campos adicionales (solo para con_cobro)
+        email_pasajero = request.POST.get('email_pasajero', '').strip()
+        ruc_cliente = request.POST.get('ruc_cliente', '').strip()
+        razon_social = request.POST.get('razon_social', '').strip().upper()
+        metodo_pago = request.POST.get('metodo_pago', 'efectivo')
+        
+        asiento = AsientoViaje.objects.filter(viaje=viaje, numero_asiento=asiento_numero).first()
+        
+        if not asiento:
+            messages.error(request, f'❌ El asiento {asiento_numero} no existe')
+            return redirect('core:chofer_reservar_asientos', viaje_id=viaje_id)
+        
+        if asiento.estado != 'disponible':
+            messages.error(request, f'❌ El asiento {asiento_numero} ya está {asiento.estado}')
+            return redirect('core:chofer_reservar_asientos', viaje_id=viaje_id)
+        
+        # ✅ RESERVAR ASIENTO (MORADO)
+        asiento.estado = 'reservado'
+        asiento.nombre_reserva = nombre_pasajero
+        asiento.numero_documento_reserva = dni_pasajero
+        asiento.telefono_reserva = telefono_pasajero
+        asiento.reservado_por_chofer = True
+        asiento.tipo_reserva_chofer = tipo_reserva
+        asiento.nombre_chofer_reserva = request.session.get('chofer_nombre')
+        asiento.chofer_reserva = request.user
+        asiento.fecha_reserva = timezone.now()
+        
+        # Guardar campos adicionales si existen
+        if email_pasajero:
+            asiento.email_reserva = email_pasajero
+        if ruc_cliente:
+            asiento.ruc_reserva = ruc_cliente
+        if razon_social:
+            asiento.razon_social_reserva = razon_social
+        if metodo_pago and tipo_reserva == 'con_cobro':
+            asiento.metodo_pago_reserva = metodo_pago
+            
+        asiento.save()
+        
+        # ✅ CREAR NOTIFICACIÓN SOLO PARA LA SEDE DE ORIGEN DEL VIAJE
+        tipo_mensaje = "CON COBRO" if tipo_reserva == 'con_cobro' else "SIN COBRO"
+        mensaje_cobro = "El chofer YA COBRÓ el pasaje." if tipo_reserva == 'con_cobro' else "El pasajero debe pagar en sede."
+        
+        # ✅ La notificación va a la sede de ORIGEN del viaje (sede_salida)
+        # Si el viaje es Trujillo → Julcán, solo Trujillo recibe la notificación
+        sede_origen = viaje.sede_salida
+        
+        if sede_origen:
+            try:
+                Notificacion.objects.create(
+                    titulo=f"🚌 RESERVA DE CHOFER - {tipo_mensaje}",
+                    descripcion=(
+                        f"Asiento {asiento_numero} reservado por {request.session.get('chofer_nombre')}.\n"
+                        f"Pasajero: {nombre_pasajero} (DNI: {dni_pasajero})\n"
+                        f"Ruta: {viaje.ruta.origen} → {viaje.ruta.destino}\n"
+                        f"{mensaje_cobro}"
+                    ),
+                    tipo='reserva_chofer',
+                    categoria='alerta',
+                    sede=sede_origen,  # ✅ SOLO la sede de origen recibe la notificación
+                    leida=False
+                )
+                print(f"✅ Notificación creada para sede de origen: {sede_origen.nombre}")
+            except Exception as e:
+                print(f"❌ Error al crear notificación: {e}")
+        else:
+            print(f"❌ El viaje no tiene sede de salida asignada")
+        
+        tipo_texto = "con cobro" if tipo_reserva == 'con_cobro' else "sin cobro"
+        messages.success(
+            request, 
+            f'✅ Asiento {asiento_numero} reservado {tipo_texto}.\n'
+            f'La sede {viaje.sede_salida.nombre} ha sido notificada.'
+        )
+        return redirect('core:panel_chofer')
+    
+    contexto = {
+        'viaje': viaje,
+        'asientos': asientos,
+        'chofer_nombre': request.session.get('chofer_nombre'),
+    }
+    return render(request, 'chofer/reservar_asientos.html', contexto)
+
+# 4. Cerrar Sesión del Chofer
+from django.contrib.auth import logout  # <-- 1. IMPORTANTE: Agrega este import arriba
+from django.shortcuts import redirect
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+
+@login_required
+def chofer_logout(request):
+    """Cerrar sesión del chofer completamente"""
+    
+    # 2. Cierra la sesión de Django (elimina todas las variables de sesión y cookies)
+    logout(request)
+    
+    messages.info(request, '👋 Sesión cerrada correctamente')
+    
+    # 3. Redirige al login específico de choferes 
+    # (Asegúrate de que 'core:login_chofer' sea el nombre exacto de tu URL de login)
+    return redirect('core:login_chofer') 
+
+@login_required
+def chofer_incidencias(request):
+    """Panel de incidencias para chofer"""
+    if not request.session.get('chofer_id'):
+        return redirect('core:chofer_seleccionar_identidad')
+    
+    chofer_nombre = request.session.get('chofer_nombre')
+    
+    # Obtener incidencias del chofer
+    try:
+        from core.models import Incidencia
+        incidencias = Incidencia.objects.filter(
+            creado_por=request.user
+        ).order_by('-fecha_creacion')
+    except Exception:
+        incidencias = []
+    
+    contexto = {
+        'incidencias': incidencias,
+        'chofer_nombre': chofer_nombre,
+    }
+    return render(request, 'chofer/incidencias.html', contexto)
+
+from django import forms
+from core.models import Incidencia
+
+# Formulario específico para choferes (sin campo de sede)
+class ChoferIncidenciaForm(forms.ModelForm):
+    class Meta:
+        model = Incidencia
+        fields = ['tipo', 'descripcion']
+        widgets = {
+            'tipo': forms.Select(attrs={
+                'class': 'w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-sm'
+            }),
+            'descripcion': forms.Textarea(attrs={
+                'class': 'w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-sm',
+                'rows': 5,
+                'placeholder': 'Describe detalladamente la incidencia...'
+            }),
+        }
+
+@login_required
+def chofer_nueva_incidencia(request):
+    """Vista para que el chofer reporte una nueva incidencia"""
+    if not request.session.get('chofer_id'):
+        return redirect('core:chofer_seleccionar_identidad')
+    
+    chofer_nombre = request.session.get('chofer_nombre')
+    
+    if request.method == 'POST':
+        form = ChoferIncidenciaForm(request.POST)
+        if form.is_valid():
+            incidencia = form.save(commit=False)
+            incidencia.reportado_por = request.user
+            incidencia.sede_reporte = request.user.sede  # Unidad Móvil
+            incidencia.estado = 'pendiente'
+            incidencia.save()
+            
+            messages.success(request, '✅ Incidencia reportada correctamente. Será revisada por el administrador.')
+            return redirect('core:chofer_incidencias')
+    else:
+        form = ChoferIncidenciaForm()
+    
+    contexto = {
+        'form': form,
+        'chofer_nombre': chofer_nombre,
+    }
+    return render(request, 'chofer/nueva_incidencia.html', contexto)
+
+
+
+from django.utils import timezone
+from datetime import datetime
+import random
+
+@login_required
+@require_POST
+def confirmar_pago_reserva_chofer(request, asiento_id):
+    """La cajera confirma que el pasajero de reserva de chofer llegó (CON COBRO)"""
+    try:
+        asiento = AsientoViaje.objects.select_related('viaje', 'viaje__ruta', 'chofer_reserva').get(id=asiento_id)
+        
+        # Verificaciones
+        if not asiento.reservado_por_chofer:
+            return JsonResponse({'success': False, 'error': 'Este asiento no es una reserva de chofer'})
+        
+        if asiento.tipo_reserva_chofer != 'con_cobro':
+            return JsonResponse({'success': False, 'error': 'Esta reserva no es de tipo "con cobro"'})
+        
+        if asiento.estado != 'reservado':
+            return JsonResponse({'success': False, 'error': 'El asiento no está en estado reservado'})
+        
+        # ✅ GENERAR NÚMERO DE TICKET
+        ahora = timezone.now()
+        fecha_str = ahora.strftime('%y%m%d')
+        random_str = f"{random.randint(1000, 9999)}"
+        numero_ticket = f"TKT-{fecha_str}-{random_str}"
+        
+        # ✅ CREAR LA VENTA
+        from core.models import Venta
+        
+        # Obtener nombre del chofer si existe
+        nombre_chofer = ""
+        if asiento.chofer_reserva:
+            nombre_chofer = asiento.chofer_reserva.get_full_name() or asiento.chofer_reserva.username
+        
+        venta = Venta.objects.create(
+            tipo_documento='ticket',
+            numero_documento=asiento.numero_documento_reserva or '',
+            nombre_cliente=asiento.nombre_reserva or 'Pasajero',
+            telefono_cliente=asiento.telefono_reserva or '',
+            email_cliente=asiento.email_reserva or '',
+            ruc_cliente=asiento.ruc_reserva or '',
+            razon_social=asiento.razon_social_reserva or '',
+            asiento=asiento,
+            viaje=asiento.viaje,
+            sede_venta=request.user.sede,
+            cajero=request.user,
+            monto_total=asiento.precio,
+            numero_ticket=numero_ticket,
+            metodo_pago=asiento.metodo_pago_reserva or 'efectivo',
+            observaciones=f"Reserva confirmada por chofer: {nombre_chofer}" if nombre_chofer else ""
+        )
+        
+        # ✅ MARCAR ASIENTO COMO VENDIDO
+        asiento.estado = 'vendido'
+        asiento.fecha_venta = timezone.now()
+        asiento.save()
+        
+        # Marcar notificaciones como leídas
+        Notificacion.objects.filter(
+            sede_id=request.user.sede.id,
+            tipo='reserva_chofer',
+            leida=False
+        ).update(leida=True)
+        
+        return JsonResponse({
+            'success': True,
+            'asiento': asiento.numero_asiento,
+            'asiento_id': asiento.id,
+            'venta_id': venta.id,  # ✅ IMPORTANTE PARA EL PDF
+            'ruta': f"{asiento.viaje.ruta.origen} → {asiento.viaje.ruta.destino}",
+            'fecha': asiento.viaje.fecha_salida.strftime('%d/%m/%Y'),
+            'hora': asiento.viaje.hora_salida.strftime('%H:%M'),
+            'pasajero': asiento.nombre_reserva or 'Sin nombre',
+            'total': float(asiento.precio or 0),
+            'numero_ticket': numero_ticket,
+            'mensaje': f'✅ Pago confirmado. Asiento {asiento.numero_asiento} vendido.'
+        })
+        
+    except AsientoViaje.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Asiento no encontrado'})
+    except Exception as e:
+        print(f"❌ ERROR en confirmar_pago_reserva_chofer: {str(e)}")
+        return JsonResponse({'success': False, 'error': f'Error interno: {str(e)}'})
+
+
+
+@login_required
+def notificaciones_contador_api(request):
+    """API: Retorna el contador de notificaciones no leídas (para polling)"""
+    no_leidas = Notificacion.objects.filter(
+        sede_id=request.user.sede.id,
+        leida=False
+    ).count()
+    
+    return JsonResponse({'no_leidas': no_leidas})

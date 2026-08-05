@@ -12,13 +12,23 @@ class SedeAdmin(admin.ModelAdmin):
 # ==================== USUARIO ====================
 @admin.register(Usuario)
 class UsuarioAdmin(UserAdmin):
-    list_display = ('username', 'email', 'sede', 'es_cajero', 'activo', 'is_staff')
-    list_filter = ('sede', 'es_cajero', 'activo', 'is_staff')
+    # 1. Agregamos 'es_chofer' a la visualización y filtros para que puedas gestionarlo
+    list_display = ('username', 'email', 'sede', 'es_cajero', 'es_chofer', 'activo', 'is_staff')
+    list_filter = ('sede', 'es_cajero', 'es_chofer', 'activo', 'is_staff')
     search_fields = ('username', 'email', 'first_name', 'last_name')
+    
+    # 2. Mantenemos tus fieldsets originales y agregamos 'es_chofer' al grupo de "Información Otiza"
     fieldsets = UserAdmin.fieldsets + (
-        ('Información Otiza', {'fields': ('sede', 'telefono', 'es_cajero', 'activo')}),
+        ('Información Otiza', {
+            'fields': ('sede', 'telefono', 'es_cajero', 'es_chofer', 'activo')
+        }),
     )
 
+    # 3. ✅ AGREGA ESTO: Oculta el usuario genérico 'chofer' de la lista del admin
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.exclude(username='chofer')
+    
 # ==================== VEHÍCULO ====================
 @admin.register(Vehiculo)
 class VehiculoAdmin(admin.ModelAdmin):

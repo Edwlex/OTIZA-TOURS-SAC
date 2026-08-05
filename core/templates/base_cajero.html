@@ -88,7 +88,6 @@
                 class="sidebar-item flex items-center space-x-3 px-4 py-3 rounded-lg {% if 'fidelizacion' in request.resolver_match.url_name %}bg-white/20 border-l-4 border-yellow-400{% endif %} hover:bg-white/10 transition">
                 <i class="fas fa-star w-5"></i>
                 <span class="font-medium">Fidelización</span>
-                <span class="ml-auto bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-1 rounded-full">12</span>
             </a>
 
             <!-- Reportes -->
@@ -141,7 +140,7 @@
                 <i class="fas fa-bell w-5"></i>
                 <span class="font-medium">Notificaciones</span>
                 {% if no_leidas_count > 0 %}
-                <span id="notifBadge" class="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                <span id="notifBadge" class="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full animate-pulse">
                     {{ no_leidas_count }}
                 </span>
                 {% endif %}
@@ -151,7 +150,6 @@
                 class="sidebar-item flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white/10 transition">
                 <i class="fas fa-exclamation-triangle w-5"></i>
                 <span>Incidencias</span>
-                <span class="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">0</span>
             </a>
 
             <!-- Cuenta -->
@@ -174,7 +172,7 @@
                     <i class="fas fa-map-marker-alt text-white"></i>
                 </div>
                 <div>
-                    <p class="text-sm font-bold">{{ sede.nombre|title }}</p>
+                    <p class="text-sm font-bold">{{ sede.nombre|title|default:"Sede" }}</p>
                     <p class="text-xs text-green-200">Sede Activa</p>
                 </div>
             </div>
@@ -207,7 +205,34 @@
         </main>
     </div>
 
-    <!-- JavaScript -->
+    <!-- ==================== 🔔 SISTEMA DE ALERTAS EN TIEMPO REAL ==================== -->
+    <div id="alertaNotificacion" class="fixed top-4 right-4 z-50 hidden">
+        <div class="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-4 rounded-xl shadow-2xl animate-bounce max-w-sm">
+            <div class="flex items-center gap-3">
+                <i class="fas fa-bell text-2xl animate-pulse"></i>
+                <div class="flex-1">
+                    <p class="font-bold text-sm">🔔 Reservas Pendientes</p>
+                    <p class="text-xs text-purple-100" id="textoAlerta">Tienes reservas de chofer por confirmar</p>
+                </div>
+                <button onclick="cerrarAlerta()" class="text-white hover:text-purple-200 ml-2">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="mt-3 pt-3 border-t border-purple-400/30">
+                <a href="{% url 'core:ventas_lista' %}" class="text-xs font-semibold bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-lg inline-block transition">
+                    Ir a Ventas <i class="fas fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audio de notificación (Sonido de campana suave) -->
+    <audio id="sonidoNotificacion" preload="auto">
+        <source src="data:audio/wav;base64,UklGRnoIAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoIAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZUQ==" type="audio/wav">
+    </audio>
+    <!-- =========================================================================== -->
+
+        <!-- JavaScript Base -->
     <script>
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
@@ -221,9 +246,101 @@
                 overlay.classList.remove('hidden');
             }
         }
+
+        // ==================== 🔔 SISTEMA DE ALERTAS ULTRA-RÁPIDO ====================
+        let intervaloNotificaciones = null;
+        let alertasMostradas = 0;
+
+        function verificarNotificacionesNuevas() {
+            fetch('/notificaciones/api/contador/')
+                .then(res => res.json())
+                .then(data => {
+                    console.log('🔔 Notificaciones pendientes:', data.no_leidas);
+                    
+                    if (data.no_leidas > 0) {
+                        // ✅ Hay notificaciones - mostrar alerta y sonar
+                        mostrarAlertaNotificacion(data.no_leidas);
+                        
+                        // Sonar solo las primeras 3 veces para no molestar tanto
+                        if (alertasMostradas < 3) {
+                            reproducirSonido();
+                            alertasMostradas++;
+                        }
+                        
+                        // Actualizar badge del sidebar si existe
+                        const badge = document.getElementById('notifBadge');
+                        if (badge) {
+                            badge.textContent = data.no_leidas;
+                            badge.classList.remove('hidden');
+                        }
+                    } else {
+                        // ✅ No hay notificaciones - resetear contador y detener
+                        alertasMostradas = 0;
+                        const badge = document.getElementById('notifBadge');
+                        if (badge) badge.classList.add('hidden');
+                    }
+                })
+                .catch(err => {
+                    console.error('❌ Error verificando notificaciones:', err);
+                });
+        }
+
+        function mostrarAlertaNotificacion(cantidad) {
+            const alerta = document.getElementById('alertaNotificacion');
+            const texto = document.getElementById('textoAlerta');
+            texto.textContent = `️ ${cantidad} reserva${cantidad > 1 ? 's' : ''} de chofer pendiente${cantidad > 1 ? 's' : ''} de confirmar - ¡Atiende ahora!`;
+            alerta.classList.remove('hidden');
+            
+            // Auto-cerrar después de 10 segundos
+            setTimeout(() => {
+                cerrarAlerta();
+            }, 10000);
+        }
+
+        function cerrarAlerta() {
+            document.getElementById('alertaNotificacion').classList.add('hidden');
+        }
+
+        function reproducirSonido() {
+            const audio = document.getElementById('sonidoNotificacion');
+            audio.volume = 0.7; // Volumen al 70%
+            audio.currentTime = 0; // Reiniciar audio
+            audio.play().catch(err => {
+                console.log('🔇 Audio bloqueado por el navegador (se requiere interacción del usuario)');
+            });
+        }
+
+        function iniciarSistemaAlertas() {
+            console.log('🚀 Iniciando sistema de alertas ultra-rápido...');
+            
+            // ✅ Verificar INMEDIATAMENTE al cargar
+            verificarNotificacionesNuevas();
+            
+            // ✅ Luego verificar cada 10 segundos (más rápido)
+            intervaloNotificaciones = setInterval(verificarNotificacionesNuevas, 10000);
+            
+            console.log('⏰ Polling activo cada 10 segundos');
+        }
+
+        // ✅ INICIAR INMEDIATAMENTE al cargar CUALQUIER página
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', iniciarSistemaAlertas);
+        } else {
+            // DOM ya está cargado
+            iniciarSistemaAlertas();
+        }
+
+        // Limpiar intervalo al cerrar la página
+        window.addEventListener('beforeunload', function() {
+            if (intervaloNotificaciones) {
+                clearInterval(intervaloNotificaciones);
+            }
+        });
+        // ==============================================================================
     </script>
+    
     <script src="{% static 'js/base_cajero.js' %}"></script>
     {% block extra_js %}{% endblock %}
+    
 </body>
-
 </html>

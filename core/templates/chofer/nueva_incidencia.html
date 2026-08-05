@@ -1,0 +1,50 @@
+{% extends 'chofer/base_chofer.html' %}
+{% block title %}Nueva Incidencia - Panel Chofer{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <!-- HEADER -->
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-slate-800">⚠️ Reportar Nueva Incidencia</h1>
+        <p class="text-slate-500">Chofer: {{ chofer_nombre }}</p>
+    </div>
+
+    <!-- FORMULARIO -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+            
+            <!-- Tipo de Incidencia -->
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-2">Tipo de Incidencia *</label>
+                {{ form.tipo }}
+                {% if form.tipo.errors %}
+                <p class="text-red-500 text-xs mt-1">{{ form.tipo.errors.0 }}</p>
+                {% endif %}
+                <p class="text-xs text-slate-500 mt-1">Selecciona el tipo de incidencia que deseas reportar.</p>
+            </div>
+            
+            <!-- Descripción -->
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-2">Descripción Detallada *</label>
+                {{ form.descripcion }}
+                {% if form.descripcion.errors %}
+                <p class="text-red-500 text-xs mt-1">{{ form.descripcion.errors.0 }}</p>
+                {% endif %}
+                <p class="text-xs text-slate-500 mt-1">Sé lo más específico posible para que el administrador pueda resolverlo rápidamente.</p>
+            </div>
+            
+            <!-- Botones -->
+            <div class="flex justify-end space-x-4 pt-6 border-t border-slate-200">
+                <a href="{% url 'core:chofer_incidencias' %}" 
+                   class="px-6 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition">
+                    Cancelar
+                </a>
+                <button type="submit" 
+                        class="px-6 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition font-semibold">
+                    <i class="fas fa-paper-plane mr-2"></i>Reportar Incidencia
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

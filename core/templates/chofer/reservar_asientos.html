@@ -1,0 +1,433 @@
+{% extends 'chofer/base_chofer.html' %}
+{% block title %}Reservar Asientos - {{ viaje.ruta }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .seat-btn { transition: all 0.2s; cursor: pointer; }
+    .seat-btn:hover:not(.ocupado):not(.seleccionado):not(.reservado) { 
+        transform: translateY(-2px); 
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); 
+    }
+    .seat-btn.seleccionado { 
+        background: linear-gradient(135deg, #10B981 0%, #059669 100%); 
+        color: white; 
+        transform: scale(1.05); 
+    }
+    .seat-btn.ocupado { 
+        background: #EF4444; 
+        color: white; 
+        cursor: not-allowed; 
+        opacity: 0.6; 
+    }
+    .seat-btn.reservado { 
+        background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%); 
+        color: white; 
+    }
+    .fade-in { animation: fadeIn 0.4s ease-in; }
+    @keyframes fadeIn { 
+        from { opacity: 0; transform: translateY(20px); } 
+        to { opacity: 1; transform: translateY(0); } 
+    }
+    /* Campos adicionales ocultos por defecto */
+    .campo-adicional { display: none; }
+    .campo-adicional.visible { display: block; animation: fadeIn 0.3s ease-in; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6 pb-10">
+    <!-- HEADER -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <a href="{% url 'core:panel_chofer' %}" class="text-sm text-slate-500 hover:text-slate-700 mb-2 inline-flex items-center gap-1">
+            <i class="fas fa-arrow-left"></i> Volver al panel
+        </a>
+        <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
+            <i class="fas fa-ticket-alt text-purple-600"></i> Reservar Asiento
+        </h2>
+        <p class="text-slate-500 text-sm mt-1">Viaje: {{ viaje.ruta.origen }} → {{ viaje.ruta.destino }}</p>
+    </div>
+
+    <!-- INFO DEL VIAJE -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <h3 class="text-lg font-bold text-slate-800 mb-4">Información del Viaje</h3>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-slate-50 rounded-lg">
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Ruta</label>
+                <p class="font-bold text-slate-800">{{ viaje.ruta.origen }} → {{ viaje.ruta.destino }}</p>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Fecha</label>
+                <p class="font-bold text-slate-800">{{ viaje.fecha_salida|date:"d/m/Y" }}</p>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Hora</label>
+                <p class="font-bold text-slate-800">{{ viaje.hora_salida|date:"H:i" }}</p>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Vehículo</label>
+                <p class="font-bold text-slate-800">{{ viaje.vehiculo.placa }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAPA DE ASIENTOS -->
+    <div id="mapaAsientos" class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h3 class="text-lg font-bold text-slate-800">Selecciona Asiento</h3>
+                <p class="text-sm text-slate-500 mt-1">{{ viaje.vehiculo.capacidad_asientos }} asientos disponibles</p>
+            </div>
+            <div class="flex flex-wrap gap-4 text-sm">
+                <span class="flex items-center gap-2">
+                    <span class="w-4 h-4 rounded bg-slate-100 border border-slate-300"></span> Libre
+                </span>
+                <span class="flex items-center gap-2">
+                    <span class="w-4 h-4 rounded bg-red-500"></span> Ocupado
+                </span>
+                <span class="flex items-center gap-2">
+                    <span class="w-4 h-4 rounded bg-purple-500"></span> Reservado
+                </span>
+                <span class="flex items-center gap-2">
+                    <span class="w-4 h-4 rounded bg-emerald-500"></span> Seleccionado
+                </span>
+            </div>
+        </div>
+
+        <!-- Grid de Asientos -->
+        <div class="max-w-2xl mx-auto">
+            <div class="text-center text-xs text-slate-400 font-bold mb-6 uppercase tracking-widest">
+                Frente del Vehículo 
+            </div>
+            
+            {% if viaje.vehiculo.capacidad_asientos == 16 %}
+            <div class="grid grid-cols-4 gap-3">
+                {% for asiento in asientos %}
+                <button type="button" 
+                        id="btn-asiento-{{ asiento.numero_asiento }}"
+                        data-asiento="{{ asiento.numero_asiento }}"
+                        data-asiento-id="{{ asiento.id }}"
+                        class="seat-btn h-14 rounded-xl border-2 border-slate-200 font-bold text-slate-700
+                            {% if asiento.estado == 'vendido' %}ocupado bg-red-500 text-white
+                            {% elif asiento.estado == 'reservado' %}reservado bg-purple-500 text-white{% endif %}"
+                        {% if asiento.estado == 'vendido' %}disabled
+                        {% elif asiento.estado == 'reservado' %}disabled
+                        {% else %}onclick="seleccionarAsiento('{{ asiento.numero_asiento }}', '{{ asiento.id }}', this)"{% endif %}>
+                    {{ asiento.numero_asiento }}
+                </button>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="grid grid-cols-3 gap-4">
+                <div class="h-14 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 flex items-center justify-center text-xs font-bold text-slate-400">
+                    Cho
+                </div>
+                {% for asiento in asientos %}
+                <button type="button" 
+                        id="btn-asiento-{{ asiento.numero_asiento }}"
+                        data-asiento="{{ asiento.numero_asiento }}"
+                        data-asiento-id="{{ asiento.id }}"
+                        class="seat-btn h-14 rounded-xl border-2 border-slate-200 font-bold text-slate-700
+                            {% if asiento.estado == 'vendido' %}ocupado bg-red-500 text-white
+                            {% elif asiento.estado == 'reservado' %}reservado bg-purple-500 text-white{% endif %}"
+                        {% if asiento.estado == 'vendido' %}disabled
+                        {% elif asiento.estado == 'reservado' %}disabled
+                        {% else %}onclick="seleccionarAsiento('{{ asiento.numero_asiento }}', '{{ asiento.id }}', this)"{% endif %}>
+                    {{ asiento.numero_asiento }}
+                </button>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- FORMULARIO DE RESERVA -->
+    <div id="formularioReserva" class="hidden">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 fade-in">
+            <!-- Formulario -->
+            <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <h3 class="text-lg font-bold text-slate-800 mb-4">
+                    Datos del Pasajero - Asiento <span id="asientoDisplay" class="text-purple-600 text-xl">--</span>
+                </h3>
+                
+                <form method="POST" class="space-y-4" id="formReserva">
+                    {% csrf_token %}
+                    <input type="hidden" name="asiento_numero" id="inputAsientoNumero">
+                    <input type="hidden" name="asiento_id" id="inputAsientoId">
+                    
+                    <!-- Tipo de Reserva -->
+                    <div class="bg-purple-50 border-2 border-purple-200 rounded-xl p-4 mb-4">
+                        <label class="block text-sm font-semibold text-purple-900 mb-3">
+                            <i class="fas fa-money-bill-wave mr-1"></i> Tipo de Reserva *
+                        </label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <label class="cursor-pointer block select-none">
+                                <input type="radio" name="tipo_reserva" value="con_cobro" id="radio-con-cobro"
+                                       class="peer sr-only" onchange="toggleCamposAdicionales()">
+                                <div class="p-3 rounded-xl border-2 border-purple-200 text-center peer-checked:bg-purple-200 peer-checked:border-purple-500 transition select-none">
+                                    <i class="fas fa-check-circle text-2xl mb-1 text-purple-600"></i>
+                                    <p class="text-sm font-bold text-purple-900 select-none">Con Cobro</p>
+                                    <p class="text-xs text-purple-700 mt-1 select-none">Ya cobré al pasajero</p>
+                                </div>
+                            </label>
+                            <label class="cursor-pointer block select-none">
+                                <input type="radio" name="tipo_reserva" value="sin_cobro" id="radio-sin-cobro"
+                                       class="peer sr-only" onchange="toggleCamposAdicionales()">
+                                <div class="p-3 rounded-xl border-2 border-purple-200 text-center peer-checked:bg-purple-200 peer-checked:border-purple-500 transition select-none">
+                                    <i class="fas fa-clock text-2xl mb-1 text-purple-600"></i>
+                                    <p class="text-sm font-bold text-purple-900 select-none">Sin Cobro</p>
+                                    <p class="text-xs text-purple-700 mt-1 select-none">Paga en sede</p>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- CAMPOS BÁSICOS (Siempre visibles) -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-2">DNI *</label>
+                            <input type="text" name="dni_pasajero" maxlength="8" required 
+                                   class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                                   placeholder="12345678">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-2">Teléfono *</label>
+                            <input type="tel" name="telefono_pasajero" maxlength="9" required 
+                                   class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                                   placeholder="987654321">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">Nombre Completo *</label>
+                        <input type="text" name="nombre_pasajero" required 
+                               class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 uppercase"
+                               placeholder="PÉREZ GARCÍA JUAN">
+                    </div>
+
+                    <!-- CAMPOS ADICIONALES (Solo para CON COBRO) -->
+                    <div id="camposAdicionales" class="campo-adicional space-y-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-2">Correo Electrónico <span class="text-xs text-slate-400">(Opcional)</span></label>
+                            <div class="relative">
+                                <i class="fas fa-envelope absolute left-3 top-3 text-slate-400"></i>
+                                <input type="email" name="email_pasajero" 
+                                       class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition"
+                                       placeholder="juan.perez@email.com">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-2">RUC <span class="text-xs text-slate-400">(Opcional)</span></label>
+                                <div class="relative">
+                                    <i class="fas fa-file-invoice absolute left-3 top-3 text-slate-400"></i>
+                                    <input type="text" name="ruc_cliente" maxlength="20" 
+                                           class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition"
+                                           placeholder="20603076304">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-2">Razón Social <span class="text-xs text-slate-400">(Opcional)</span></label>
+                                <div class="relative">
+                                    <i class="fas fa-building absolute left-3 top-3 text-slate-400"></i>
+                                    <input type="text" name="razon_social" maxlength="150" 
+                                           class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition uppercase"
+                                           placeholder="OTIZA TOURS S.A.C.">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Métodos de Pago -->
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-2">Método de Pago *</label>
+                            <div class="grid grid-cols-3 gap-3">
+                                <label class="cursor-pointer block select-none">
+                                    <input type="radio" name="metodo_pago" value="efectivo" class="peer sr-only" checked>
+                                    <div class="p-3 rounded-xl border-2 border-slate-200 text-center peer-checked:bg-green-100 peer-checked:border-green-500 peer-checked:text-green-700 transition hover:bg-slate-50 h-full flex flex-col items-center justify-center">
+                                        <i class="fas fa-money-bill-wave text-2xl mb-1"></i>
+                                        <p class="text-sm font-semibold">Efectivo</p>
+                                    </div>
+                                </label>
+                                <label class="cursor-pointer block select-none">
+                                    <input type="radio" name="metodo_pago" value="yape" class="peer sr-only">
+                                    <div class="p-3 rounded-xl border-2 border-slate-200 text-center peer-checked:bg-purple-100 peer-checked:border-purple-500 peer-checked:text-purple-700 transition hover:bg-slate-50 h-full flex flex-col items-center justify-center">
+                                        <i class="fas fa-mobile-alt text-2xl mb-1"></i>
+                                        <p class="text-sm font-semibold">Yape</p>
+                                    </div>
+                                </label>
+                                <label class="cursor-pointer block select-none">
+                                    <input type="radio" name="metodo_pago" value="plin" class="peer sr-only">
+                                    <div class="p-3 rounded-xl border-2 border-slate-200 text-center peer-checked:bg-teal-100 peer-checked:border-teal-500 peer-checked:text-teal-700 transition hover:bg-slate-50 h-full flex flex-col items-center justify-center">
+                                        <i class="fas fa-wallet text-2xl mb-1"></i>
+                                        <p class="text-sm font-semibold">Plin</p>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Precio -->
+                    <div class="bg-slate-50 rounded-xl p-4 border-2 border-slate-200">
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-600 font-medium">Precio del Pasaje:</span>
+                            <span class="text-2xl font-bold text-purple-600">S/ {{ viaje.ruta.precio_base|floatformat:2 }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Botones -->
+                    <div class="flex justify-end gap-3 pt-4 border-t border-slate-200">
+                        <button type="button" onclick="volverAMapa()" 
+                                class="px-6 py-2.5 border border-slate-300 rounded-lg text-slate-700 font-medium hover:bg-slate-50">
+                            <i class="fas fa-arrow-left mr-2"></i>Volver
+                        </button>
+                        <button type="submit" 
+                                class="px-6 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition shadow-md">
+                            <i class="fas fa-check-circle mr-2"></i>Confirmar Reserva
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Resumen -->
+            <div class="bg-gradient-to-br from-purple-600 to-purple-800 rounded-xl shadow-lg p-6 text-white">
+                <h4 class="font-bold text-lg mb-4">
+                    <i class="fas fa-receipt mr-2"></i>Resumen
+                </h4>
+                <div class="space-y-3 text-sm">
+                    <div class="flex justify-between border-b border-white/20 pb-2">
+                        <span class="text-purple-200">Ruta:</span>
+                        <span class="font-semibold">{{ viaje.ruta.origen }} → {{ viaje.ruta.destino }}</span>
+                    </div>
+                    <div class="flex justify-between border-b border-white/20 pb-2">
+                        <span class="text-purple-200">Fecha:</span>
+                        <span class="font-semibold">{{ viaje.fecha_salida|date:"d/m/Y" }}</span>
+                    </div>
+                    <div class="flex justify-between border-b border-white/20 pb-2">
+                        <span class="text-purple-200">Hora:</span>
+                        <span class="font-semibold">{{ viaje.hora_salida|date:"H:i" }}</span>
+                    </div>
+                    <div class="flex justify-between border-b border-white/20 pb-2">
+                        <span class="text-purple-200">Asiento:</span>
+                        <span class="font-semibold text-xl" id="resumenAsiento">--</span>
+                    </div>
+                    <div class="flex justify-between border-b border-white/20 pb-2">
+                        <span class="text-purple-200">Vehículo:</span>
+                        <span class="font-semibold">{{ viaje.vehiculo.placa }}</span>
+                    </div>
+                    <div class="flex justify-between pt-2">
+                        <span class="text-purple-200 font-bold">TOTAL:</span>
+                        <span class="font-bold text-2xl">S/ {{ viaje.ruta.precio_base|floatformat:2 }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let asientoActualSeleccionado = null;
+
+function seleccionarAsiento(numero, asientoId, elemento) {
+    if (elemento.classList.contains('ocupado') || elemento.classList.contains('reservado')) {
+        alert('⚠️ Este asiento no está disponible');
+        return;
+    }
+
+    // CAMBIO DE ASIENTO
+    if (asientoActualSeleccionado && asientoActualSeleccionado !== elemento) {
+        asientoActualSeleccionado.classList.remove('seleccionado');
+    }
+
+    // Si es el mismo asiento, lo deseleccionamos
+    if (asientoActualSeleccionado === elemento) {
+        elemento.classList.remove('seleccionado');
+        asientoActualSeleccionado = null;
+        document.getElementById('inputAsientoNumero').value = '';
+        document.getElementById('inputAsientoId').value = '';
+        document.getElementById('asientoDisplay').textContent = '--';
+        document.getElementById('resumenAsiento').textContent = '--';
+        document.getElementById('formularioReserva').classList.add('hidden');
+        return;
+    }
+
+    // Seleccionar nuevo asiento
+    elemento.classList.add('seleccionado');
+    asientoActualSeleccionado = elemento;
+    
+    // Actualizar formulario
+    document.getElementById('inputAsientoNumero').value = numero;
+    document.getElementById('inputAsientoId').value = asientoId;
+    document.getElementById('asientoDisplay').textContent = numero;
+    document.getElementById('resumenAsiento').textContent = numero;
+    
+    // Mostrar formulario con scroll suave
+    const formulario = document.getElementById('formularioReserva');
+    formulario.classList.remove('hidden');
+    
+    setTimeout(() => {
+        const offset = formulario.offsetTop - 80;
+        window.scrollTo({ top: offset, behavior: 'smooth' });
+    }, 100);
+}
+
+function volverAMapa() {
+    if (asientoActualSeleccionado) {
+        asientoActualSeleccionado.classList.remove('seleccionado');
+        asientoActualSeleccionado = null;
+    }
+    
+    document.getElementById('formularioReserva').classList.add('hidden');
+    document.getElementById('inputAsientoNumero').value = '';
+    document.getElementById('inputAsientoId').value = '';
+    document.getElementById('asientoDisplay').textContent = '--';
+    document.getElementById('resumenAsiento').textContent = '--';
+    
+    const mapa = document.getElementById('mapaAsientos');
+    mapa.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ✅ FUNCIÓN PARA MOSTRAR/OCULTAR CAMPOS ADICIONALES
+function toggleCamposAdicionales() {
+    const camposAdicionales = document.getElementById('camposAdicionales');
+    const radioConCobro = document.getElementById('radio-con-cobro');
+    const radioSinCobro = document.getElementById('radio-sin-cobro');
+    
+    if (radioConCobro && radioConCobro.checked) {
+        // ✅ CON COBRO: Mostrar todos los campos
+        camposAdicionales.classList.add('visible');
+        
+        // Hacer requeridos los campos de método de pago
+        const metodosPago = document.querySelectorAll('input[name="metodo_pago"]');
+        metodosPago.forEach(radio => radio.required = true);
+        
+    } else if (radioSinCobro && radioSinCobro.checked) {
+        // ✅ SIN COBRO: Ocultar campos adicionales
+        camposAdicionales.classList.remove('visible');
+        
+        // Quitar required de los campos adicionales
+        const emailInput = document.querySelector('input[name="email_pasajero"]');
+        const rucInput = document.querySelector('input[name="ruc_cliente"]');
+        const razonInput = document.querySelector('input[name="razon_social"]');
+        const metodosPago = document.querySelectorAll('input[name="metodo_pago"]');
+        
+        if (emailInput) emailInput.required = false;
+        if (rucInput) rucInput.required = false;
+        if (razonInput) razonInput.required = false;
+        metodosPago.forEach(radio => radio.required = false);
+    }
+}
+
+// Inicializar al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+    // Marcar "Con Cobro" por defecto
+    const radioConCobro = document.getElementById('radio-con-cobro');
+    if (radioConCobro) {
+        radioConCobro.checked = true;
+        // Mostrar campos adicionales por defecto
+        toggleCamposAdicionales();
+    }
+});
+</script>
+{% endblock %}

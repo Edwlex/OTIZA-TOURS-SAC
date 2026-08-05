@@ -76,13 +76,13 @@
                 <div class="text-center text-xs text-slate-400 font-bold mb-6 uppercase tracking-widest">Frente del Vehículo 🛞</div>
                 <div class="grid grid-cols-4 gap-3">
                     {% for a in asientos %}
-                    <button type="button" data-asiento="{{ a.numero_asiento }}"
+                    <button type="button" data-asiento="{{ a.numero_asiento }}" data-asiento-id="{{ a.id }}"
                         class="seat-btn h-14 rounded-xl border-2 border-slate-200 font-bold text-slate-700
                             {% if a.estado == 'vendido' %}ocupado bg-red-500 text-white
                             {% elif a.estado == 'reservado' %}reservado{% endif %}"
                         {% if a.estado == 'vendido' %}disabled
                         {% elif a.estado == 'reservado' %}
-                            onclick="abrirModalReserva('{{ a.id }}', '{{ a.numero_asiento }}', '{{ a.nombre_reserva|default:'Sin nombre' }}')"
+                            onclick="abrirModalReserva('{{ a.id }}', '{{ a.numero_asiento }}', '{{ a.nombre_reserva|default:'Sin nombre' }}', '{{ a.numero_documento_reserva|default:'Sin DNI' }}', '{{ a.tipo_reserva_chofer|default:'' }}', '{{ a.reservado_por_chofer|default:'False' }}')"
                         {% else %}
                             onclick="seleccionarAsiento('{{ a.numero_asiento }}', this)"
                         {% endif %}>
@@ -100,13 +100,16 @@
                 <div class="grid grid-cols-3 gap-4">
                     <div class="h-14 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 flex items-center justify-center text-xs font-bold text-slate-400">Cho</div>
                     {% for a in asientos %}
-                    <button type="button" data-asiento="{{ a.numero_asiento }}"
+                    <button type="button" data-asiento="{{ a.numero_asiento }}" data-asiento-id="{{ a.id }}"
                         class="seat-btn h-14 rounded-xl border-2 border-slate-200 font-bold text-slate-700
                             {% if a.estado == 'vendido' %}ocupado bg-red-500 text-white
                             {% elif a.estado == 'reservado' %}reservado{% endif %}"
                         {% if a.estado == 'vendido' %}disabled
-                        {% elif a.estado == 'reservado' %}onclick="abrirModalReserva('{{ a.id }}', '{{ a.numero_asiento }}', '{{ a.nombre_reserva|default:'Reservado' }}')"
-                        {% else %}onclick="seleccionarAsiento('{{ a.numero_asiento }}', this)"{% endif %}>
+                        {% elif a.estado == 'reservado' %}
+                            onclick="abrirModalReserva('{{ a.id }}', '{{ a.numero_asiento }}', '{{ a.nombre_reserva|default:'Sin nombre' }}', '{{ a.numero_documento_reserva|default:'Sin DNI' }}', '{{ a.tipo_reserva_chofer|default:'' }}', '{{ a.reservado_por_chofer|default:'False' }}')"
+                        {% else %}
+                            onclick="seleccionarAsiento('{{ a.numero_asiento }}', this)"
+                        {% endif %}>
                         {{ a.numero_asiento }}
                     </button>
                     {% endfor %}
@@ -235,35 +238,35 @@
     </div>
 </div>
 
-<!-- MODAL: Opciones para Asiento Reservado (SOLO UNO) -->
+<!-- ✅ MODAL: Opciones para Asiento Reservado (DINÁMICO) -->
 <div id="modalReserva" class="fixed inset-0 z-50 hidden">
     <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="cerrarModalReserva()"></div>
     <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-slide-up">
+        
+        <!-- Header del Modal -->
         <div class="text-center mb-4">
+            <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <i class="fas fa-bookmark text-purple-600 text-2xl"></i>
+            </div>
             <h3 class="text-xl font-bold text-gray-800">Asiento <span id="reservaNumero" class="text-purple-600">--</span> Reservado</h3>
-            <p class="text-sm text-gray-500 mt-1">Reservado por: <span id="reservaNombre" class="font-semibold">--</span></p>
+            <p class="text-sm text-gray-500 mt-1">Pasajero: <span id="reservaNombre" class="font-semibold">--</span></p>
+            <p class="text-xs text-gray-400 mt-1">DNI: <span id="reservaDNI">--</span></p>
         </div>
-        <div class="space-y-3">
-            <!-- Botón 1: Confirmar Pago -->
-            <button onclick="confirmarPagoReserva()" 
-                    class="w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-medium transition flex items-center justify-center gap-2">
-                <i class="fas fa-check-circle"></i>
-                <span>El cliente llegó - Confirmar Pago</span>
-            </button>
-            
-            <!-- Botón 2: Liberar Asiento (NUEVO - AMARILLO) -->
-            <button onclick="liberarReserva()" 
-                    class="w-full px-4 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-medium transition flex items-center justify-center gap-2">
-                <i class="fas fa-undo"></i>
-                <span>Cliente NO llegó - Liberar Asiento</span>
-            </button>
-            
-            <!-- Botón 3: Cancelar -->
-            <button onclick="cerrarModalReserva()" 
-                    class="w-full px-4 py-3 border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-xl font-medium transition">
-                Cancelar
-            </button>
+
+        <!-- Badge de tipo de reserva -->
+        <div id="badgeTipoReserva" class="mb-4 p-3 rounded-lg text-center text-sm font-bold hidden">
+            <!-- Se llena dinámicamente -->
         </div>
+
+        <div class="space-y-3" id="botonesReserva">
+            <!-- Los botones se generan dinámicamente según el tipo de reserva -->
+        </div>
+
+        <!-- Botón Cerrar -->
+        <button onclick="cerrarModalReserva()" 
+                class="w-full mt-3 px-4 py-3 border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-xl font-medium transition">
+            Cancelar
+        </button>
     </div>
 </div>
 {% endblock %}
@@ -328,11 +331,8 @@ function volverAMapa() {
     asientoSeleccionado = null;
 }
 function volverAFiltros() {
-    // ✅ Redirigir a la lista de viajes disponibles
-    // Ajusta la URL según tu configuración de urls.py
     window.location.href = "{% url 'core:ventas_lista' %}";
 }
-
 
 // ===== ACTUALIZAR VISUALMENTE EL ASIENTO =====
 function actualizarAsientoVisual(numeroAsiento, tipo, asientoId = null) {
@@ -345,23 +345,92 @@ function actualizarAsientoVisual(numeroAsiento, tipo, asientoId = null) {
         btn.removeAttribute('onclick');
     } 
     else if (tipo === 'reserva' && asientoId) {
-        // ✅ PONER MORADO + ACTUALIZAR ONCLICK
         btn.className = 'seat-btn h-14 rounded-xl border-2 border-slate-200 font-bold text-white reservado';
         btn.disabled = false;
         btn.onclick = function() {
-            abrirModalReserva(asientoId, numeroAsiento, 'Reservado');
+            // Aquí podríamos pasar los datos, pero como ya está reservado, no se usa mucho este caso
         };
     }
 }
-// ===== MODAL DE RESERVA =====
-function abrirModalReserva(asientoId, numero, nombreReserva) {
+
+// ===== ✅ MODAL DE RESERVA MEJORADO (DINÁMICO) =====
+function abrirModalReserva(asientoId, numero, nombreReserva, dniReserva, tipoReservaChofer, reservadoPorChofer) {
     if (!asientoId || asientoId === 'None' || asientoId === 'undefined') {
         alert('⚠️ Error: El asiento no tiene ID válido.');
         return;
     }
+    
     asientoReservaActual = String(asientoId).trim();
+    
+    // Llenar datos básicos
     document.getElementById('reservaNumero').textContent = numero;
     document.getElementById('reservaNombre').textContent = nombreReserva || 'Sin nombre';
+    document.getElementById('reservaDNI').textContent = dniReserva || 'Sin DNI';
+    
+    const badge = document.getElementById('badgeTipoReserva');
+    const botonesContainer = document.getElementById('botonesReserva');
+    botonesContainer.innerHTML = '';
+    
+    // ✅ LÓGICA: Diferenciar entre reserva de chofer y reserva normal
+    if (reservadoPorChofer === 'True' || reservadoPorChofer === true) {
+        badge.classList.remove('hidden');
+        
+        if (tipoReservaChofer === 'con_cobro') {
+            // ✅ CON COBRO: El chofer ya cobró, solo se confirma
+            badge.className = 'mb-4 p-3 rounded-lg text-center text-sm font-bold bg-green-100 text-green-700 border border-green-200';
+            badge.innerHTML = '<i class="fas fa-check-circle mr-1"></i> RESERVA CON COBRO - El chofer ya cobró al pasajero';
+            
+            botonesContainer.innerHTML = `
+                <button onclick="confirmarPagoReservaChofer()" 
+                        class="w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-medium transition flex items-center justify-center gap-2 shadow-lg">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Confirmar que el pasajero llegó</span>
+                </button>
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-xs text-yellow-700">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    <strong>Nota:</strong> El chofer ya cobró el pasaje. Al confirmar, el asiento se marcará como vendido y no podrá liberarse.
+                </div>
+            `;
+            
+        } else if (tipoReservaChofer === 'sin_cobro') {
+            // ✅ SIN COBRO: El pasajero debe pagar en sede
+            badge.className = 'mb-4 p-3 rounded-lg text-center text-sm font-bold bg-orange-100 text-orange-700 border border-orange-200';
+            badge.innerHTML = '<i class="fas fa-clock mr-1"></i> RESERVA SIN COBRO - El pasajero debe pagar en sede';
+            
+            botonesContainer.innerHTML = `
+                <button onclick="confirmarPagoReserva()" 
+                        class="w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-medium transition flex items-center justify-center gap-2">
+                    <i class="fas fa-money-bill-wave"></i>
+                    <span>El cliente llegó - Cobrar y Confirmar</span>
+                </button>
+                <button onclick="liberarReserva()" 
+                        class="w-full px-4 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-medium transition flex items-center justify-center gap-2">
+                    <i class="fas fa-undo"></i>
+                    <span>Cliente NO llegó - Liberar Asiento</span>
+                </button>
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-700">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    <strong>Nota:</strong> El pasajero debe pagar aquí. Si no llega, puedes liberar el asiento para venderlo.
+                </div>
+            `;
+        }
+    } else {
+        // Reserva normal (no de chofer)
+        badge.classList.add('hidden');
+        botonesContainer.innerHTML = `
+            <button onclick="confirmarPagoReserva()" 
+                    class="w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-medium transition flex items-center justify-center gap-2">
+                <i class="fas fa-check-circle"></i>
+                <span>El cliente llegó - Confirmar Pago</span>
+            </button>
+            <button onclick="liberarReserva()" 
+                    class="w-full px-4 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-medium transition flex items-center justify-center gap-2">
+                <i class="fas fa-undo"></i>
+                <span>Cliente NO llegó - Liberar Asiento</span>
+            </button>
+        `;
+    }
+    
     document.getElementById('modalReserva').classList.remove('hidden');
 }
 
@@ -370,10 +439,84 @@ function cerrarModalReserva() {
     asientoReservaActual = null;
 }
 
-// ===== CONFIRMAR PAGO DE RESERVA =====
+// ===== ✅ CONFIRMAR PAGO DE RESERVA DE CHOFER (CON COBRO) =====
+// ===== ✅ CONFIRMAR PAGO DE RESERVA DE CHOFER (CON COBRO) =====
+function confirmarPagoReservaChofer() {
+    if (!asientoReservaActual) { 
+        alert('️ Error: No se identificó el asiento.'); 
+        return; 
+    }
+    
+    if (!confirm('¿Confirmas que el pasajero llegó? El asiento se marcará como vendido.')) {
+        return;
+    }
+    
+    const btn = document.querySelector('#botonesReserva button.bg-green-600');
+    const textoOriginal = btn ? btn.innerHTML : 'Confirmando...';
+    if (btn) { 
+        btn.disabled = true; 
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Procesando...'; 
+    }
+    
+    fetch(`/ventas/confirmar-pago-reserva-chofer/${asientoReservaActual}/`, {
+        method: 'POST',
+        headers: { 
+            'X-CSRFToken': getCookie('csrftoken'), 
+            'Content-Type': 'application/json' 
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (btn) { 
+            btn.disabled = false; 
+            btn.innerHTML = textoOriginal; 
+        }
+        
+        if (data.success) {
+            document.getElementById('modalReserva').classList.add('hidden');
+            
+            // ✅ PINTAR ASIENTO COMO VENDIDO (ROJO)
+            const btnAsiento = document.querySelector(`button[data-asiento-id="${asientoReservaActual}"]`);
+            if (btnAsiento) {
+                btnAsiento.className = 'seat-btn h-14 rounded-xl border-2 border-slate-200 font-bold text-white ocupado bg-red-500';
+                btnAsiento.disabled = true;
+                btnAsiento.removeAttribute('onclick');
+            }
+            
+            // ✅ MOSTRAR MODAL DE CONFIRMACIÓN CON PDF E IMPRIMIR
+            document.getElementById('ticketAsiento').textContent = data.asiento;
+            document.getElementById('ticketRuta').textContent = data.ruta;
+            document.getElementById('ticketFecha').textContent = data.fecha;
+            document.getElementById('ticketHora').textContent = data.hora;
+            document.getElementById('ticketPasajero').textContent = data.pasajero;
+            document.getElementById('ticketTotal').textContent = `S/ ${data.total.toFixed(2)}`;
+            
+            // ✅ LINK CORRECTO AL PDF
+            if (data.venta_id) {
+                document.getElementById('btnDescargarPDF').href = `/boletos/${data.venta_id}/pdf/`;
+            }
+            
+            document.getElementById('modalConfirmacionVenta').classList.remove('hidden');
+            
+            asientoReservaActual = null;
+        } else { 
+            alert(' ' + data.error); 
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        if (btn) { 
+            btn.disabled = false; 
+            btn.innerHTML = textoOriginal; 
+        }
+        alert('❌ Error de conexión');
+    });
+}
+
+// ===== CONFIRMAR PAGO DE RESERVA NORMAL O SIN COBRO =====
 function confirmarPagoReserva() {
     if (!asientoReservaActual) { alert('⚠️ Error: No se identificó el asiento.'); return; }
-    const btn = document.querySelector('#modalReserva button.bg-green-600');
+    const btn = document.querySelector('#botonesReserva button.bg-green-600');
     const textoOriginal = btn ? btn.innerHTML : 'Confirmar Pago';
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Procesando...'; }
     
@@ -412,7 +555,7 @@ function liberarReserva() {
     }
     
     if (confirm('¿Estás seguro de liberar este asiento?\n\nEl asiento volverá a estar disponible para vender.')) {
-        const btn = document.querySelector('#modalReserva button.bg-amber-500');
+        const btn = document.querySelector('#botonesReserva button.bg-amber-500');
         const textoOriginal = btn ? btn.innerHTML : '';
         
         if (btn) {
@@ -435,10 +578,8 @@ function liberarReserva() {
             }
             
             if (data.success) {
-                // ✅ CERRAR MODAL
                 document.getElementById('modalReserva').classList.add('hidden');
                 
-                // ✅ PINTAR ASIENTO COMO DISPONIBLE (BLANCO/GRIS)
                 const btnAsiento = document.querySelector(`button[data-asiento="${data.asiento}"]`);
                 if (btnAsiento) {
                     btnAsiento.className = 'seat-btn h-14 rounded-xl border-2 border-slate-200 font-bold text-slate-700';
@@ -492,13 +633,11 @@ document.getElementById('formVenta')?.addEventListener('submit', function(e) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // ✅ PASAR EL ID DEL ASIENTO (tercer parámetro)
             actualizarAsientoVisual(data.asiento, data.tipo || 'venta', data.asiento_id);
             
             if (data.tipo === 'reserva') {
                 alert(`✅ Asiento ${data.asiento} reservado para ${data.nombre}\n\nEl cliente debe llegar antes de la hora de salida.`);
             } else {
-                // CASO VENTA: Mostrar modal completo
                 document.getElementById('ticketAsiento').textContent = data.asiento;
                 document.getElementById('ticketRuta').textContent = data.ruta;
                 document.getElementById('ticketFecha').textContent = data.fecha;
@@ -537,7 +676,5 @@ function cambiarTipoOperacion(tipo) {
         if (form) form.action = "{% url 'core:procesar_venta' %}";
     }
 }
-
-
 </script>
 {% endblock %}
