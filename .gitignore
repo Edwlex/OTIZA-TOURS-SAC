@@ -1,7 +1,31 @@
+# ==================== ENTORNO VIRTUAL Y VARIABLES DE ENTORNO ====================
 venv/
-__pycache__/
-*.pyc
+env/
 .env
-db.sqlite3
+.env.local
+.env.*.local
+
+# ==================== DJANGO / PYTHON ====================
+__pycache__/
+*.py[cod]
+*$py.class
+*.sqlite3
+*.sqlite3-journal
 staticfiles/
+media/
 *.log
+
+# ==================== IDEs Y EDITORES DE CÓDIGO ====================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ==================== SISTEMA OPERATIVO ====================
+.DS_Store
+Thumbs.db
+
+# ==================== FRONTEND / OTROS ====================
+node_modules/
+*.pdf

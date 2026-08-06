@@ -1,0 +1,1 @@
+web: gunicorn otiza_backend.wsgi:application
