@@ -3597,8 +3597,13 @@ def manifiesto_generar(request, viaje_id):
             manifiesto.viaje = viaje
             manifiesto.fecha_viaje = viaje.fecha_salida
             
-            # Generar número único
-            contador = Manifiesto.objects.filter(sede=sede).count() + 1
+            # ✅ GENERAR NÚMERO CORRELATIVO (000001, 000002, etc.)
+            from django.db.models import Max
+            ultimo_numero = Manifiesto.objects.filter(sede=sede).aggregate(max_num=Max('numero_correlativo'))['max_num']
+            manifiesto.numero_correlativo = (ultimo_numero or 0) + 1
+            
+            # ✅ GENERAR NÚMERO DE DOCUMENTO CON FORMATO ANTIGUO (por compatibilidad)
+            contador = manifiesto.numero_correlativo
             manifiesto.numero_documento = f"MAN-{sede.nombre[:3].upper()}-{timezone.now().strftime('%Y%m%d')}-{contador:04d}"
             manifiesto.save()
             
@@ -3650,24 +3655,67 @@ def manifiesto_generar(request, viaje_id):
     }
     return render(request, 'documentos/manifiesto_generar.html', contexto)
 
-
-
 # ==================== 3. GENERAR PDF ====================
+import base64
+import os
+from django.conf import settings
+from django.db.models import Max
+from io import BytesIO
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
+from django.template.loader import render_to_string
+from django.contrib.auth.decorators import login_required
+from xhtml2pdf import pisa
+
 @login_required
 def manifiesto_pdf(request, id):
-    """Genera y descarga el PDF del manifiesto"""
+    """Genera y descarga el PDF del manifiesto con Logo Base64 y Número Correlativo"""
     manifiesto = get_object_or_404(Manifiesto, id=id, sede=request.user.sede)
     
-    context = {'manifiesto': manifiesto}
-    html_string = render(request, 'documentos/manifiesto_pdf.html', context).content.decode('utf-8')
+    # ✅ 1. BUSCAR Y CONVERTIR LOGO A BASE64
+    logo_filename = 'otiza.png'
+    logo_path = None
     
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = f'inline; filename="Manifiesto_{manifiesto.numero_documento}.pdf"'
+    if hasattr(settings, 'STATICFILES_DIRS'):
+        for static_dir in settings.STATICFILES_DIRS:
+            possible_path = os.path.join(static_dir, 'images', logo_filename)
+            if os.path.exists(possible_path):
+                logo_path = possible_path
+                break
     
-    pisa_status = pisa.CreatePDF(BytesIO(html_string.encode('UTF-8')), response, encoding='UTF-8')
+    logo_base64 = None
+    if logo_path:
+        try:
+            with open(logo_path, "rb") as image_file:
+                encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+                logo_base64 = f"data:image/png;base64,{encoded_string}"
+                print("✅ Logo del manifiesto convertido a Base64")
+        except Exception as e:
+            print(f"❌ Error al leer imagen del manifiesto: {e}")
+    
+    # ✅ 2. FORMATEAR NÚMERO CORRELATIVO (001 - 000001)
+    sede_codigo = f"{manifiesto.sede.id:03d}"  # Ej: 001, 002, 003
+    numero_correlativo = manifiesto.numero_correlativo or 0
+    numero_manifiesto = f"{sede_codigo} - {numero_correlativo:06d}"  # Ej: 001 - 000001
+    
+    # ✅ 3. PREPARAR CONTEXTO
+    context = {
+        'manifiesto': manifiesto,
+        'logo_base64': logo_base64,              # ✅ Logo en Base64
+        'numero_manifiesto': numero_manifiesto,  # ✅ Número formateado
+    }
+    
+    # ✅ 4. GENERAR PDF
+    html_string = render_to_string('documentos/manifiesto_pdf.html', context)
+    
+    result = BytesIO()
+    pisa_status = pisa.CreatePDF(BytesIO(html_string.encode('UTF-8')), result, encoding='UTF-8')
     
     if pisa_status.err:
         return HttpResponse('Error al generar el PDF', status=500)
+    
+    response = HttpResponse(result.getvalue(), content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="Manifiesto_{numero_manifiesto.replace(' - ', '_')}.pdf"'
     
     return response
 

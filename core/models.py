@@ -431,9 +431,9 @@ class Notificacion(models.Model):
 
 class Manifiesto(models.Model):
     sede = models.ForeignKey('Sede', on_delete=models.CASCADE, related_name='manifiestos')
-    viaje = models.ForeignKey('Viaje', on_delete=models.CASCADE, related_name='manifiesto', null=True, blank=True)  # ← Agregar null=True, blank=True
+    viaje = models.ForeignKey('Viaje', on_delete=models.CASCADE, related_name='manifiesto', null=True, blank=True)
     numero_documento = models.CharField(max_length=50, unique=True)
-    fecha_emision = models.DateField(default=timezone.now)  # ← Cambiar auto_now_add por default
+    fecha_emision = models.DateField(default=timezone.now)
     fecha_viaje = models.DateField()
     conductor_nombre = models.CharField(max_length=100)
     placa = models.CharField(max_length=20)
@@ -442,6 +442,13 @@ class Manifiesto(models.Model):
     destino_origen = models.CharField(max_length=100)
     destino_final = models.CharField(max_length=100)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
+    
+    # ✅ NUEVO CAMPO: Número correlativo del manifiesto
+    numero_correlativo = models.PositiveIntegerField(
+        null=True, 
+        blank=True, 
+        help_text="Número correlativo del manifiesto (ej: 1, 2, 3...)"
+    )
 
     class Meta:
         ordering = ['-fecha_creacion']
@@ -449,6 +456,8 @@ class Manifiesto(models.Model):
     def __str__(self):
         return f"Manifiesto {self.numero_documento}"
 
+
+    
 
 class PasajeroManifiesto(models.Model):
     manifiesto = models.ForeignKey(Manifiesto, on_delete=models.CASCADE, related_name='pasajeros')
