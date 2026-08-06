@@ -536,3 +536,40 @@ class HojaRuta(models.Model):
 
     def __str__(self):
         return f"Hoja de Ruta {self.numero_documento} - {self.viaje}"
+
+
+from django.db import models
+from django.utils import timezone
+
+class ClienteFidelizacion(models.Model):
+    dni = models.CharField(max_length=8, unique=True)
+    nombre_completo = models.CharField(max_length=200)
+    telefono = models.CharField(max_length=20, blank=True)
+    email = models.EmailField(blank=True)
+    total_viajes = models.IntegerField(default=0)
+    viajes_pendientes_premio = models.IntegerField(default=0)  # Viajes para completar 12
+    ultimo_viaje_fecha = models.DateField(null=True, blank=True)
+    fecha_registro = models.DateTimeField(auto_now_add=True)
+    activo = models.BooleanField(default=True)
+    
+    def __str__(self):
+        return f"{self.nombre_completo} - {self.dni} ({self.total_viajes} viajes)"
+    
+    class Meta:
+        verbose_name = "Cliente Fidelización"
+        verbose_name_plural = "Clientes Fidelización"
+
+
+class PremioFidelizacion(models.Model):
+    cliente = models.ForeignKey(ClienteFidelizacion, on_delete=models.CASCADE, related_name='premios')
+    fecha_ganado = models.DateTimeField(auto_now_add=True)
+    fecha_entregado = models.DateTimeField(null=True, blank=True)
+    descripcion = models.CharField(max_length=200, default="Rasca y Gana - 12 viajes")
+    entregado = models.BooleanField(default=False)
+    
+    def __str__(self):
+        return f"{self.cliente.nombre_completo} - {'Entregado' if self.entregado else 'Pendiente'}"
+    
+    class Meta:
+        verbose_name = "Premio Fidelización"
+        verbose_name_plural = "Premios Fidelización"

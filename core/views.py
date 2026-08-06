@@ -1379,44 +1379,187 @@ def incidencia_ver(request, incidencia_id):
 
 
 # ==================== ADMIN - FIDELIZACIÓN ====================
+from django.db.models import Count, Q
+from core.models import ClienteFidelizacion, PremioFidelizacion, Venta
+from django.core.paginator import Paginator
 
 @login_required
 def fidelizacion_admin(request):
-    """Vista de fidelización para ADMIN (ve todos los clientes de todas las sedes)"""
-    usuario = request.user
-    sede = usuario.sede
+    """Panel de administración del programa de fidelización"""
     
-    # Verificar permisos de admin
-    if sede.nombre != 'Oficina Central' and not usuario.is_superuser:
-        messages.error(request, 'No tienes permisos para ver la fidelización global')
-        return redirect('core:dashboard')
+    # Obtener todos los clientes con viajes registrados
+    clientes = ClienteFidelizacion.objects.filter(activo=True).order_by('-total_viajes')
     
+    # Filtros
     filtro = request.GET.get('filtro', 'todos')
-    busqueda = request.GET.get('q', '').strip()
     
-    try:
-        # ← SEDE=None: Trae a TODOS los clientes del sistema sin filtros de sucursal
-        clientes = FidelizacionService.obtener_progreso_clientes(filtro=filtro, sede=None)
-        kpis = FidelizacionService.obtener_kpis_fidelizacion(sede=None)
-        
-        if busqueda:
-            clientes = [c for c in clientes if busqueda in c['dni'] or busqueda.lower() in c['nombre'].lower()]
-            
-    except Exception as e:
-        logger.error(f"FIDELIZACION_ADMIN_VIEW - Error: {str(e)}", exc_info=True)
-        clientes, kpis = [], {'total_clientes': 0, 'pendientes': 0, 'entregados': 0, 'cercanos': 0}
+    if filtro == 'con_premio':
+        clientes = clientes.filter(premios__entregado=False).distinct()
+    elif filtro == 'cercanos':
+        clientes = clientes.filter(total_viajes__gte=9)
+    
+    # KPIs
+    total_clientes = clientes.count()
+    premios_pendientes = PremioFidelizacion.objects.filter(entregado=False).count()
+    premios_entregados_mes = PremioFidelizacion.objects.filter(
+        entregado=True,
+        fecha_entregado__month=timezone.now().month
+    ).count()
+    
+    # Calcular progreso para cada cliente
+    for cliente in clientes:
+        cliente.progreso = cliente.total_viajes % 12
+        cliente.ciclos_completados = cliente.total_viajes // 12
+        cliente.premios_pendientes = cliente.premios.filter(entregado=False).count()
+    
+    # ✅ PAGINACIÓN: 10 clientes por página
+    paginator = Paginator(clientes, 10)  # 10 clientes por página
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
     
     contexto = {
-        'usuario': usuario,
-        'sede': sede,
-        'es_admin': True,
-        'clientes_fidelizacion': clientes,
-        'stats': kpis,
+        'clientes': page_obj,  # ✅ Usar page_obj en lugar de clientes
+        'page_obj': page_obj,  # ✅ Para los controles de paginación
+        'total_clientes': total_clientes,
+        'premios_pendientes': premios_pendientes,
+        'premios_entregados_mes': premios_entregados_mes,
         'filtro_actual': filtro,
-        'busqueda_actual': busqueda
     }
     
-    return render(request, 'admin/fidelizacion.html', contexto)
+    return render(request, 'admin/fidelizacion_admin.html', contexto)
+
+    
+
+
+
+@login_required
+def sincronizar_fidelizacion(request):
+    """Sincronizar clientes desde ventas existentes y crear premios"""
+    from django.contrib import messages
+    from django.db.models import Count
+    
+    ventas = Venta.objects.filter(numero_documento__isnull=False).exclude(numero_documento='')
+    
+    clientes_creados = 0
+    premios_creados = 0
+    
+    # Agrupar ventas por DNI
+    ventas_por_dni = ventas.values('numero_documento').annotate(
+        total=Count('id'),
+        ultimo_viaje=Max('fecha_venta')
+    )
+    
+    for datos in ventas_por_dni:
+        dni = datos['numero_documento']
+        total_viajes = datos['total']
+        ultimo_viaje = datos['ultimo_viaje']
+        
+        # Obtener la última venta para tener los datos del cliente
+        ultima_venta = Venta.objects.filter(numero_documento=dni).order_by('-fecha_venta').first()
+        
+        # Buscar o crear cliente
+        cliente, creado = ClienteFidelizacion.objects.get_or_create(
+            dni=dni,
+            defaults={
+                'nombre_completo': ultima_venta.nombre_cliente if ultima_venta else 'Cliente',
+                'telefono': ultima_venta.telefono_cliente or '' if ultima_venta else '',
+                'email': ultima_venta.email_cliente or '' if ultima_venta else '',
+            }
+        )
+        
+        if creado:
+            clientes_creados += 1
+        
+        # Actualizar total de viajes
+        cliente.total_viajes = total_viajes
+        cliente.ultimo_viaje_fecha = ultimo_viaje.date() if ultimo_viaje else timezone.now().date()
+        cliente.save()
+        
+        # ✅ CREAR PREMIOS POR CADA 12 VIAJES COMPLETADOS
+        ciclos_completados = total_viajes // 12
+        
+        # Verificar cuántos premios ya tiene registrados este cliente
+        premios_existentes = PremioFidelizacion.objects.filter(cliente=cliente).count()
+        premios_faltantes = ciclos_completados - premios_existentes
+        
+        # Crear los premios faltantes
+        for i in range(premios_faltantes):
+            numero_premio = premios_existentes + i + 1
+            PremioFidelizacion.objects.create(
+                cliente=cliente,
+                descripcion=f'Rasca y Gana - {numero_premio * 12} viajes completados',
+                entregado=False
+            )
+            premios_creados += 1
+    
+    messages.success(request, f'✅ Sincronización completada. {clientes_creados} clientes registrados y {premios_creados} premios creados.')
+    return redirect('core:fidelizacion_admin')
+
+
+
+@login_required
+def fidelizacion_detalle(request, cliente_id):
+    """Detalle de un cliente en el programa de fidelización"""
+    from django.shortcuts import get_object_or_404
+    from core.models import ClienteFidelizacion
+    
+    cliente = get_object_or_404(ClienteFidelizacion, id=cliente_id)
+    
+    # Obtener todos los premios de este cliente ordenados por fecha
+    premios = cliente.premios.all().order_by('-fecha_ganado')
+    
+    # Calcular progreso actual
+    cliente.progreso = cliente.total_viajes % 12
+    cliente.ciclos_completados = cliente.total_viajes // 12
+    
+    contexto = {
+        'cliente': cliente,
+        'premios': premios,
+    }
+    
+    # Usa 'base_cajero.html' o la plantilla base que uses para el admin
+    return render(request, 'admin/fidelizacion_detalle.html', contexto)
+
+from django.contrib import messages
+from django.shortcuts import redirect, get_object_or_404
+
+@login_required
+def premio_entregar(request, premio_id):
+    """Marcar un premio como entregado"""
+    from core.models import PremioFidelizacion
+    
+    premio = get_object_or_404(PremioFidelizacion, id=premio_id)
+    
+    if request.method == 'POST':
+        premio.entregado = True
+        premio.fecha_entregado = timezone.now()
+        premio.save()
+        
+        messages.success(request, f'✅ Premio marcado como entregado a {premio.cliente.nombre_completo}')
+    
+    # Redirigir al detalle del cliente
+    return redirect('core:fidelizacion_detalle', cliente_id=premio.cliente.id)
+
+
+@login_required
+def premio_marcar_pendiente(request, premio_id):
+    """Marcar un premio como pendiente (revertir entrega)"""
+    from core.models import PremioFidelizacion
+    
+    premio = get_object_or_404(PremioFidelizacion, id=premio_id)
+    
+    if request.method == 'POST':
+        premio.entregado = False
+        premio.fecha_entregado = None
+        premio.save()
+        
+        messages.success(request, f' Premio marcado como pendiente para {premio.cliente.nombre_completo}')
+    
+    # Redirigir al detalle del cliente
+    return redirect('core:fidelizacion_detalle', cliente_id=premio.cliente.id)
+
+
+
 
 # ==================== ADMIN - VEHÍCULOS ====================
 

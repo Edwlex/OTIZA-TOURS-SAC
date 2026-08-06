@@ -106,6 +106,17 @@ urlpatterns = [
     path('panel-admin/usuarios/editar/<int:id>/', views.usuario_editar, name='usuario_editar'),
     path('panel-admin/usuarios/eliminar/<int:id>/', views.usuario_eliminar, name='usuario_eliminar'),
 
+
+
+    # URLs de fidelización
+    path('panel-admin/fidelizacion/', views.fidelizacion_admin, name='fidelizacion_admin'),
+    path('panel-admin/fidelizacion/sincronizar/', views.sincronizar_fidelizacion, name='sincronizar_fidelizacion'),
+    path('panel-admin/fidelizacion/<int:cliente_id>/', views.fidelizacion_detalle, name='fidelizacion_detalle'),
+    path('panel-admin/fidelizacion/premio/<int:premio_id>/entregar/', views.premio_entregar, name='premio_entregar'),
+    path('panel-admin/fidelizacion/premio/<int:premio_id>/pendiente/', views.premio_marcar_pendiente, name='premio_marcar_pendiente'),
+
+
+
     
     # ==================== INCIDENCIAS ====================
     path('incidencias/', views.incidencias_lista, name='incidencias_lista'),

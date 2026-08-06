@@ -1,0 +1,203 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block title %}Fidelización Admin{% endblock %}
+{% block page_title %}Fidelización Admin{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- KPIs -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-blue-100 text-sm">Clientes en Programa</p>
+                    <p class="text-3xl font-bold mt-1">{{ total_clientes }}</p>
+                </div>
+                <i class="fas fa-users text-4xl text-blue-200"></i>
+            </div>
+        </div>
+        
+        <div class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-6 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-orange-100 text-sm">Premios Pendientes</p>
+                    <p class="text-3xl font-bold mt-1">{{ premios_pendientes }}</p>
+                </div>
+                <i class="fas fa-gift text-4xl text-orange-200"></i>
+            </div>
+        </div>
+        
+        <div class="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-6 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-green-100 text-sm">Premios Entregados (Mes)</p>
+                    <p class="text-3xl font-bold mt-1">{{ premios_entregados_mes }}</p>
+                </div>
+                <i class="fas fa-check-circle text-4xl text-green-200"></i>
+            </div>
+        </div>
+        
+        <div class="bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl p-6 text-white">
+            <div>
+                <p class="text-purple-100 text-sm">Regla del Programa</p>
+                <p class="text-2xl font-bold mt-1">12 Viajes = 🎫 Rasca y Gana</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros y Acciones -->
+    <div class="flex flex-wrap items-center justify-between gap-4">
+        <div class="flex gap-2">
+            <a href="?filtro=todos" class="px-4 py-2 rounded-lg {% if filtro_actual == 'todos' %}bg-indigo-600 text-white{% else %}bg-white text-slate-700 border border-slate-300{% endif %}">
+                Todos los Clientes
+            </a>
+            <a href="?filtro=con_premio" class="px-4 py-2 rounded-lg {% if filtro_actual == 'con_premio' %}bg-orange-500 text-white{% else %}bg-white text-slate-700 border border-slate-300{% endif %}">
+                🎁 Con Premio Pendiente
+            </a>
+            <a href="?filtro=cercanos" class="px-4 py-2 rounded-lg {% if filtro_actual == 'cercanos' %}bg-green-500 text-white{% else %}bg-white text-slate-700 border border-slate-300{% endif %}">
+                Cerca de Ganar (≤3)
+            </a>
+        </div>
+        
+        <a href="{% url 'core:sincronizar_fidelizacion' %}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium">
+            <i class="fas fa-sync-alt mr-2"></i>Sincronizar desde Ventas
+        </a>
+    </div>
+
+    <!-- Tabla de Clientes -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="p-6 border-b border-slate-200 flex items-center justify-between">
+            <h3 class="text-lg font-bold text-slate-800">🏆 Estado de Fidelización</h3>
+            <span class="text-sm text-slate-500">
+                Mostrando {{ page_obj.start_index }} - {{ page_obj.end_index }} de {{ page_obj.paginator.count }} clientes
+            </span>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-slate-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Cliente</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">DNI</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Viajes</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Progreso</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Estado</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200">
+                    {% for cliente in clientes %}
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="px-6 py-4">
+                            <div class="font-semibold text-slate-800">{{ cliente.nombre_completo }}</div>
+                            <div class="text-sm text-slate-500">
+                                {% if cliente.ultimo_viaje_fecha %}
+                                    Último viaje: {{ cliente.ultimo_viaje_fecha|date:"d/m/Y" }}
+                                {% else %}
+                                    Sin viajes registrados
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 text-slate-700 font-mono">{{ cliente.dni }}</td>
+                        <td class="px-6 py-4">
+                            <span class="font-bold text-slate-800 text-lg">{{ cliente.total_viajes }}</span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex items-center gap-2">
+                                <div class="flex-1 bg-slate-200 rounded-full h-2 w-24">
+                                    <div class="bg-indigo-600 h-2 rounded-full transition-all" style="width: {% widthratio cliente.progreso 12 100 %}%"></div>
+                                </div>
+                                <span class="text-sm text-slate-600">{{ cliente.progreso }}/12</span>
+                            </div>
+                            {% if cliente.ciclos_completados > 0 %}
+                            <div class="text-xs text-green-600 mt-1 font-semibold">{{ cliente.ciclos_completados }} premio(s) ganado(s)</div>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4">
+                            {% if cliente.premios_pendientes > 0 %}
+                            <span class="px-3 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700">
+                                🎁 {{ cliente.premios_pendientes }} pendiente(s)
+                            </span>
+                            {% elif cliente.progreso >= 9 %}
+                            <span class="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                                Cerca de ganar
+                            </span>
+                            {% else %}
+                            <span class="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">
+                                En progreso
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4">
+                            <a href="{% url 'core:fidelizacion_detalle' cliente.id %}" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium flex items-center gap-1">
+                                <i class="fas fa-eye"></i> Ver detalle
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-12 text-center text-slate-500">
+                            <i class="fas fa-users-slash text-4xl mb-3 text-slate-300"></i>
+                            <p class="font-medium">No hay clientes que coincidan con el filtro</p>
+                            <p class="text-sm text-slate-400 mt-1">Registra ventas con DNI para activar el programa</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- ✅ CONTROLES DE PAGINACIÓN -->
+        {% if page_obj.has_other_pages %}
+        <div class="px-6 py-4 border-t border-slate-200 bg-slate-50">
+            <div class="flex items-center justify-between">
+                <!-- Información de página -->
+                <div class="text-sm text-slate-600">
+                    Página <span class="font-semibold">{{ page_obj.number }}</span> de <span class="font-semibold">{{ page_obj.paginator.num_pages }}</span>
+                </div>
+                
+                <!-- Botones de navegación -->
+                <div class="flex items-center gap-2">
+                    <!-- Primera página -->
+                    {% if page_obj.has_previous %}
+                    <a href="?page=1&filtro={{ filtro_actual }}" class="px-3 py-1.5 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition">
+                        <i class="fas fa-angle-double-left"></i> Primera
+                    </a>
+                    
+                    <!-- Página anterior -->
+                    <a href="?page={{ page_obj.previous_page_number }}&filtro={{ filtro_actual }}" class="px-3 py-1.5 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition">
+                        <i class="fas fa-angle-left"></i> Anterior
+                    </a>
+                    {% endif %}
+                    
+                    <!-- Números de página -->
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                            <span class="px-3 py-1.5 text-sm font-semibold text-white bg-indigo-600 rounded-lg">
+                                {{ num }}
+                            </span>
+                        {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+                            <a href="?page={{ num }}&filtro={{ filtro_actual }}" class="px-3 py-1.5 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition">
+                                {{ num }}
+                            </a>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    <!-- Página siguiente -->
+                    {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}&filtro={{ filtro_actual }}" class="px-3 py-1.5 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition">
+                        Siguiente <i class="fas fa-angle-right"></i>
+                    </a>
+                    
+                    <!-- Última página -->
+                    <a href="?page={{ page_obj.paginator.num_pages }}&filtro={{ filtro_actual }}" class="px-3 py-1.5 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition">
+                        Última <i class="fas fa-angle-double-right"></i>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
