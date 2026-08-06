@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: otiza-tours
+    env: python
+    region: oregon  # o el que prefieras
+    plan: free
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn otiza_backend.wsgi:application"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.0
+      - key: SECRET_KEY
+        generateValue: true
+      - key: WEB_CONCURRENCY
+        value: 4
+
+databases:
+  - name: otiza-db
+    databaseName: otiza_tours_db
+    user: otiza_user
+    plan: free
+    ipAllowList: []

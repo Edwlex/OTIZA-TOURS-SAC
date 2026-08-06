@@ -4,20 +4,21 @@ Django settings for otiza_backend project.
 
 from pathlib import Path
 import os
-import dj_database_url  # ✅ AGREGADO: Para leer la URL de la BD de Railway
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # ==================== SEGURIDAD Y ENTORNO ====================
-# ✅ 1. SECRET KEY: Usa la de Railway, si no existe, usa la local de respaldo
+# ✅ 1. SECRET KEY: Usa la de Render, si no existe, usa la local de respaldo
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-1mf-_95pn8&**t!_(@s2h1!s=f^q9fbx@roh!dc2^*d6qn@ch!')
 
-# ✅ 2. DEBUG: True en local, False en Railway (se controla con variable de entorno)
+# ✅ 2. DEBUG: True en local, False en Render (se controla con variable de entorno)
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
-# ✅ 3. ALLOWED HOSTS: Se llena desde Railway, en local permite localhost
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
+# ✅ 3. ALLOWED HOSTS: Permite localhost en local, y cualquier dominio .onrender.com en producción
+# El '*' es un fallback seguro para el primer despliegue, luego puedes restringirlo.
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '127.0.0.1,localhost,.onrender.com').split(',')
 
 # ==================== APLICACIONES ====================
 INSTALLED_APPS = [
@@ -33,7 +34,7 @@ INSTALLED_APPS = [
 # ==================== MIDDLEWARE ====================
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware', # ✅ AGREGADO: Para servir archivos estáticos en prod
+    'whitenoise.middleware.WhiteNoiseMiddleware', # ✅ Sirve archivos estáticos en prod
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -62,13 +63,13 @@ TEMPLATES = [
 WSGI_APPLICATION = 'otiza_backend.wsgi.application'
 
 # ==================== BASE DE DATOS ====================
-# ✅ 4. DATABASE: Usa la URL de Railway. Si no existe, usa tu configuración local de respaldo.
-# ✅ SSL se exige solo cuando DEBUG es False (es decir, en producción)
+# ✅ 4. DATABASE: Usa la URL de Render. Si no existe, usa SQLite en local (más seguro si no tienes Postgres instalado)
+# Render inyecta DATABASE_URL automáticamente con sslmode=require
 DATABASES = {
     'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL', 'postgresql://otiza_user:otiza_pass_2026@localhost:5432/otiza_db'),
+        default=os.environ.get('DATABASE_URL', 'sqlite:///' + str(BASE_DIR / 'db.sqlite3')),
         conn_max_age=600,
-        ssl_require=os.environ.get('DEBUG', 'True') != 'True' 
+        ssl_require=not DEBUG # Solo exige SSL en producción (Render)
     )
 }
 
@@ -94,7 +95,7 @@ STATICFILES_DIRS = [
 ]
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# ✅ Optimización de WhiteNoise para producción (compresión y caché)
+# ✅ Optimización de WhiteNoise para producción (Django 4.2+)
 STORAGES = {
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
@@ -170,4 +171,4 @@ LOGGING = {
 # ==================== SESSION CONFIG ====================
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SESSION_COOKIE_AGE = 1800  # 30 minutos
-SESSION_SAVE_EVERY_REQUEST = True 
+SESSION_SAVE_EVERY_REQUEST = True  
