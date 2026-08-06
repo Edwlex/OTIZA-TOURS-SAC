@@ -140,7 +140,7 @@
         <table class="table-admin w-full">
             <thead class="bg-gray-50">
                 <tr>
-                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Ticket</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">N° Boleto</th>
                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Fecha</th>
                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Cliente</th>
                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">DNI</th>
@@ -153,7 +153,7 @@
             <tbody class="divide-y divide-gray-200">
                 {% for venta in ventas %}
                 <tr class="hover:bg-gray-50 transition">
-                    <td class="px-6 py-4 font-mono text-sm text-indigo-600 font-semibold">{{ venta.numero_ticket }}</td>
+                    <td class="px-6 py-4 font-mono text-sm text-indigo-600 font-semibold">N° {{ venta.numero_correlativo|default:"0"|stringformat:"06d" }}</td>
                     <td class="px-6 py-4 text-sm text-gray-700">{{ venta.fecha_venta|date:"d/m/Y H:i" }}</td>
                     <td class="px-6 py-4 text-sm text-gray-700">
                         <div>

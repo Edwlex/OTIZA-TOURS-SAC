@@ -175,7 +175,15 @@
     <table class="header-table">
         <tr>
             <td class="logo-cell">
-                <img src="{% static 'images/otiza.png' %}" alt="Otiza Tours">
+                {% if boleto.logo_base64 %}
+                <!-- ✅ Usamos la imagen en Base64 directamente -->
+                <img src="{{ boleto.logo_base64 }}" alt="Otiza Tours" width="60" height="60">
+                {% else %}
+                <!-- Fallback por si acaso -->
+                <div style="text-align: center; font-weight: bold; color: #0b2e83; font-size: 12pt;">
+                    OTIZA<br>TOURS
+                </div>
+                {% endif %}
             </td>
             <td class="company-cell">
                 <div class="company-title">OTIZA TOURS S.A.C.</div>

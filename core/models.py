@@ -282,6 +282,8 @@ class AsientoViaje(models.Model):
     
 # ==================== VENTAS ====================
 
+from django.db import models
+
 class Venta(models.Model):
     TIPO_DOCUMENTO = [
         ('boleta', 'Boleta'),
@@ -307,14 +309,22 @@ class Venta(models.Model):
     razon_social = models.CharField(max_length=150, blank=True, null=True, help_text="Razón social (empresas)")
     
     # ===== DATOS DE LA TRANSACCIÓN =====
-    asiento = models.ForeignKey(AsientoViaje, on_delete=models.PROTECT, related_name='ventas')
-    viaje = models.ForeignKey(Viaje, on_delete=models.PROTECT, related_name='ventas')
-    sede_venta = models.ForeignKey(Sede, on_delete=models.PROTECT, related_name='ventas')
-    cajero = models.ForeignKey(Usuario, on_delete=models.PROTECT, related_name='ventas')
+    asiento = models.ForeignKey('AsientoViaje', on_delete=models.PROTECT, related_name='ventas')
+    viaje = models.ForeignKey('Viaje', on_delete=models.PROTECT, related_name='ventas')
+    sede_venta = models.ForeignKey('Sede', on_delete=models.PROTECT, related_name='ventas')
+    cajero = models.ForeignKey('Usuario', on_delete=models.PROTECT, related_name='ventas')
     
     monto_total = models.DecimalField(max_digits=10, decimal_places=2)
     fecha_venta = models.DateTimeField(auto_now_add=True)
-    numero_ticket = models.CharField(max_length=50, unique=True)  # Generar automáticamente
+    numero_ticket = models.CharField(max_length=50, unique=True)  # Generar automáticamente (TKT-...)
+    
+    # ✅ NUEVO CAMPO: Número correlativo del boleto (000001, 000002, etc.)
+    numero_correlativo = models.PositiveIntegerField(
+        null=True, 
+        blank=True, 
+        help_text="Número correlativo del boleto (000001, 000002, etc.)"
+    )
+    
     metodo_pago = models.CharField(max_length=20, choices=METODO_PAGO, default='efectivo')
     observaciones = models.TextField(blank=True)
     

@@ -603,6 +603,9 @@ def ventas_lista_admin(request, usuario, sede):
     return render(request, 'admin/ventas_lista.html', contexto)
 
 
+
+
+
 from datetime import datetime, time # ✅ Asegúrate de tener esto importado arriba
 
 @login_required
@@ -812,6 +815,25 @@ def mapa_asientos(request, viaje_id):
 
 logger = logging.getLogger(__name__)
 
+from django.utils import timezone
+from django.shortcuts import get_object_or_404
+from django.http import JsonResponse
+from django.db.models import Max
+from datetime import datetime
+import random
+import logging
+
+logger = logging.getLogger(__name__)
+
+# ✅ FUNCIÓN PARA GENERAR NÚMERO CORRELATIVO
+def generar_numero_correlativo():
+    """Genera el siguiente número correlativo de boleto"""
+    ultimo_numero = Venta.objects.aggregate(max_num=Max('numero_correlativo'))['max_num']
+    if ultimo_numero is None:
+        return 1
+    return ultimo_numero + 1
+
+
 @login_required
 def procesar_venta(request):
     """Procesar la venta de un asiento"""
@@ -862,8 +884,11 @@ def procesar_venta(request):
         return JsonResponse({'success': False, 'error': 'Este asiento ya no está disponible'}, status=409)
     
     try:
-        # Generar número de ticket
+        # Generar número de ticket (se mantiene para el nombre del archivo)
         ticket_numero = f"TKT-{timezone.now().strftime('%y%m%d')}-{random.randint(1000, 9999)}"
+        
+        # ✅ Generar número correlativo
+        numero_correlativo = generar_numero_correlativo()
         
         # Crear venta
         venta = Venta.objects.create(
@@ -880,6 +905,7 @@ def procesar_venta(request):
             metodo_pago=metodo_pago,
             monto_total=viaje.ruta.precio_base,
             numero_ticket=ticket_numero,
+            numero_correlativo=numero_correlativo,  # ✅ NUEVO CAMPO
             fecha_venta=timezone.now()
         )
         
@@ -887,7 +913,10 @@ def procesar_venta(request):
         asiento.estado = 'vendido'
         asiento.save()
         
-        # ✅ Devolver JSON exitoso CON 'tipo'
+        # ✅ Formatear número correlativo (000001, 000002, etc.)
+        numero_formateado = f"{numero_correlativo:06d}"
+        
+        # ✅ Devolver JSON exitoso CON 'tipo' y número correlativo
         return JsonResponse({
             'success': True,
             'venta_id': venta.id,
@@ -897,12 +926,15 @@ def procesar_venta(request):
             'hora': venta.viaje.hora_salida.strftime('%H:%M'),
             'pasajero': venta.nombre_cliente,
             'total': str(venta.monto_total),
-            'tipo': 'venta',  # ← ✅ AGREGADO: Para que el JS sepa qué color poner
+            'tipo': 'venta',  # ← Para que el JS sepa qué color poner
+            'numero_correlativo': numero_formateado,  # ✅ NUEVO: Para mostrar en el frontend
         })
         
     except Exception as e:
         logger.error(f"Error al procesar venta: {str(e)}", exc_info=True)
         return JsonResponse({'success': False, 'error': f'Error al registrar: {str(e)}'}, status=500)
+
+    
     
 # ==================== CLIENTES Y FIDELIZACIÓN ====================
 from django.contrib.auth.decorators import login_required
@@ -2394,15 +2426,21 @@ def ver_ticket(request, venta_id):
     venta = get_object_or_404(Venta, id=venta_id)
     return render(request, 'ventas/boleto.html', {'venta': venta})
 
+
+
+
+import base64
+import os
+from django.conf import settings
+
 @login_required
 def descargar_boleto_pdf(request, boleto_id):
-    """Genera y descarga el PDF del boleto con datos formateados"""
+    """Genera y descarga el PDF del boleto con imagen en Base64"""
     
-    # ✅ IMPORTAR DENTRO DE LA FUNCIÓN (evita errores de caché)
     try:
         from xhtml2pdf import pisa
     except ImportError:
-        return HttpResponse("Error: Librería xhtml2pdf no instalada. Ejecuta: pip install xhtml2pdf", status=500)
+        return HttpResponse("Error: Librería xhtml2pdf no instalada", status=500)
     
     from io import BytesIO
     from django.template.loader import render_to_string
@@ -2410,12 +2448,39 @@ def descargar_boleto_pdf(request, boleto_id):
     from django.shortcuts import get_object_or_404
     from core.models import Venta
     
-    # Obtener venta
     venta = get_object_or_404(Venta, id=boleto_id)
     
-    # Preparar datos formateados
+    # ✅ 1. BUSCAR LA RUTA DE LA IMAGEN
+    logo_filename = 'otiza.png'
+    logo_path = None
+    
+    if hasattr(settings, 'STATICFILES_DIRS'):
+        for static_dir in settings.STATICFILES_DIRS:
+            possible_path = os.path.join(static_dir, 'images', logo_filename)
+            if os.path.exists(possible_path):
+                logo_path = possible_path
+                print(f"✅ Logo encontrado en: {logo_path}")
+                break
+    
+    # ✅ 2. CONVERTIR LA IMAGEN A BASE64
+    logo_base64 = None
+    if logo_path:
+        try:
+            with open(logo_path, "rb") as image_file:
+                encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+                logo_base64 = f"data:image/png;base64,{encoded_string}"
+                print("✅ Imagen convertida a Base64 exitosamente")
+        except Exception as e:
+            print(f"❌ Error al leer la imagen: {e}")
+    else:
+        print("❌ No se encontró la imagen en las rutas estáticas")
+    
+    # ✅ 3. PREPARAR DATOS
+    numero_correlativo = venta.numero_correlativo or 0
+    numero_formateado = f"{numero_correlativo:06d}"
+    
     boleto = {
-        'numero': venta.numero_ticket,
+        'numero': numero_formateado,
         'pasajero': venta.nombre_cliente,
         'dni': venta.numero_documento,
         'telefono': venta.telefono_cliente,
@@ -2430,15 +2495,13 @@ def descargar_boleto_pdf(request, boleto_id):
         'asiento': venta.asiento.numero_asiento,
         'valor': venta.monto_total,
         'es_premiado': False,
+        'logo_base64': logo_base64,  # ✅ PASAMOS LA IMAGEN EN BASE64
     }
     
-    # Renderizar HTML
+    # ✅ 4. GENERAR PDF
     html_string = render_to_string('ventas/boleto_pdf.html', {'boleto': boleto})
-    
-    # Crear PDF
     result = BytesIO()
     
-    # ✅ VERIFICAR QUE pisa EXISTE ANTES DE USARLO
     if pisa is None:
         return HttpResponse("Error crítico: xhtml2pdf no cargó correctamente", status=500)
     
@@ -2448,9 +2511,12 @@ def descargar_boleto_pdf(request, boleto_id):
         return HttpResponse("Error al generar PDF", status=500)
     
     response = HttpResponse(result.getvalue(), content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="boleto_{venta.numero_ticket}.pdf"'
+    response['Content-Disposition'] = f'attachment; filename="boleto_{numero_formateado}.pdf"'
     
     return response
+
+
+
 
 # ==================== ADMIN - ASIGNACIÓN DE VIAJES ====================
 
@@ -3276,6 +3342,23 @@ def confirmar_pago_reserva(request, asiento_id):
 
 
 # ==================== PROCESAR PAGO FINAL DE RESERVA ==================== 
+from django.utils import timezone
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.contrib.auth.decorators import login_required
+from django.db.models import Max
+import random
+
+# ✅ FUNCIÓN PARA GENERAR NÚMERO CORRELATIVO
+def generar_numero_correlativo():
+    """Genera el siguiente número correlativo de boleto"""
+    from core.models import Venta
+    ultimo_numero = Venta.objects.aggregate(max_num=Max('numero_correlativo'))['max_num']
+    if ultimo_numero is None:
+        return 1
+    return ultimo_numero + 1
+
+
 @login_required
 @require_POST
 def procesar_pago_reserva_final(request):
@@ -3300,15 +3383,17 @@ def procesar_pago_reserva_final(request):
         razon_social = request.POST.get('razon_social', '').strip().upper()
         metodo_pago = request.POST.get('metodo_pago', 'efectivo')
         
-        # ✅ GENERAR NÚMERO DE TICKET
+        # ✅ GENERAR NÚMERO DE TICKET INTERNO (por si lo necesitas de respaldo)
         ahora = timezone.now()
         fecha_str = ahora.strftime('%y%m%d')
         random_str = f"{random.randint(1000, 9999)}"
         numero_ticket = f"TKT-{fecha_str}-{random_str}"
         
-        # ✅ CREAR LA VENTA
-        from core.models import Venta
+        # ✅ GENERAR NÚMERO CORRELATIVO (000001, 000002...) DE FORMA SEGURA
+        ultimo_numero = Venta.objects.aggregate(max_num=Max('numero_correlativo'))['max_num']
+        numero_correlativo = (ultimo_numero or 0) + 1
         
+        # ✅ CREAR LA VENTA (Venta ya está importada arriba en el archivo)
         venta = Venta.objects.create(
             tipo_documento='ticket',
             numero_documento=asiento.numero_documento_reserva or '',
@@ -3323,6 +3408,7 @@ def procesar_pago_reserva_final(request):
             cajero=request.user,
             monto_total=asiento.precio,
             numero_ticket=numero_ticket,
+            numero_correlativo=numero_correlativo,  # ✅ SE GUARDA EL CORRELATIVO
             metodo_pago=metodo_pago,
             observaciones=f"Reserva confirmada - Pago procesado en sede"
         )
@@ -3346,7 +3432,8 @@ def procesar_pago_reserva_final(request):
         return JsonResponse({
             'success': True,
             'venta_id': venta.id,
-            'numero_ticket': numero_ticket,
+            'numero_ticket': f"{numero_correlativo:06d}",  # ✅ Devuelve el correlativo formateado (ej: 000031)
+            'numero_correlativo': f"{numero_correlativo:06d}",
             'asiento': asiento.numero_asiento,
             'ruta': f"{asiento.viaje.ruta.origen} → {asiento.viaje.ruta.destino}",
             'fecha': asiento.viaje.fecha_salida.strftime('%d/%m/%Y'),
@@ -3359,8 +3446,9 @@ def procesar_pago_reserva_final(request):
     except AsientoViaje.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Asiento no encontrado'})
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)})
-
+        import traceback
+        traceback.print_exc() # Esto te mostrará el error exacto en consola si vuelve a fallar
+        return JsonResponse({'success': False, 'error': f'Error interno: {str(e)}'})
 
 
 from django.utils import timezone
@@ -4140,9 +4228,10 @@ def chofer_ver_incidencia(request, incidencia_id):
 
     
 
-from django.utils import timezone
-from datetime import datetime
+from django.db.models import Sum, Count, Max
+from core.models import Venta, AsientoViaje, Viaje, Ruta, Notificacion, Usuario
 import random
+from django.utils import timezone
 
 @login_required
 @require_POST
@@ -4158,7 +4247,7 @@ def confirmar_pago_reserva_chofer(request, asiento_id):
                 'error': f'⚠️ No autorizado. Solo la sede de origen ({asiento.viaje.sede_salida.nombre}) puede confirmar esta reserva.'
             })
         
-        # Verificaciones existentes
+        # Verificaciones
         if not asiento.reservado_por_chofer:
             return JsonResponse({'success': False, 'error': 'Este asiento no es una reserva de chofer'})
         
@@ -4168,19 +4257,21 @@ def confirmar_pago_reserva_chofer(request, asiento_id):
         if asiento.estado != 'reservado':
             return JsonResponse({'success': False, 'error': 'El asiento no está en estado reservado'})
         
-        # ✅ GENERAR NÚMERO DE TICKET
+        # ✅ GENERAR NÚMERO DE TICKET INTERNO
         ahora = timezone.now()
         fecha_str = ahora.strftime('%y%m%d')
         random_str = f"{random.randint(1000, 9999)}"
         numero_ticket = f"TKT-{fecha_str}-{random_str}"
         
-        # ✅ CREAR LA VENTA
-        from core.models import Venta
+        # ✅ GENERAR NÚMERO CORRELATIVO (000001, 000002...)
+        ultimo_numero = Venta.objects.aggregate(max_num=Max('numero_correlativo'))['max_num']
+        numero_correlativo = (ultimo_numero or 0) + 1
         
         nombre_chofer = ""
         if asiento.chofer_reserva:
             nombre_chofer = asiento.chofer_reserva.get_full_name() or asiento.chofer_reserva.username
         
+        # ✅ CREAR LA VENTA (Venta ya está importada arriba en el archivo)
         venta = Venta.objects.create(
             tipo_documento='ticket',
             numero_documento=asiento.numero_documento_reserva or '',
@@ -4195,6 +4286,7 @@ def confirmar_pago_reserva_chofer(request, asiento_id):
             cajero=request.user,
             monto_total=asiento.precio,
             numero_ticket=numero_ticket,
+            numero_correlativo=numero_correlativo,  # ✅ NUEVO: Guarda el correlativo
             metodo_pago=asiento.metodo_pago_reserva or 'efectivo',
             observaciones=f"Reserva confirmada por chofer: {nombre_chofer}" if nombre_chofer else ""
         )
@@ -4221,7 +4313,7 @@ def confirmar_pago_reserva_chofer(request, asiento_id):
             'hora': asiento.viaje.hora_salida.strftime('%H:%M'),
             'pasajero': asiento.nombre_reserva or 'Sin nombre',
             'total': float(asiento.precio or 0),
-            'numero_ticket': numero_ticket,
+            'numero_ticket': f"{numero_correlativo:06d}",  # ✅ Devuelve el correlativo formateado (ej: 000031)
             'mensaje': f'✅ Pago confirmado. Asiento {asiento.numero_asiento} vendido.'
         })
         
@@ -4229,8 +4321,9 @@ def confirmar_pago_reserva_chofer(request, asiento_id):
         return JsonResponse({'success': False, 'error': 'Asiento no encontrado'})
     except Exception as e:
         print(f"❌ ERROR en confirmar_pago_reserva_chofer: {str(e)}")
+        import traceback
+        traceback.print_exc() # Esto te mostrará el error exacto en consola si vuelve a fallar
         return JsonResponse({'success': False, 'error': f'Error interno: {str(e)}'})
-
 
 
 @login_required
@@ -4295,8 +4388,13 @@ def transacciones_sede(request):
     # Preparar lista de transacciones
     transacciones = []
     for venta in ventas_qs:
+        # ✅ FORMATEAR NÚMERO CORRELATIVO (000001, 000002, etc.)
+        num_corr = venta.numero_correlativo or 0
+        numero_formateado = f"{num_corr:06d}"
+        
         transacciones.append({
-            'ticket': venta.numero_ticket,
+            'ticket': numero_formateado,  # ✅ CAMBIADO: Ahora muestra el correlativo
+            'numero_ticket_interno': venta.numero_ticket,  # ✅ Por si lo necesitas después
             'fecha': venta.fecha_venta,
             'cliente': venta.nombre_cliente,
             'dni': venta.numero_documento,
