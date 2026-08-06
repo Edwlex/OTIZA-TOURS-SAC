@@ -217,43 +217,29 @@ def dashboard_view(request):
 
 
 
-from django.utils import timezone
-from django.db.models import Sum, Count
-from django.db.models.functions import ExtractHour
-from datetime import timedelta
-
 @login_required
 def dashboard_cajero(request, usuario, sede):
-    """Dashboard para cajeros - VERSIÓN FINAL CON NOTIFICACIONES"""
+    """Dashboard para cajeros - VERSIÓN FINAL LIMPIA"""
     
     # 1. OBTENER HORA Y FECHA LOCAL
     ahora_local = timezone.localtime(timezone.now())
     hoy = ahora_local.date()
     
-    # 2. RANGO PARA VENTAS (MÉTODO SEGURO CON .replace())
+    # 2. RANGO PARA VENTAS
     inicio_dia = ahora_local.replace(hour=0, minute=0, second=0, microsecond=0)
     fin_dia = ahora_local.replace(hour=23, minute=59, second=59, microsecond=999999)
     
     # ==================== 1. KPIs DEL DÍA ====================
-    
-    # VENTAS DE HOY (DateTimeField SÍ necesita rango)
-    ventas_hoy_qs = Venta.objects.filter(
-        sede_venta=sede,
-        fecha_venta__range=(inicio_dia, fin_dia)
-    )
+    ventas_hoy_qs = Venta.objects.filter(sede_venta=sede, fecha_venta__range=(inicio_dia, fin_dia))
     ventas_hoy = ventas_hoy_qs.count()
     monto_total_hoy = ventas_hoy_qs.aggregate(total=Sum('monto_total'))['total'] or 0
     total_pasajeros_hoy = ventas_hoy
     
-    # VIAJES COMPLETADOS HOY (DateField usa = DIRECTO, SIN __date)
     viajes_completados_hoy = Viaje.objects.filter(
-        sede_salida=sede,
-        fecha_salida=hoy,
-        estado__in=['finalizado', 'completado', 'terminado']
+        sede_salida=sede, fecha_salida=hoy, estado__in=['finalizado', 'completado', 'terminado']
     ).count()
     
-    # ==================== 2. PRÓXIMOS VIAJES ====================
-    
+    # ==================== 2. PRÓXIMOS VIAJES (SOLO HOY, FUTUROS) ====================
     proximos_viajes_qs = Viaje.objects.filter(
         sede_salida=sede,
         fecha_salida=hoy,
@@ -275,24 +261,19 @@ def dashboard_cajero(request, usuario, sede):
             'asientos_disponibles': disponibles,
             'asientos_totales': total,
             'estado': viaje.get_estado_display(),
-            'porcentaje_ocupacion': round(ocupacion, 1)
+            'porcentaje_ocupacion': round(ocupacion, 1),
         })
     
     # ==================== 3. VIAJES RECIENTES ====================
-    
     fecha_desde = hoy - timedelta(days=3)
-    
     viajes_recientes_qs = Viaje.objects.filter(
-        sede_salida=sede,
-        fecha_salida__gte=fecha_desde,
-        estado__in=['finalizado', 'completado', 'terminado']
+        sede_salida=sede, fecha_salida__gte=fecha_desde, estado__in=['finalizado', 'completado', 'terminado']
     ).select_related('ruta', 'vehiculo').order_by('-fecha_salida', '-hora_salida')[:5]
     
     viajes_recientes = []
     for viaje in viajes_recientes_qs:
         ingresos = viaje.ventas.aggregate(total=Sum('monto_total'))['total'] or 0
         pasajeros = viaje.ventas.count()
-        
         viajes_recientes.append({
             'fecha': viaje.fecha_salida.strftime('%d/%m/%Y') if viaje.fecha_salida else 'N/A',
             'hora': viaje.hora_salida.strftime('%H:%M') if viaje.hora_salida else 'N/A',
@@ -309,85 +290,45 @@ def dashboard_cajero(request, usuario, sede):
     try:
         clientes_sede = FidelizacionService.obtener_progreso_clientes(filtro='cerca')
         for cliente in clientes_sede:
-            ventas_cliente_en_sede = Venta.objects.filter(
-                numero_documento=cliente['dni'],
-                sede_venta=sede
-            ).count()
-            
+            ventas_cliente_en_sede = Venta.objects.filter(numero_documento=cliente['dni'], sede_venta=sede).count()
             if ventas_cliente_en_sede > 0:
                 clientes_cercanos.append({
-                    'dni': cliente['dni'],
-                    'nombre': cliente['nombre'],
-                    'viajes_en_sede': ventas_cliente_en_sede,
-                    'faltan_para_premio': cliente['faltan']
+                    'dni': cliente['dni'], 'nombre': cliente['nombre'],
+                    'viajes_en_sede': ventas_cliente_en_sede, 'faltan_para_premio': cliente['faltan']
                 })
     except Exception:
         pass
     
     # ==================== 5. NOTIFICACIONES ====================
-    notificaciones_no_leidas = Notificacion.objects.filter(
-        sede_id=sede.id,  # ✅ Usar ID en lugar del objeto
-        leida=False
-    ).order_by('-fecha_creacion')[:10]
-    
-    notificaciones_leidas = Notificacion.objects.filter(
-        sede_id=sede.id,  # ✅ Usar ID en lugar del objeto
-        leida=True
-    ).order_by('-fecha_creacion')[:5]
-    
+    notificaciones_no_leidas = Notificacion.objects.filter(sede_id=sede.id, leida=False).order_by('-fecha_creacion')[:10]
+    notificaciones_leidas = Notificacion.objects.filter(sede_id=sede.id, leida=True).order_by('-fecha_creacion')[:5]
     total_notificaciones = notificaciones_no_leidas.count()
     
     # ==================== 6. CONTEXTO BASE ====================
     contexto = {
-        'usuario': usuario,
-        'sede': sede,
-        'es_admin': False,
-        'fecha_actual': hoy,
-        
-        'ventas_hoy': ventas_hoy,
-        'monto_total_hoy': monto_total_hoy,
-        'viajes_completados_hoy': viajes_completados_hoy,
-        'total_pasajeros_hoy': total_pasajeros_hoy,
-        
-        'proximos_viajes': proximos_viajes,
-        'viajes_recientes': viajes_recientes,
-        'clientes_cercanos': clientes_cercanos[:3],
-        'alerta_fidelizacion': clientes_cercanos[0] if clientes_cercanos else None,
+        'usuario': usuario, 'sede': sede, 'es_admin': False, 'fecha_actual': hoy,
+        'ventas_hoy': ventas_hoy, 'monto_total_hoy': monto_total_hoy,
+        'viajes_completados_hoy': viajes_completados_hoy, 'total_pasajeros_hoy': total_pasajeros_hoy,
+        'proximos_viajes': proximos_viajes, 'viajes_recientes': viajes_recientes,
+        'clientes_cercanos': clientes_cercanos[:3], 'alerta_fidelizacion': clientes_cercanos[0] if clientes_cercanos else None,
         'cliente_busqueda': request.GET.get('dni_cliente', ''),
-        
-        # ✅ NOTIFICACIONES AGREGADAS
-        'notificaciones_no_leidas': notificaciones_no_leidas,
-        'notificaciones_leidas': notificaciones_leidas,
+        'notificaciones_no_leidas': notificaciones_no_leidas, 'notificaciones_leidas': notificaciones_leidas,
         'total_notificaciones': total_notificaciones,
     }
     
     # ==================== 7. DATOS PARA GRÁFICOS ====================
-    
-    ventas_por_hora = Venta.objects.filter(
-        sede_venta=sede,
-        fecha_venta__range=(inicio_dia, fin_dia)
-    ).annotate(
-        hora=ExtractHour('fecha_venta')
-    ).values('hora').annotate(
-        total=Sum('monto_total')
-    ).order_by('hora')
+    ventas_por_hora = Venta.objects.filter(sede_venta=sede, fecha_venta__range=(inicio_dia, fin_dia)).annotate(hora=ExtractHour('fecha_venta')).values('hora').annotate(total=Sum('monto_total')).order_by('hora')
     
     horas_labels = [f"{h:02d}:00" for h in range(6, 20)]
     ventas_hora_data = [0] * 14
-    
     for item in ventas_por_hora:
         hora_idx = item['hora'] - 6
         if 0 <= hora_idx < 14:
             ventas_hora_data[hora_idx] = float(item['total'] or 0)
     
-    rutas_ocupacion = Viaje.objects.filter(
-        sede_salida=sede,
-        fecha_salida=hoy,
-        estado__in=['programado', 'en_curso', 'activo', 'pendiente', 'finalizado', 'completado']
-    ).select_related('ruta').prefetch_related('asientos')
+    rutas_ocupacion = Viaje.objects.filter(sede_salida=sede, fecha_salida=hoy, estado__in=['programado', 'en_curso', 'activo', 'pendiente', 'finalizado', 'completado']).select_related('ruta').prefetch_related('asientos')
     
-    rutas_labels = []
-    rutas_data = []
+    rutas_labels, rutas_data = [], []
     colores_rutas = ['#10B981', '#3B82F6', '#F59E0B', '#8B5CF6', '#EF4444']
     
     for i, viaje in enumerate(rutas_ocupacion[:4]):
@@ -395,32 +336,24 @@ def dashboard_cajero(request, usuario, sede):
         total = asientos.count()
         ocupados = asientos.filter(estado__in=['vendido', 'reservado']).count()
         porcentaje = (ocupados / total * 100) if total > 0 else 0
-        
         rutas_labels.append(f"{viaje.ruta.origen}→{viaje.ruta.destino}")
         rutas_data.append(round(porcentaje, 1))
     
     if not rutas_labels:
-        rutas_labels = ['Sin datos']
-        rutas_data = [0]
+        rutas_labels, rutas_data = ['Sin datos'], [0]
     
     asientos_disponibles_total = sum(v['asientos_disponibles'] for v in proximos_viajes)
     asientos_totales_total = sum(v['asientos_totales'] for v in proximos_viajes)
     
     contexto.update({
-        'ventas_hora_labels': horas_labels,
-        'ventas_hora_data': ventas_hora_data,
-        'rutas_labels': rutas_labels,
-        'rutas_data': rutas_data,
-        'rutas_colores': colores_rutas[:len(rutas_labels)],
-        'asientos_disponibles_total': asientos_disponibles_total,
-        'asientos_totales_total': asientos_totales_total,
-        'porcentaje_disponibilidad': round(
-            (asientos_disponibles_total / asientos_totales_total * 100) 
-            if asientos_totales_total > 0 else 0, 1
-        ),
+        'ventas_hora_labels': horas_labels, 'ventas_hora_data': ventas_hora_data,
+        'rutas_labels': rutas_labels, 'rutas_data': rutas_data, 'rutas_colores': colores_rutas[:len(rutas_labels)],
+        'asientos_disponibles_total': asientos_disponibles_total, 'asientos_totales_total': asientos_totales_total,
+        'porcentaje_disponibilidad': round((asientos_disponibles_total / asientos_totales_total * 100) if asientos_totales_total > 0 else 0, 1),
     })
     
     return render(request, 'dashboard/dashboard_cajero.html', contexto)
+
 
 @login_required
 def dashboard_admin_simple(request, usuario, sede):
@@ -670,14 +603,16 @@ def ventas_lista_admin(request, usuario, sede):
     return render(request, 'admin/ventas_lista.html', contexto)
 
 
+from datetime import datetime, time # ✅ Asegúrate de tener esto importado arriba
+
 @login_required
 def ventas_lista_cajero(request, usuario, sede):
-    """Lista de ventas para CAJERO - AHORA COMPARTIDA ENTRE SEDES""" 
+    """Lista de ventas para CAJERO - CON FILTRO DE FECHA FUNCIONAL""" 
     
     form = VentaFiltroForm(request.GET)
     filtros = form.cleaned_data if form.is_valid() else {}
     
-    # Obtener ventas y KPIs (el servicio YA no filtra por sede)
+    # Obtener ventas y KPIs
     ventas = VentaService.obtener_ventas_filtradas(filtros, es_admin=False, sede=sede)
     kpis = VentaService.calcular_kpis(ventas)
     
@@ -686,30 +621,48 @@ def ventas_lista_cajero(request, usuario, sede):
     hoy = ahora_local.date()
     ahora = ahora_local.time()
     
-    # ===== QUERYSET DE VIAJES (sin cambios) =====
-    viajes_qs = Viaje.objects.filter(
-        estado__in=['programado', 'en_curso'],
-    ).filter(
-        Q(fecha_salida=hoy, hora_salida__gte=ahora) |
-        Q(fecha_salida__gt=hoy)
-    )
+    # ✅ 1. OBTENER FECHA DEL FILTRO (o usar hoy por defecto)
+    fecha_filtro_str = request.GET.get('fecha', '')
+    if fecha_filtro_str:
+        try:
+            from datetime import datetime as dt
+            fecha_filtro = dt.strptime(fecha_filtro_str, '%Y-%m-%d').date()
+        except ValueError:
+            fecha_filtro = hoy
+    else:
+        fecha_filtro = hoy
     
+    # ✅ 2. CONSTRUIR QUERYSET DE VIAJES SEGÚN LA FECHA
+    if fecha_filtro < hoy:
+        # Si es una fecha PASADA, traemos TODOS los viajes de ese día (sin importar estado)
+        viajes_qs = Viaje.objects.filter(fecha_salida=fecha_filtro)
+    elif fecha_filtro == hoy:
+        # ✅ Si es HOY, traemos TODOS los viajes del día (sin importar si ya pasaron)
+        # La lógica de 'esta_pasado' se encargará de marcarlos como bloqueados en el template
+        viajes_qs = Viaje.objects.filter(
+            fecha_salida=hoy,
+            estado__in=['programado', 'en_curso', 'pendiente', 'activo', 'finalizado', 'completado', 'terminado']
+        )
+    else:
+        # Si es una fecha FUTURA, traemos los programados
+        viajes_qs = Viaje.objects.filter(fecha_salida=fecha_filtro, estado__in=['programado', 'pendiente', 'activo'])
     
+    # Aplicar otros filtros (ruta, buscador)
     if filtros.get('ruta'):
         viajes_qs = viajes_qs.filter(ruta_id=filtros['ruta'])
-    if filtros.get('buscador'):
-        buscador = filtros['buscador']
+    if filtros.get('buscador') or request.GET.get('q'):
+        buscador = filtros.get('buscador') or request.GET.get('q', '')
         viajes_qs = viajes_qs.filter(
             Q(ruta__origen__icontains=buscador) |
             Q(ruta__destino__icontains=buscador) |
             Q(vehiculo__placa__icontains=buscador)
         )
     
-    viajes_qs = viajes_qs.select_related('ruta', 'vehiculo', 'chofer_asignado') \
+    viajes_qs = viajes_qs.select_related('ruta', 'vehiculo', 'chofer_asignado', 'sede_salida') \
                          .prefetch_related('asientos') \
                          .order_by('fecha_salida', 'hora_salida')
     
-    # Procesar viajes
+    # ✅ 3. PROCESAR VIAJES Y MARCAR SI ESTÁN PASADOS
     viajes_disponibles = []
     for viaje in viajes_qs:
         asientos_lista = list(viaje.asientos.all())
@@ -718,6 +671,16 @@ def ventas_lista_cajero(request, usuario, sede):
         
         chofer_obj = viaje.chofer_asignado
         nombre_chofer = chofer_obj.get_full_name() if chofer_obj else 'Por asignar'
+        
+        # Lógica para marcar como pasado
+        esta_pasado = False
+        if fecha_filtro < hoy:
+            esta_pasado = True
+        elif fecha_filtro == hoy and viaje.hora_salida:
+            from datetime import datetime, time
+            hora_viaje = viaje.hora_salida.time() if isinstance(viaje.hora_salida, datetime) else viaje.hora_salida
+            if isinstance(hora_viaje, time) and hora_viaje < ahora:
+                esta_pasado = True
         
         viajes_disponibles.append({
             'id': viaje.id,
@@ -730,32 +693,22 @@ def ventas_lista_cajero(request, usuario, sede):
             'precio_base': viaje.ruta.precio_base,
             'estado': viaje.estado,
             'sede_salida_nombre': viaje.sede_salida.nombre if viaje.sede_salida else 'Global',
+            'esta_pasado': esta_pasado,
+            'fecha_salida': viaje.fecha_salida,
         })
     
-    # ===== DEBUG EXTREMO: Imprimir TODO =====
-    print(f"\n{'='*80}")
-    print(f"DEBUG EXTREMO - VENTAS_LISTA_CAJERO")
-    print(f"Usuario: {usuario.username} | Sede: {sede.nombre} (ID: {sede.id})")
-    print(f"¿Es admin? {usuario.is_superuser}")
-    print(f"Total ventas en queryset: {ventas.count()}")
-    
-    if ventas.count() > 0:
-        print("📋 Primeras 3 ventas:")
-        for v in ventas[:3]:
-            print(f"   • Ticket: {v.numero_ticket} | Cliente: {v.nombre_cliente} | Sede Venta: {v.sede_venta}")
-    else:
-        print("⚠️ NO HAY VENTAS EN EL QUERYSET. Posibles causas:")
-        print("   1. No hay ventas registradas en la BD")
-        print("   2. Los filtros de fecha/ruta están vaciando el queryset")
-        print("   3. Hay un filtro oculto en VentaService")
-    
-    print(f"{'='*80}\n")
+    # Debug
+    print(f"\n{'='*60}")
+    print(f" DEBUG VENTAS_LISTA | Fecha filtro: {fecha_filtro} | Hoy: {hoy}")
+    print(f"🔍 Total viajes encontrados: {len(viajes_disponibles)}")
+    print(f"{'='*60}\n")
     
     contexto = {
         'usuario': usuario,
         'sede': sede,
         'es_admin': False,
-        'ventas': ventas,  # ← Ahora trae TODAS las ventas, sin filtro por sede
+        'hoy': hoy,
+        'ventas': ventas,
         'form': form,
         'total_monto': kpis['total_monto'],
         'total_boletos': kpis['total_boletos'],
@@ -766,6 +719,7 @@ def ventas_lista_cajero(request, usuario, sede):
     }
     
     return render(request, 'ventas/lista.html', contexto)
+
 
 
 @login_required
@@ -1369,6 +1323,27 @@ def incidencia_eliminar(request, incidencia_id):
         messages.error(request, f'❌ Error al eliminar: {str(e)}')
     
     return redirect('core:incidencias_lista')
+
+
+
+
+@login_required
+def incidencia_ver(request, incidencia_id):
+    """Ver detalle de una incidencia desde la sede"""
+    incidencia = get_object_or_404(Incidencia, id=incidencia_id)
+    
+    # Verificar que la incidencia pertenezca a la sede del usuario
+    if request.user.sede != incidencia.sede_reporte and not request.user.is_superuser:
+        messages.error(request, '❌ No tienes permiso para ver esta incidencia.')
+        return redirect('core:incidencias_lista')
+    
+    contexto = {
+        'incidencia': incidencia,
+        'sede': request.user.sede,
+    }
+    return render(request, 'incidencias/incidencia_ver.html', contexto)
+
+
 
 
 # ==================== ADMIN - FIDELIZACIÓN ====================
@@ -3178,39 +3153,49 @@ def procesar_reserva(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
     
 
+# ==================== LIBERAR RESERVA ====================
 @login_required
+@require_POST
 def liberar_reserva(request, asiento_id):
-    """Libera una reserva (cuando el cliente no llegó)"""
-    if request.method != 'POST':
-        return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=400)
-    
+    """Libera un asiento reservado (solo la sede de origen puede hacerlo)"""
     try:
-        asiento = get_object_or_404(AsientoViaje, id=asiento_id)
+        asiento = AsientoViaje.objects.select_related('viaje').get(id=asiento_id)
         
-        # Verificar que esté reservado
-        if asiento.estado != 'reservado':
+        # ✅ VERIFICACIÓN DE SEGURIDAD: Solo la sede de origen puede liberar
+        if request.user.sede.id != asiento.viaje.sede_salida.id:
             return JsonResponse({
                 'success': False, 
-                'error': f'El asiento no está reservado (estado: {asiento.estado})'
-            }, status=400)
+                'error': f'⚠️ No autorizado. Solo la sede de origen ({asiento.viaje.sede_salida.nombre}) puede liberar esta reserva.'
+            })
         
-        # Liberar el asiento
+        if asiento.estado != 'reservado':
+            return JsonResponse({'success': False, 'error': 'El asiento no está reservado'})
+        
+        # ✅ LIBERAR ASIENTO
         asiento.estado = 'disponible'
         asiento.nombre_reserva = ''
         asiento.numero_documento_reserva = ''
         asiento.telefono_reserva = ''
+        asiento.email_reserva = ''
+        asiento.ruc_reserva = ''
+        asiento.razon_social_reserva = ''
+        asiento.metodo_pago_reserva = ''
+        asiento.reservado_por_chofer = False
+        asiento.tipo_reserva_chofer = ''
+        asiento.chofer_reserva = None
         asiento.fecha_reserva = None
         asiento.save()
         
         return JsonResponse({
             'success': True,
             'asiento': asiento.numero_asiento,
-            'message': f'Asiento {asiento.numero_asiento} liberado correctamente'
+            'mensaje': f'✅ Asiento {asiento.numero_asiento} liberado correctamente.'
         })
         
+    except AsientoViaje.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Asiento no encontrado'})
     except Exception as e:
-        logger.error(f"Error al liberar reserva: {str(e)}", exc_info=True)
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        return JsonResponse({'success': False, 'error': str(e)})
 
 
 @login_required
@@ -3244,53 +3229,137 @@ def confirmacion_venta(request, venta_id):
     
     return render(request, 'ventas/confirmacion_venta.html', contexto)
 
+
+# ==================== CONFIRMAR PAGO DE RESERVA NORMAL (SIN COBRO DEL CHOFER) ==========
 @login_required
+@require_POST
 def confirmar_pago_reserva(request, asiento_id):
-    """Convierte reserva en venta - AHORA USA EL DNI GUARDADO"""
-    if request.method != 'POST':
-        return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=400)
-    
-    import random
-    
+    """La cajera confirma el pago de una reserva (normal o sin cobro del chofer)"""
     try:
-        asiento = get_object_or_404(AsientoViaje, id=asiento_id)
+        asiento = AsientoViaje.objects.select_related('viaje', 'viaje__ruta', 'chofer_reserva').get(id=asiento_id)
+        
+        # ✅ VERIFICACIÓN DE SEGURIDAD: Solo la sede de origen puede confirmar
+        if request.user.sede.id != asiento.viaje.sede_salida.id:
+            return JsonResponse({
+                'success': False, 
+                'error': f'⚠️ No autorizado. Solo la sede de origen ({asiento.viaje.sede_salida.nombre}) puede procesar esta reserva.'
+            })
         
         if asiento.estado != 'reservado':
-            return JsonResponse({'success': False, 'error': 'El asiento no está reservado'}, status=400)
+            return JsonResponse({'success': False, 'error': 'El asiento no está en estado reservado'})
         
-        # Crear la venta (USAR DNI GUARDADO)
+        # ✅ Retornar datos del asiento para que el frontend muestre el formulario completo
+        return JsonResponse({
+            'success': True,
+            'asiento_id': asiento.id,
+            'numero_asiento': asiento.numero_asiento,
+            'nombre_reserva': asiento.nombre_reserva or '',
+            'dni_reserva': asiento.numero_documento_reserva or '',
+            'telefono_reserva': asiento.telefono_reserva or '',
+            'email_reserva': asiento.email_reserva or '',
+            'ruc_reserva': asiento.ruc_reserva or '',
+            'razon_social_reserva': asiento.razon_social_reserva or '',
+            'metodo_pago_reserva': asiento.metodo_pago_reserva or 'efectivo',
+            'precio': float(asiento.precio or 0),
+            'ruta': f"{asiento.viaje.ruta.origen} → {asiento.viaje.ruta.destino}",
+            'fecha': asiento.viaje.fecha_salida.strftime('%d/%m/%Y'),
+            'hora': asiento.viaje.hora_salida.strftime('%H:%M'),
+            'viaje_id': asiento.viaje.id,
+            'reservado_por_chofer': asiento.reservado_por_chofer,
+            'tipo_reserva_chofer': asiento.tipo_reserva_chofer or '',
+        })
+        
+    except AsientoViaje.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Asiento no encontrado'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+# ==================== PROCESAR PAGO FINAL DE RESERVA ==================== 
+@login_required
+@require_POST
+def procesar_pago_reserva_final(request):
+    """Procesa el pago final de una reserva completando todos los campos"""
+    try:
+        asiento_id = request.POST.get('asiento_id')
+        asiento = AsientoViaje.objects.select_related('viaje', 'viaje__ruta').get(id=asiento_id)
+        
+        # ✅ VERIFICACIÓN DE SEGURIDAD: Solo la sede de origen
+        if request.user.sede.id != asiento.viaje.sede_salida.id:
+            return JsonResponse({
+                'success': False, 
+                'error': f'⚠️ No autorizado. Solo la sede de origen puede procesar esta reserva.'
+            })
+        
+        if asiento.estado != 'reservado':
+            return JsonResponse({'success': False, 'error': 'El asiento ya no está reservado'})
+        
+        # ✅ Obtener datos del formulario
+        email_pasajero = request.POST.get('email_pasajero', '').strip()
+        ruc_cliente = request.POST.get('ruc_cliente', '').strip()
+        razon_social = request.POST.get('razon_social', '').strip().upper()
+        metodo_pago = request.POST.get('metodo_pago', 'efectivo')
+        
+        # ✅ GENERAR NÚMERO DE TICKET
+        ahora = timezone.now()
+        fecha_str = ahora.strftime('%y%m%d')
+        random_str = f"{random.randint(1000, 9999)}"
+        numero_ticket = f"TKT-{fecha_str}-{random_str}"
+        
+        # ✅ CREAR LA VENTA
+        from core.models import Venta
+        
         venta = Venta.objects.create(
-            viaje=asiento.viaje,
+            tipo_documento='ticket',
+            numero_documento=asiento.numero_documento_reserva or '',
+            nombre_cliente=asiento.nombre_reserva or 'Pasajero',
+            telefono_cliente=asiento.telefono_reserva or '',
+            email_cliente=email_pasajero,
+            ruc_cliente=ruc_cliente,
+            razon_social=razon_social,
             asiento=asiento,
+            viaje=asiento.viaje,
             sede_venta=request.user.sede,
             cajero=request.user,
-            numero_documento=asiento.numero_documento_reserva or '',  # ← USAR CAMPO DE RESERVA
-            nombre_cliente=asiento.nombre_reserva or 'Cliente Reserva',
-            telefono_cliente=asiento.telefono_reserva or '',
-            metodo_pago='efectivo',
-            monto_total=asiento.viaje.ruta.precio_base,
-            numero_ticket=f"TKT-{timezone.now().strftime('%y%m%d')}-{random.randint(1000, 9999)}",
-            fecha_venta=timezone.now()
+            monto_total=asiento.precio,
+            numero_ticket=numero_ticket,
+            metodo_pago=metodo_pago,
+            observaciones=f"Reserva confirmada - Pago procesado en sede"
         )
         
+        # ✅ MARCAR ASIENTO COMO VENDIDO
         asiento.estado = 'vendido'
+        asiento.fecha_venta = timezone.now()
+        asiento.email_reserva = email_pasajero
+        asiento.ruc_reserva = ruc_cliente
+        asiento.razon_social_reserva = razon_social
+        asiento.metodo_pago_reserva = metodo_pago
         asiento.save()
+        
+        # Marcar notificaciones como leídas
+        Notificacion.objects.filter(
+            sede_id=request.user.sede.id,
+            tipo='reserva_chofer',
+            leida=False
+        ).update(leida=True)
         
         return JsonResponse({
             'success': True,
             'venta_id': venta.id,
-            'asiento': venta.asiento.numero_asiento,
-            'ruta': f"{venta.viaje.ruta.origen} → {venta.viaje.ruta.destino}",
-            'fecha': venta.viaje.fecha_salida.strftime('%d/%m/%Y'),
-            'hora': venta.viaje.hora_salida.strftime('%H:%M'),
-            'pasajero': venta.nombre_cliente,
-            'total': str(venta.monto_total),
-            'tipo': 'venta'
+            'numero_ticket': numero_ticket,
+            'asiento': asiento.numero_asiento,
+            'ruta': f"{asiento.viaje.ruta.origen} → {asiento.viaje.ruta.destino}",
+            'fecha': asiento.viaje.fecha_salida.strftime('%d/%m/%Y'),
+            'hora': asiento.viaje.hora_salida.strftime('%H:%M'),
+            'pasajero': asiento.nombre_reserva or 'Sin nombre',
+            'total': float(asiento.precio or 0),
+            'mensaje': f'✅ Pago confirmado. Asiento {asiento.numero_asiento} vendido.'
         })
         
+    except AsientoViaje.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Asiento no encontrado'})
     except Exception as e:
-        logger.error(f"Error al confirmar pago: {str(e)}", exc_info=True)
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        return JsonResponse({'success': False, 'error': str(e)})
 
 
 
@@ -3699,36 +3768,6 @@ def hoja_ruta_limpiar_sesion(request):
 
 
 
-# ==================== PORTAL CHOFERES (LÓGICA DE ORO) ====================
-from django.contrib.auth import authenticate, login, logout
-
-# 1. LOGIN PERSONALIZADO PARA DETECTAR AL CHOFER GENÉRICO
-def login_chofer_view(request):
-    """Login para el usuario genérico 'chofer'"""
-    if request.method == 'POST':
-        username = request.POST.get('username')
-        password = request.POST.get('password')
-        
-        # Autenticar al usuario genérico
-        user = authenticate(request, username=username, password=password)
-        
-        if user is not None and user.username == 'chofer':
-            login(request, user)
-            
-            # ✅ SIEMPRE mandar a seleccionar identidad, no al panel directo
-            # Limpiamos cualquier sesión previa de chofer
-            if 'chofer_id' in request.session:
-                del request.session['chofer_id']
-            if 'chofer_nombre' in request.session:
-                del request.session['chofer_nombre']
-            
-            messages.success(request, '✅ Login exitoso. Selecciona tu identidad.')
-            return redirect('core:chofer_seleccionar_identidad')
-        else:
-            messages.error(request, '❌ Credenciales incorrectas')
-    
-    return render(request, 'chofer/login_chofer.html')
-
 # 2. SELECCIÓN DE IDENTIDAD (Jala los choferes reales de la BD)
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
@@ -3790,11 +3829,11 @@ from zoneinfo import ZoneInfo
 
 @login_required
 def panel_chofer(request):
-    """Panel principal del chofer - Muestra viajes de todas las sedes con filtros"""
+    """Panel principal del chofer - Muestra todos los viajes de la fecha filtrada"""
     if not request.session.get('chofer_id'):
         return redirect('core:chofer_seleccionar_identidad')
     
-    # ✅ FECHA Y HORA DE HOY (Lima, Perú)
+    # Fecha y hora local (Lima)
     lima_tz = ZoneInfo('America/Lima')
     ahora_local = timezone.now().astimezone(lima_tz)
     hoy = ahora_local.date()
@@ -3804,7 +3843,7 @@ def panel_chofer(request):
     fecha_filtro = request.GET.get('fecha', hoy.isoformat())
     ruta_filtro = request.GET.get('ruta', '')
     
-    # Query base
+    # Query base: TODOS los viajes de la fecha filtrada
     viajes_qs = Viaje.objects.filter(
         fecha_salida=fecha_filtro
     ).select_related('ruta', 'vehiculo', 'chofer_asignado', 'sede_salida')
@@ -3812,25 +3851,37 @@ def panel_chofer(request):
     if ruta_filtro:
         viajes_qs = viajes_qs.filter(ruta_id=ruta_filtro)
     
-    # ✅ FILTRO CLAVE: Si la fecha es HOY, solo mostrar viajes con hora_salida >= hora_actual
-    from datetime import date as date_type
-    if fecha_filtro == hoy.isoformat():
-        viajes_qs = viajes_qs.filter(hora_salida__gte=hora_actual)
-    
     viajes_qs = viajes_qs.order_by('hora_salida')
     rutas = Ruta.objects.filter(activa=True).order_by('origen', 'destino')
     
+    # ✅ ANOTAR cada viaje con si está pasado o no
+    viajes_con_estado = []
+    for viaje in viajes_qs:
+        esta_pasado = False
+        if fecha_filtro < hoy.isoformat():
+            # Fecha anterior a hoy = pasado
+            esta_pasado = True
+        elif fecha_filtro == hoy.isoformat() and viaje.hora_salida and viaje.hora_salida < hora_actual:
+            # Hoy pero hora ya pasó = pasado
+            esta_pasado = True
+        
+        viajes_con_estado.append({
+            'viaje': viaje,
+            'esta_pasado': esta_pasado
+        })
+    
     contexto = {
-        'viajes': viajes_qs,
+        'viajes_con_estado': viajes_con_estado,
         'rutas': rutas,
         'fecha_filtro': fecha_filtro,
         'ruta_filtro': ruta_filtro,
-        'total_viajes': viajes_qs.count(),
+        'total_viajes': len(viajes_con_estado),
         'hoy': hoy,
         'chofer_nombre': request.session.get('chofer_nombre'),
     }
     
     return render(request, 'chofer/panel_chofer.html', contexto)
+
 
 
 from django.shortcuts import render, redirect, get_object_or_404
@@ -3951,46 +4002,50 @@ def chofer_reservar_asientos(request, viaje_id):
     return render(request, 'chofer/reservar_asientos.html', contexto)
 
 # 4. Cerrar Sesión del Chofer
-from django.contrib.auth import logout  # <-- 1. IMPORTANTE: Agrega este import arriba
+from django.contrib.auth import logout
 from django.shortcuts import redirect
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 
-@login_required
 def chofer_logout(request):
     """Cerrar sesión del chofer completamente"""
     
-    # 2. Cierra la sesión de Django (elimina todas las variables de sesión y cookies)
+    # 1. Cierra la sesión de Django
     logout(request)
+    
+    # 2. Limpia las variables de sesión del chofer
+    if 'chofer_id' in request.session:
+        del request.session['chofer_id']
+    if 'chofer_nombre' in request.session:
+        del request.session['chofer_nombre']
+    if 'chofer_dni' in request.session:
+        del request.session['chofer_dni']
     
     messages.info(request, '👋 Sesión cerrada correctamente')
     
-    # 3. Redirige al login específico de choferes 
-    # (Asegúrate de que 'core:login_chofer' sea el nombre exacto de tu URL de login)
-    return redirect('core:login_chofer') 
+    # 3. Redirige al login general
+    return redirect('core:login')
+
 
 @login_required
 def chofer_incidencias(request):
-    """Panel de incidencias para chofer"""
+    """Lista de incidencias reportadas por el chofer"""
     if not request.session.get('chofer_id'):
         return redirect('core:chofer_seleccionar_identidad')
     
     chofer_nombre = request.session.get('chofer_nombre')
+    chofer_id = request.session.get('chofer_id')
     
-    # Obtener incidencias del chofer
-    try:
-        from core.models import Incidencia
-        incidencias = Incidencia.objects.filter(
-            creado_por=request.user
-        ).order_by('-fecha_creacion')
-    except Exception:
-        incidencias = []
+    # ✅ CAMBIAR 'fecha_creacion' POR 'fecha_reporte'
+    incidencias = Incidencia.objects.filter(
+        reportado_por_id=chofer_id
+    ).order_by('-fecha_reporte')
     
     contexto = {
         'incidencias': incidencias,
         'chofer_nombre': chofer_nombre,
     }
     return render(request, 'chofer/incidencias.html', contexto)
+
 
 from django import forms
 from core.models import Incidencia
@@ -4018,12 +4073,14 @@ def chofer_nueva_incidencia(request):
         return redirect('core:chofer_seleccionar_identidad')
     
     chofer_nombre = request.session.get('chofer_nombre')
+    chofer_id = request.session.get('chofer_id')
     
     if request.method == 'POST':
         form = ChoferIncidenciaForm(request.POST)
         if form.is_valid():
             incidencia = form.save(commit=False)
-            incidencia.reportado_por = request.user
+            # ✅ GUARDAR EL CHOFER REAL, NO EL USUARIO GENÉRICO
+            incidencia.reportado_por_id = chofer_id  # ID del chofer real
             incidencia.sede_reporte = request.user.sede  # Unidad Móvil
             incidencia.estado = 'pendiente'
             incidencia.save()
@@ -4040,6 +4097,48 @@ def chofer_nueva_incidencia(request):
     return render(request, 'chofer/nueva_incidencia.html', contexto)
 
 
+@login_required
+def chofer_eliminar_incidencia(request, incidencia_id):
+    """Eliminar incidencia reportada por el chofer (solo si está pendiente)"""
+    if not request.session.get('chofer_id'):
+        return redirect('core:chofer_seleccionar_identidad')
+    
+    chofer_id = request.session.get('chofer_id')
+    
+    try:
+        incidencia = Incidencia.objects.get(id=incidencia_id, reportado_por_id=chofer_id)
+        
+        # Solo se puede eliminar si está pendiente
+        if incidencia.estado == 'pendiente':
+            incidencia.delete()
+            messages.success(request, '✅ Incidencia eliminada correctamente.')
+        else:
+            messages.error(request, '❌ No se puede eliminar una incidencia que ya está en proceso o resuelta.')
+    except Incidencia.DoesNotExist:
+        messages.error(request, '❌ Incidencia no encontrada.')
+    
+    return redirect('core:chofer_incidencias')
+
+@login_required
+def chofer_ver_incidencia(request, incidencia_id):
+    """Ver detalle de una incidencia"""
+    if not request.session.get('chofer_id'):
+        return redirect('core:chofer_seleccionar_identidad')
+    
+    chofer_id = request.session.get('chofer_id')
+    
+    try:
+        incidencia = Incidencia.objects.get(id=incidencia_id, reportado_por_id=chofer_id)
+        contexto = {
+            'incidencia': incidencia,
+            'chofer_nombre': request.session.get('chofer_nombre'),
+        }
+        return render(request, 'chofer/ver_incidencia.html', contexto)
+    except Incidencia.DoesNotExist:
+        messages.error(request, '❌ Incidencia no encontrada.')
+        return redirect('core:chofer_incidencias')
+
+    
 
 from django.utils import timezone
 from datetime import datetime
@@ -4052,7 +4151,14 @@ def confirmar_pago_reserva_chofer(request, asiento_id):
     try:
         asiento = AsientoViaje.objects.select_related('viaje', 'viaje__ruta', 'chofer_reserva').get(id=asiento_id)
         
-        # Verificaciones
+        # ✅ VERIFICACIÓN DE SEGURIDAD: Solo la sede de origen puede confirmar
+        if request.user.sede.id != asiento.viaje.sede_salida.id:
+            return JsonResponse({
+                'success': False, 
+                'error': f'⚠️ No autorizado. Solo la sede de origen ({asiento.viaje.sede_salida.nombre}) puede confirmar esta reserva.'
+            })
+        
+        # Verificaciones existentes
         if not asiento.reservado_por_chofer:
             return JsonResponse({'success': False, 'error': 'Este asiento no es una reserva de chofer'})
         
@@ -4071,7 +4177,6 @@ def confirmar_pago_reserva_chofer(request, asiento_id):
         # ✅ CREAR LA VENTA
         from core.models import Venta
         
-        # Obtener nombre del chofer si existe
         nombre_chofer = ""
         if asiento.chofer_reserva:
             nombre_chofer = asiento.chofer_reserva.get_full_name() or asiento.chofer_reserva.username
@@ -4110,7 +4215,7 @@ def confirmar_pago_reserva_chofer(request, asiento_id):
             'success': True,
             'asiento': asiento.numero_asiento,
             'asiento_id': asiento.id,
-            'venta_id': venta.id,  # ✅ IMPORTANTE PARA EL PDF
+            'venta_id': venta.id,
             'ruta': f"{asiento.viaje.ruta.origen} → {asiento.viaje.ruta.destino}",
             'fecha': asiento.viaje.fecha_salida.strftime('%d/%m/%Y'),
             'hora': asiento.viaje.hora_salida.strftime('%H:%M'),
@@ -4130,10 +4235,83 @@ def confirmar_pago_reserva_chofer(request, asiento_id):
 
 @login_required
 def notificaciones_contador_api(request):
-    """API: Retorna el contador de notificaciones no leídas (para polling)"""
-    no_leidas = Notificacion.objects.filter(
+    """API: Retorna el contador de notificaciones no leídas de RESERVA CON COBRO (para polling rápido)"""
+    
+    # ✅ Solo contamos las notificaciones de reserva de chofer que sean CON COBRO
+    # Filtramos por el título que generamos: "🚌 RESERVA DE CHOFER - CON COBRO"
+    no_leidas_con_cobro = Notificacion.objects.filter(
+        sede_id=request.user.sede.id,
+        leida=False,
+        titulo__icontains="CON COBRO"  # ✅ Filtra solo las de CON COBRO para la alerta urgente
+    ).count()
+    
+    # También contamos el total de no leídas para el badge del sidebar (todas, incluyendo SIN COBRO)
+    total_no_leidas = Notificacion.objects.filter(
         sede_id=request.user.sede.id,
         leida=False
     ).count()
     
-    return JsonResponse({'no_leidas': no_leidas})
+    return JsonResponse({
+        'no_leidas_con_cobro': no_leidas_con_cobro,
+        'total_no_leidas': total_no_leidas
+    })
+
+
+from django.db.models import Sum
+from django.utils import timezone
+from datetime import datetime, timedelta
+
+@login_required
+def transacciones_sede(request):
+    """Detalle de transacciones de la sede actual - Por defecto muestra solo hoy"""
+    sede = request.user.sede
+    
+    # ✅ FECHA DE HOY POR DEFECTO
+    hoy = timezone.localtime(timezone.now()).date()
+    
+    # Filtro de fecha (si no viene, usa hoy)
+    fecha_filtro = request.GET.get('fecha', hoy.isoformat())
+    
+    # Queryset base: solo ventas de esta sede
+    ventas_qs = Venta.objects.filter(sede_venta=sede).select_related(
+        'viaje', 'viaje__ruta', 'asiento', 'asiento__viaje', 'cajero'
+    )
+    
+    # ✅ Aplicar filtro de fecha (siempre habrá una fecha: hoy o la filtrada)
+    if fecha_filtro:
+        try:
+            fecha_obj = datetime.strptime(fecha_filtro, '%Y-%m-%d').date()
+            inicio_dia = datetime.combine(fecha_obj, datetime.min.time())
+            fin_dia = datetime.combine(fecha_obj, datetime.max.time())
+            ventas_qs = ventas_qs.filter(fecha_venta__range=(inicio_dia, fin_dia))
+        except ValueError:
+            pass
+    
+    ventas_qs = ventas_qs.order_by('-fecha_venta')
+    
+    # Calcular total
+    total_monto = ventas_qs.aggregate(total=Sum('monto_total'))['total'] or 0
+    
+    # Preparar lista de transacciones
+    transacciones = []
+    for venta in ventas_qs:
+        transacciones.append({
+            'ticket': venta.numero_ticket,
+            'fecha': venta.fecha_venta,
+            'cliente': venta.nombre_cliente,
+            'dni': venta.numero_documento,
+            'ruta': f"{venta.viaje.ruta.origen} → {venta.viaje.ruta.destino}" if venta.viaje and venta.viaje.ruta else 'N/A',
+            'asiento': f"Asiento {venta.asiento.numero_asiento}" if venta.asiento else 'N/A',
+            'sede': venta.sede_venta.nombre,
+            'monto': venta.monto_total,
+        })
+    
+    contexto = {
+        'transacciones': transacciones,
+        'total_transacciones': len(transacciones),
+        'total_monto': total_monto,
+        'fecha_filtro': fecha_filtro,
+        'sede': sede,
+    }
+    
+    return render(request, 'ventas/transacciones_sede.html', contexto)

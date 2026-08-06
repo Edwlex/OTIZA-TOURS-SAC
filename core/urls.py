@@ -23,6 +23,8 @@ urlpatterns = [
     path('ventas/exportar/', views.ventas_exportar, name='ventas_exportar'),
     path('ventas/confirmar-pago-reserva/<int:asiento_id>/', views.confirmar_pago_reserva, name='confirmar_pago_reserva'),
     path('ventas/liberar-reserva/<int:asiento_id>/', views.liberar_reserva, name='liberar_reserva'),
+    path('ventas/procesar-pago-reserva-final/', views.procesar_pago_reserva_final, name='procesar_pago_reserva_final'),
+    path('ventas/transacciones/', views.transacciones_sede, name='transacciones_sede'),
     
     path('boletos/<int:boleto_id>/pdf/', views.descargar_boleto_pdf, name='descargar_boleto_pdf'),
     path('boletos/<int:boleto_id>/', views.ver_boleto, name='ver_boleto'),  
@@ -62,6 +64,7 @@ urlpatterns = [
     path('incidencias/actualizar/<int:id>/', views.incidencia_actualizar_estado, name='incidencia_actualizar_estado'),
     path('incidencias/detalle/<int:id>/', views.incidencia_ver_detalle, name='incidencia_ver_detalle'),
     path('incidencias/<int:incidencia_id>/eliminar/', views.incidencia_eliminar, name='incidencia_eliminar'),
+    path('incidencias/<int:incidencia_id>/ver/', views.incidencia_ver, name='incidencia_ver'),
 
     # ==================== ADMIN - GESTIÓN DE CHOFERES ====================
     path('panel-admin/choferes/', views.choferes_lista, name='choferes_lista'),
@@ -133,11 +136,13 @@ urlpatterns = [
 
 
     # ==================== PORTAL CHOFERES ====================
-    path('chofer/login/', views.login_chofer_view, name='login_chofer'),
+    # path('chofer/login/', views.login_chofer_view, name='login_chofer'),
     path('chofer/seleccionar-identidad/', views.chofer_seleccionar_identidad, name='chofer_seleccionar_identidad'),
     path('chofer/panel/', views.panel_chofer, name='panel_chofer'),
     path('chofer/reservar/<int:viaje_id>/', views.chofer_reservar_asientos, name='chofer_reservar_asientos'),
     path('chofer/logout/', views.chofer_logout, name='chofer_logout'),
     path('chofer/incidencias/', views.chofer_incidencias, name='chofer_incidencias'),
     path('chofer/incidencias/nueva/', views.chofer_nueva_incidencia, name='chofer_nueva_incidencia'),
+    path('chofer/incidencias/<int:incidencia_id>/ver/', views.chofer_ver_incidencia, name='chofer_ver_incidencia'),
+    path('chofer/incidencias/<int:incidencia_id>/eliminar/', views.chofer_eliminar_incidencia, name='chofer_eliminar_incidencia'),
 ]

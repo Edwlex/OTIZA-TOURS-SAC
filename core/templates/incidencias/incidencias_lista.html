@@ -122,11 +122,11 @@
                         <!-- ✅ COLUMNA DE ACCIONES ACTUALIZADA CON BOTÓN ELIMINAR -->
                         <td class="px-6 py-4 text-center">
                             <div class="flex items-center justify-center gap-2">
-                                <!-- Botón Ver Detalle (Modal existente) -->
-                                <button onclick="verDetalle('{{ inc.descripcion|escapejs }}', '{{ inc.get_estado_display }}')" 
-                                        class="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition" title="Ver detalle">
+                                <!-- Botón Ver Detalle (Página completa) -->
+                                <a href="{% url 'core:incidencia_ver' inc.id %}" 
+                                class="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition" title="Ver detalle">
                                     <i class="fas fa-eye"></i>
-                                </button>
+                                </a>
                                 
                                 <!-- Botón Eliminar -->
                                 <form action="{% url 'core:incidencia_eliminar' inc.id %}" method="POST" style="display:inline;" 
@@ -173,20 +173,4 @@
         </div>
     </div>
 </div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-function verDetalle(descripcion, estado) {
-    document.getElementById('modalDetalle').classList.remove('hidden');
-    document.getElementById('detalleDescripcion').textContent = descripcion;
-    document.getElementById('detalleEstado').textContent = 'Estado actual: ' + estado;
-}
-function cerrarModalDetalle() {
-    document.getElementById('modalDetalle').classList.add('hidden');
-}
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') cerrarModalDetalle();
-});
-</script>
 {% endblock %}

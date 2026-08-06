@@ -87,8 +87,9 @@
         
         <!-- Footer -->
         <div class="mt-6 text-center">
-            <a href="{% url 'core:login_chofer' %}" class="text-xs text-slate-400 hover:text-slate-600 transition flex items-center justify-center gap-1">
-                <i class="fas fa-sign-out-alt"></i> Volver al inicio de sesión
+            <!-- ✅ CAMBIADO: Ahora apunta al logout para cerrar sesión antes de ir al login -->
+            <a href="{% url 'core:chofer_logout' %}" class="text-xs text-slate-400 hover:text-red-500 transition flex items-center justify-center gap-1">
+                <i class="fas fa-sign-out-alt"></i> Cerrar sesión y volver al inicio
             </a>
         </div>
     </div>

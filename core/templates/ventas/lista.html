@@ -10,59 +10,57 @@
         <h1 class="text-2xl font-bold text-slate-800">Venta de Pasajes</h1>
         <p class="text-slate-500 mt-1">Gestiona las ventas de boletos para tus viajes</p>
     </div>
-    <div class="flex gap-3">
-        <button class="bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-50 transition text-sm font-medium flex items-center gap-2">
-            <i class="fas fa-filter"></i> Filtros
-        </button>
-    </div>
 </div>
 
-<!-- Buscador y Filtros DINÁMICOS -->
+<!-- Filtros (igual al panel del chofer) -->
 <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6">
-    <form method="get" class="flex flex-col md:flex-row gap-4">
-        <!-- Buscador -->
-        <div class="flex-1 relative">
-            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
-            <input type="text" name="q" placeholder="Buscar por ruta, placa..." 
-                   value="{{ request.GET.q }}"
-                   class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition">
-        </div>
-        
+    <form method="get" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
         <!-- Filtro de Fecha -->
-        <div class="flex items-center gap-2">
-            <i class="fas fa-calendar text-slate-400"></i>
-            <input type="date" name="fecha" value="{{ request.GET.fecha }}"
-                   class="px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition">
+        <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">📅 FECHA</label>
+            <input type="date" name="fecha" value="{{ request.GET.fecha|default:hoy|date:'Y-m-d' }}" 
+                   class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-otiza-green transition">
         </div>
         
-        <!-- Filtro de Ruta DINÁMICO -->
-        <select name="ruta" class="px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-otiza-green/20 focus:border-otiza-green transition bg-white">
-            <option value="">Todas las rutas</option>
-            {% for ruta in rutas_activas %}
-            <option value="{{ ruta.id }}" {% if request.GET.ruta == ruta.id|stringformat:"s" %}selected{% endif %}>
-                {{ ruta.origen }} → {{ ruta.destino }}
-            </option>
-            {% endfor %}
-        </select>
+        <!-- Filtro de Ruta -->
+        <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">️ RUTA</label>
+            <select name="ruta" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-otiza-green transition bg-white">
+                <option value="">Todas las rutas</option>
+                {% for ruta in rutas_activas %}
+                <option value="{{ ruta.id }}" {% if request.GET.ruta == ruta.id|stringformat:"s" %}selected{% endif %}>
+                    {{ ruta.origen }} → {{ ruta.destino }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
         
-        <!-- Botón Buscar -->
-        <button type="submit" class="bg-otiza-green hover:bg-otiza-dark text-white px-6 py-2.5 rounded-lg font-medium transition flex items-center gap-2">
-            <i class="fas fa-search"></i> Buscar
-        </button>
+        <!-- Botones Filtrar y Limpiar -->
+        <div class="flex items-end gap-2 pb-2.5">
+            <button type="submit" class="px-4 py-2 bg-otiza-green text-white rounded-lg hover:bg-otiza-dark transition font-medium flex items-center gap-2">
+                <i class="fas fa-filter"></i> Filtrar
+            </button>
+            <a href="{% url 'core:ventas_lista' %}" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition font-medium flex items-center gap-2">
+                <i class="fas fa-times"></i> Limpiar
+            </a>
+        </div>
     </form>
 </div>
 
 <!-- Lista de Viajes Disponibles -->
 <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
     <div class="p-6 border-b border-slate-200">
-        <h3 class="text-lg font-bold text-slate-800">Viajes Disponibles - Hoy</h3>
-        <p class="text-sm text-slate-500 mt-1">{{ viajes_disponibles|length }} viajes programados</p>
+        <h3 class="text-lg font-bold text-slate-800">
+            Viajes {% if request.GET.fecha %}del {{ request.GET.fecha }}{% else %}Disponibles - Hoy{% endif %}
+        </h3>
+        <p class="text-sm text-slate-500 mt-1">{{ viajes_disponibles|length }} viajes encontrados</p>
     </div>
     
     <div class="overflow-x-auto">
         <table class="w-full">
             <thead class="bg-slate-50">
                 <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Fecha</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Hora</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Ruta</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Vehículo</th>
@@ -75,29 +73,49 @@
             </thead>
             <tbody class="divide-y divide-slate-200">
                 {% for viaje in viajes_disponibles %}
-                <tr class="hover:bg-slate-50 transition group {% if viaje.asientos_disponibles == 0 %}opacity-60{% endif %}">
+                <!-- ✅ FILA CON ESTILO PARA VIAJES PASADOS -->
+                <tr class="hover:bg-slate-50 transition group {% if viaje.esta_pasado %}bg-slate-100 opacity-60{% elif viaje.asientos_disponibles == 0 %}opacity-60{% endif %}">
+                    
+                    <!-- ✅ NUEVA COLUMNA: FECHA -->
                     <td class="px-6 py-4">
-                        <span class="text-sm font-bold text-slate-900">{{ viaje.hora_salida|date:"H:i" }}</span>
+                        <span class="text-sm font-bold {% if viaje.esta_pasado %}text-slate-500 line-through{% else %}text-slate-900{% endif %}">
+                            {{ viaje.fecha_salida|date:"d/m/Y" }}
+                        </span>
                     </td>
+                    
+                    <!-- HORA -->
+                    <td class="px-6 py-4">
+                        <span class="text-sm font-bold {% if viaje.esta_pasado %}text-slate-500 line-through{% else %}text-slate-900{% endif %}">
+                            {{ viaje.hora_salida|date:"H:i" }}
+                        </span>
+                    </td>
+                    
+                    <!-- RUTA -->
                     <td class="px-6 py-4">
                         <div class="flex items-center gap-2">
-                            <i class="fas fa-map-marker-alt text-otiza-green text-xs"></i>
-                            <span class="text-sm text-slate-700">{{ viaje.ruta.origen }} → {{ viaje.ruta.destino }}</span>
+                            <i class="fas fa-map-marker-alt {% if viaje.esta_pasado %}text-slate-400{% else %}text-otiza-green{% endif %} text-xs"></i>
+                            <span class="text-sm {% if viaje.esta_pasado %}text-slate-500{% else %}text-slate-700{% endif %}">
+                                {{ viaje.ruta.origen }} → {{ viaje.ruta.destino }}
+                            </span>
                         </div>
                     </td>
+                    
+                    <!-- VEHÍCULO -->
                     <td class="px-6 py-4">
                         <div>
-                            <p class="text-sm font-semibold text-slate-900">{{ viaje.vehiculo.placa }}</p>
+                            <p class="text-sm font-semibold {% if viaje.esta_pasado %}text-slate-500{% else %}text-slate-900{% endif %}">{{ viaje.vehiculo.placa }}</p>
                             <p class="text-xs text-slate-500">{{ viaje.vehiculo.modelo }}</p>
                         </div>
                     </td>
-                   <td class="px-6 py-4">
+                    
+                    <!-- CHOFER -->
+                    <td class="px-6 py-4">
                         {% if viaje.chofer_nombre and viaje.chofer_nombre != 'Por asignar' %}
                             <div class="flex items-center gap-2">
                                 <div class="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">
                                     {{ viaje.chofer_nombre|slice:":1"|upper }}{{ viaje.chofer_nombre|slice:"1:2"|default:"A"|upper }}
                                 </div>
-                                <span class="text-sm text-slate-700">{{ viaje.chofer_nombre }}</span>
+                                <span class="text-sm {% if viaje.esta_pasado %}text-slate-500{% else %}text-slate-700{% endif %}">{{ viaje.chofer_nombre }}</span>
                             </div>
                         {% else %}
                             <div class="flex items-center gap-2">
@@ -108,6 +126,8 @@
                             </div>
                         {% endif %}
                     </td>
+                    
+                    <!-- ASIENTOS -->
                     <td class="px-6 py-4">
                         <div class="flex items-center gap-2">
                             <div class="w-20 bg-slate-200 rounded-full h-2">
@@ -120,11 +140,21 @@
                             <span class="text-sm text-slate-600">{{ viaje.asientos_disponibles }}/{{ viaje.asientos_totales }}</span>
                         </div>
                     </td>
+                    
+                    <!-- PRECIO -->
                     <td class="px-6 py-4">
-                        <span class="text-sm font-bold text-slate-900">S/ {{ viaje.precio_base|floatformat:2 }}</span>
+                        <span class="text-sm font-bold {% if viaje.esta_pasado %}text-slate-500{% else %}text-slate-900{% endif %}">
+                            S/ {{ viaje.precio_base|floatformat:2 }}
+                        </span>
                     </td>
+                    
+                    <!-- ESTADO -->
                     <td class="px-6 py-4">
-                        {% if viaje.asientos_disponibles == 0 %}
+                        {% if viaje.esta_pasado %}
+                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-200 text-slate-600">
+                            ⏰ Pasado
+                        </span>
+                        {% elif viaje.asientos_disponibles == 0 %}
                         <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">Agotado</span>
                         {% elif viaje.asientos_disponibles < 5 %}
                         <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">Pocos asientos</span>
@@ -132,25 +162,32 @@
                         <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">Disponible</span>
                         {% endif %}
                     </td>
-                    <td class="px-6 py-4">
-                        {% if viaje.asientos_disponibles > 0 %}
-                        <a href="{% url 'core:mapa_asientos' viaje.id %}" 
-                           class="bg-otiza-green hover:bg-otiza-dark text-white px-4 py-2 rounded-lg text-sm font-medium transition inline-flex items-center gap-2 group-hover:shadow-lg">
-                            <i class="fas fa-ticket-alt"></i> Vender
-                        </a>
+                    
+                    <!-- ACCIÓN -->
+                    <td class="px-6 py-4 text-center">
+                        {% if viaje.esta_pasado %}
+                            <span class="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-200 text-slate-500 rounded-lg text-xs font-bold cursor-not-allowed">
+                                <i class="fas fa-lock"></i> BLOQUEADO
+                            </span>
+                        {% elif viaje.asientos_disponibles > 0 %}
+                            <a href="{% url 'core:mapa_asientos' viaje.id %}" 
+                            class="bg-otiza-green hover:bg-otiza-dark text-white px-4 py-2 rounded-lg text-sm font-medium transition inline-flex items-center gap-2 group-hover:shadow-lg">
+                                <i class="fas fa-ticket-alt"></i> Vender
+                            </a>
                         {% else %}
-                        <button disabled class="bg-slate-200 text-slate-400 px-4 py-2 rounded-lg text-sm font-medium cursor-not-allowed">
-                            Agotado
-                        </button>
+                            <button disabled class="bg-slate-200 text-slate-400 px-4 py-2 rounded-lg text-sm font-medium cursor-not-allowed">
+                                Agotado
+                            </button>
                         {% endif %}
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="8" class="px-6 py-12 text-center text-slate-500">
+                    <!-- ✅ CAMBIADO: colspan de 8 a 9 porque ahora hay 9 columnas -->
+                    <td colspan="9" class="px-6 py-12 text-center text-slate-500">
                         <div class="flex flex-col items-center">
                             <i class="fas fa-bus text-4xl mb-3 text-slate-300"></i>
-                            <p class="font-medium">No hay viajes disponibles</p>
+                            <p class="font-medium">No hay viajes disponibles para esta fecha</p>
                             <p class="text-sm text-slate-400 mt-1">Intenta con otros filtros o contacta a administración</p>
                         </div>
                     </td>
