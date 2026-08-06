@@ -426,9 +426,6 @@ class Notificacion(models.Model):
 
 
 
-
-
-
 class Manifiesto(models.Model):
     sede = models.ForeignKey('Sede', on_delete=models.CASCADE, related_name='manifiestos')
     viaje = models.ForeignKey('Viaje', on_delete=models.CASCADE, related_name='manifiesto', null=True, blank=True)
@@ -473,11 +470,20 @@ class PasajeroManifiesto(models.Model):
         return f"{self.numero}. {self.nombre}"
 
 
+
+
 class HojaRuta(models.Model):
     sede = models.ForeignKey('Sede', on_delete=models.CASCADE, related_name='hojas_ruta')
     viaje = models.ForeignKey('Viaje', on_delete=models.CASCADE, related_name='hoja_ruta')
     numero_documento = models.CharField(max_length=50, unique=True)
     fecha_emision = models.DateField(auto_now_add=True)
+    
+    # ✅ NUEVO CAMPO: Número correlativo (000001, 000002, etc.)
+    numero_correlativo = models.PositiveIntegerField(
+        null=True, 
+        blank=True, 
+        help_text="Número correlativo de la hoja de ruta"
+    )
     
     # Datos del viaje (se copian para tener histórico)
     placa = models.CharField(max_length=20)

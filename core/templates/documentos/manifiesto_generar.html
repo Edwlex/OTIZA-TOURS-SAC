@@ -1,86 +1,123 @@
 {% extends 'base_cajero.html' %}
-{% block title %}Editar Manifiesto{% endblock %}
+{% block title %}Generar Hoja de Ruta{% endblock %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto">
+<div class="max-w-5xl mx-auto">
     <div class="mb-6">
-        <h1 class="text-2xl font-bold text-slate-800">✏️ Editar Manifiesto - Viaje {{ viaje }}</h1>
-        <p class="text-slate-500">Verifica y corrige los datos antes de generar el PDF</p>
+        <h1 class="text-2xl font-bold text-slate-800">📋 Generar Hoja de Ruta</h1>
+        <p class="text-slate-500">Viaje: {{ viaje.ruta.origen }} → {{ viaje.ruta.destino }} | {{ viaje.fecha_salida|date:"d/m/Y" }}</p>
     </div>
 
-    <form method="POST" class="space-y-6">
+    <form method="POST" class="space-y-6" id="hojaRutaForm">
         {% csrf_token %}
         
-        <!-- Datos del Viaje -->
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-            <h3 class="text-lg font-bold text-slate-800 mb-4">📋 Datos del Viaje</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Campo oculto obligatorio -->
+        <input type="hidden" name="viaje" value="{{ viaje.id }}">
+
+        <!-- ✅ DATOS DEL VIAJE (AUTO-LLENADOS, SOLO LECTURA) -->
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h3 class="font-bold text-blue-900 mb-3">📌 Datos del Viaje (Auto-llenados)</h3>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-2">Conductor</label>
-                    {{ form.conductor_nombre }}
+                    <span class="text-slate-600 font-semibold">Placa:</span>
+                    <div class="font-bold text-slate-800">{{ viaje.vehiculo.placa|default:"Sin asignar" }}</div>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-2">Placa</label>
-                    {{ form.placa }}
+                    <span class="text-slate-600 font-semibold">Fecha:</span>
+                    <div class="font-bold text-slate-800">{{ viaje.fecha_salida|date:"d/m/Y" }}</div>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-2">Hora Salida</label>
-                    {{ form.hora_salida }}
+                    <span class="text-slate-600 font-semibold">Hora Salida:</span>
+                    <div class="font-bold text-slate-800" id="horaSalidaDisplay">{{ viaje.hora_salida|date:"H:i" }}</div>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-2">Brevete</label>
-                    {{ form.brevete }}
+                    <span class="text-slate-600 font-semibold">Hora Llegada:</span>
+                    <div class="font-bold text-slate-800" id="horaLlegadaDisplay">{{ viaje.hora_llegada|date:"H:i"|default:"No definida" }}</div>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-2">Origen</label>
-                    {{ form.destino_origen }}
+                    <span class="text-slate-600 font-semibold">Ruta:</span>
+                    <div class="font-bold text-slate-800">{{ viaje.ruta.origen }} → {{ viaje.ruta.destino }}</div>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-2">Destino</label>
-                    {{ form.destino_final }}
+                    <span class="text-slate-600 font-semibold">Chofer Asignado:</span>
+                    <div class="font-bold text-slate-800">{{ viaje.chofer_asignado.get_full_name|default:"Sin asignar" }}</div>
                 </div>
             </div>
         </div>
 
-        <!-- Pasajeros -->
+        <!-- ✅ FORMULARIO DE CONDUCTORES E INCIDENTES -->
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-            <h3 class="text-lg font-bold text-slate-800 mb-4">👥 Lista de Pasajeros (Editable)</h3>
-            {{ formset.management_form }}
-            <div class="overflow-x-auto">
-                <table class="w-full">
-                    <thead class="bg-slate-100">
-                        <tr>
-                            <th class="px-3 py-2 text-left text-xs font-semibold">N°</th>
-                            <th class="px-3 py-2 text-left text-xs font-semibold">Nombre</th>
-                            <th class="px-3 py-2 text-left text-xs font-semibold">DNI</th>
-                            <th class="px-3 py-2 text-left text-xs font-semibold">Destino</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for form_pasajero in formset %}
-                        <tr class="border-b hover:bg-slate-50">
-                            <td class="px-3 py-2">{{ form_pasajero.numero }}</td>
-                            <td class="px-3 py-2">{{ form_pasajero.nombre }}</td>
-                            <td class="px-3 py-2">{{ form_pasajero.dni }}</td>
-                            <td class="px-3 py-2">{{ form_pasajero.destino }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <h3 class="text-lg font-bold text-slate-800 mb-4">👨‍✈️ Datos de Conductores (Auto-llenados)</h3>
+            
+            <!-- Mensaje informativo -->
+            <div class="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+                <p class="text-sm text-green-700">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Los campos de <strong>Conductor 1</strong> y las <strong>horas de inicio/término</strong> se han auto-llenado con los datos del viaje. Puedes modificarlos si es necesario.
+                </p>
             </div>
+            
+            {{ form.as_p }}
         </div>
 
-        <!-- Botones -->
         <div class="flex justify-end gap-4">
-            <a href="{% url 'core:viajes_disponibles_manifiesto' %}" 
-               class="px-6 py-3 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition">
-                Cancelar
-            </a>
-            <button type="submit" 
-                    class="px-6 py-3 bg-otiza-green text-white rounded-lg hover:bg-otiza-dark transition font-semibold">
-                <i class="fas fa-file-pdf mr-2"></i>Generar PDF y Guardar
+            <a href="{% url 'core:hoja_ruta_lista' %}" class="px-6 py-3 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition">Cancelar</a>
+            <button type="submit" class="px-6 py-3 bg-otiza-green text-white rounded-lg hover:bg-otiza-dark transition font-semibold">
+                <i class="fas fa-file-pdf mr-2"></i>Guardar y Generar PDF
             </button>
         </div>
     </form>
 </div>
+
+<!-- ✅ JAVASCRIPT PARA AUTO-LLENAR LOS CAMPOS -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // ✅ Obtener las horas del viaje desde los elementos del DOM
+    const horaSalida = document.getElementById('horaSalidaDisplay').textContent.trim();
+    const horaLlegada = document.getElementById('horaLlegadaDisplay').textContent.trim();
+    
+    console.log(' Hora Salida:', horaSalida);
+    console.log('🔍 Hora Llegada:', horaLlegada);
+    
+    // ✅ Función para buscar y llenar un campo por su label
+    function llenarCampo(labelText, valor) {
+        // Buscar todos los labels
+        const labels = document.querySelectorAll('label');
+        for (let label of labels) {
+            if (label.textContent.trim().toLowerCase().includes(labelText.toLowerCase())) {
+                // Encontrar el input asociado
+                const inputId = label.getAttribute('for');
+                if (inputId) {
+                    const input = document.getElementById(inputId);
+                    if (input) {
+                        input.value = valor;
+                        console.log(`✅ Campo "${labelText}" llenado con: ${valor}`);
+                        return true;
+                    }
+                }
+                // Si no tiene "for", buscar el siguiente input
+                const nextInput = label.nextElementSibling;
+                if (nextInput && nextInput.tagName === 'INPUT') {
+                    nextInput.value = valor;
+                    console.log(`✅ Campo "${labelText}" llenado con: ${valor}`);
+                    return true;
+                }
+            }
+        }
+        console.log(`⚠️ No se encontró el campo "${labelText}"`);
+        return false;
+    }
+    
+    // ✅ Llenar los campos de horas
+    if (horaSalida && horaSalida !== 'No definida') {
+        llenarCampo('conductor1 hora inicio', horaSalida);
+        llenarCampo('conductor2 hora inicio', horaSalida);
+    }
+    
+    if (horaLlegada && horaLlegada !== 'No definida') {
+        llenarCampo('conductor1 hora fin', horaLlegada);
+        llenarCampo('conductor2 hora fin', horaLlegada);
+    }
+});
+</script>
 {% endblock %}

@@ -3811,13 +3811,28 @@ def hoja_ruta_historial(request):
     }
     return render(request, 'documentos/hoja_ruta_historial.html', contexto)
 
+
+
+
+import base64
+import os
+from io import BytesIO
+from django.conf import settings
+from django.db.models import Max
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
+from django.template.loader import render_to_string
+from django.contrib.auth.decorators import login_required
+from xhtml2pdf import pisa
+from core.models import HojaRuta, Viaje  # Asegúrate de que estén importados
+
+
 @login_required
 def hoja_ruta_generar(request, viaje_id):
     """Generar hoja de ruta desde un viaje específico"""
     sede = request.user.sede
     viaje = get_object_or_404(Viaje, id=viaje_id, sede_salida=sede)
     
-    # Verificar si ya existe hoja de ruta
     if HojaRuta.objects.filter(viaje=viaje).exists():
         messages.warning(request, '⚠️ Ya existe una hoja de ruta para este viaje')
         return redirect('core:hoja_ruta_lista')
@@ -3829,43 +3844,54 @@ def hoja_ruta_generar(request, viaje_id):
             hoja.sede = sede
             hoja.viaje = viaje
             
-            # Auto-llenar campos obligatorios
+            # Auto-llenar campos obligatorios desde el viaje
             hoja.fecha_inicio = viaje.fecha_salida
-            hoja.fecha_llegada = getattr(viaje, 'fecha_llegada_estimada', viaje.fecha_salida) or viaje.fecha_salida
+            hoja.fecha_llegada = viaje.fecha_llegada if hasattr(viaje, 'fecha_llegada') and viaje.fecha_llegada else viaje.fecha_salida
             hoja.hora_salida = viaje.hora_salida
-            hoja.hora_llegada = getattr(viaje, 'hora_llegada_estimada', viaje.hora_salida) or viaje.hora_salida
+            hoja.hora_llegada = viaje.hora_llegada if hasattr(viaje, 'hora_llegada') and viaje.hora_llegada else viaje.hora_salida
             hoja.placa = viaje.vehiculo.placa if viaje.vehiculo else ''
             
-            # Lugares
-            hoja.lugar_embarque = form.cleaned_data.get('lugar_embarque', viaje.ruta.origen if viaje.ruta else '')
-            hoja.lugar_desembarque = form.cleaned_data.get('lugar_desembarque', viaje.ruta.destino if viaje.ruta else '')
+            # Lugares desde la ruta
+            hoja.lugar_embarque = viaje.ruta.origen if viaje.ruta else ''
+            hoja.lugar_desembarque = viaje.ruta.destino if viaje.ruta else ''
             
-            # Número único
-            contador = HojaRuta.objects.filter(sede=sede).count() + 1
+            # ✅ GENERAR NÚMERO CORRELATIVO
+            ultimo_correlativo = HojaRuta.objects.filter(sede=sede).aggregate(max_num=Max('numero_correlativo'))['max_num']
+            hoja.numero_correlativo = (ultimo_correlativo or 0) + 1
+            
+            contador = hoja.numero_correlativo
             hoja.numero_documento = f"HR-{sede.nombre[:3].upper()}-{timezone.now().strftime('%Y%m%d')}-{contador:04d}"
             
             hoja.save()
             
             messages.success(request, '✅ Hoja de Ruta generada exitosamente.')
-            
-            # 💡 REDIRECCIÓN CORREGIDA: Guarda y regresa al historial/lista.
-            # No redirigir directamente al PDF para evitar descargas/aperturas no deseadas.
             return redirect('core:hoja_ruta_historial') 
-            
     else:
-        initial_data = {
-            'lugar_embarque': viaje.ruta.origen if viaje.ruta else '',
-            'lugar_desembarque': viaje.ruta.destino if viaje.ruta else '',
-        }
+        # ✅ OBTENER HORAS DEL VIAJE
+        hora_salida_str = viaje.hora_salida.strftime('%H:%M') if viaje.hora_salida else ''
+        hora_llegada_str = viaje.hora_llegada.strftime('%H:%M') if hasattr(viaje, 'hora_llegada') and viaje.hora_llegada else hora_salida_str
         
         chofer = viaje.chofer_asignado
+        
+        initial_data = {
+            'conductor1_hora_inicio': hora_salida_str,
+            'conductor1_hora_fin': hora_llegada_str,
+            'conductor2_hora_inicio': hora_salida_str,
+            'conductor2_hora_fin': hora_llegada_str,
+        }
+        
         if chofer:
             initial_data.update({
                 'conductor1_nombre': chofer.get_full_name(),
                 'conductor1_licencia': getattr(chofer, 'licencia_conducir', getattr(chofer, 'brevete', '')),
             })
         
-        form = HojaRutaForm(initial=initial_data)
+        # ✅ PASAR LAS HORAS AL FORMULARIO
+        form = HojaRutaForm(
+            initial=initial_data,
+            hora_salida=hora_salida_str,
+            hora_llegada=hora_llegada_str
+        )
     
     return render(request, 'documentos/hoja_ruta_generar.html', {
         'form': form,
@@ -3873,26 +3899,125 @@ def hoja_ruta_generar(request, viaje_id):
         'sede': sede
     })
 
+    
+
+
 
 @login_required
 def hoja_ruta_pdf(request, id):
-    """Generar vista de PDF de la hoja de ruta"""
+    """Generar vista de PDF de la hoja de ruta con Logo, Carro Base64 y Correlativo"""
     hoja = get_object_or_404(HojaRuta, id=id, sede=request.user.sede)
     
-    # Renderizamos la plantilla HTML ajustada
-    context = {'hoja': hoja}
-    html_string = render_to_string('documentos/hoja_ruta_pdf.html', context)
+    # ✅ 1. FUNCIÓN AUXILIAR PARA CONVERTIR IMÁGENES A BASE64
+    def get_image_base64(filename):
+        image_path = None
+        if hasattr(settings, 'STATICFILES_DIRS'):
+            for static_dir in settings.STATICFILES_DIRS:
+                possible_path = os.path.join(static_dir, 'images', filename)
+                if os.path.exists(possible_path):
+                    image_path = possible_path
+                    break
+        
+        if image_path:
+            try:
+                with open(image_path, "rb") as image_file:
+                    encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+                    return f"data:image/png;base64,{encoded_string}"
+            except Exception as e:
+                print(f"❌ Error al leer {filename}: {e}")
+        return None
+
+    logo_base64 = get_image_base64('otiza.png')
+    carro_base64 = get_image_base64('carro.png')
     
-    response = HttpResponse(content_type='application/pdf')
-    # inline = Visualizar en pestaña nueva sin forzar descarga local automática
-    response['Content-Disposition'] = f'inline; filename="Hoja_Ruta_{hoja.numero_documento}.pdf"'
+    # ✅ 2. VERIFICAR/GENERAR NÚMERO CORRELATIVO
+    if not hoja.numero_correlativo:
+        ultimo_numero = HojaRuta.objects.filter(sede=hoja.sede).aggregate(max_num=Max('numero_correlativo'))['max_num']
+        hoja.numero_correlativo = (ultimo_numero or 0) + 1
+        hoja.save()
     
-    pisa_status = pisa.CreatePDF(BytesIO(html_string.encode('UTF-8')), dest=response, encoding='UTF-8')
+    # Formato: "001 - 000001"
+    sede_codigo = f"{hoja.sede.id:03d}"
+    numero_hoja_ruta = f"{sede_codigo} - {hoja.numero_correlativo:06d}"
+    
+    # ✅ 3. OBTENER HORARIOS DIRECTAMENTE DEL VIAJE
+    viaje = hoja.viaje
+    
+    # Función auxiliar para formatear hora
+    def formatear_hora(hora_obj):
+        if hora_obj:
+            if hasattr(hora_obj, 'strftime'):
+                return hora_obj.strftime('%H:%M')
+            return str(hora_obj)
+        return ''
+    
+    # Función auxiliar para validar que un valor no esté vacío
+    def tiene_valor(valor):
+        if valor is None:
+            return False
+        if isinstance(valor, str) and valor.strip() == '':
+            return False
+        if isinstance(valor, str) and valor.upper() in ['NONE', 'NULL', 'N/A']:
+            return False
+        return True
+    
+    # ✅ HORA DE SALIDA (desde el viaje)
+    hora_salida_ruta = ''
+    if viaje and viaje.hora_salida:
+        hora_salida_ruta = formatear_hora(viaje.hora_salida)
+    elif hasattr(hoja, 'hora_salida') and hoja.hora_salida:
+        hora_salida_ruta = formatear_hora(hoja.hora_salida)
+    
+    # ✅ HORA DE LLEGADA (desde el viaje - campo hora_llegada)
+    hora_llegada_ruta = ''
+    if viaje and viaje.hora_llegada:
+        hora_llegada_ruta = formatear_hora(viaje.hora_llegada)
+    elif hasattr(hoja, 'hora_llegada') and hoja.hora_llegada:
+        hora_llegada_ruta = formatear_hora(hoja.hora_llegada)
+    
+    # ✅ HORAS DE LOS CONDUCTORES (con validación estricta)
+    hora_inicio_conductor = ''
+    hora_termino_conductor = ''
+    
+    # Conductor 1 - Hora de Inicio
+    if hasattr(hoja, 'conductor1_hora_inicio') and tiene_valor(hoja.conductor1_hora_inicio):
+        hora_inicio_conductor = str(hoja.conductor1_hora_inicio).strip()
+    else:
+        hora_inicio_conductor = hora_salida_ruta  # ✅ Jala del viaje
+    
+    # Conductor 1 - Hora de Término
+    if hasattr(hoja, 'conductor1_hora_fin') and tiene_valor(hoja.conductor1_hora_fin):
+        hora_termino_conductor = str(hoja.conductor1_hora_fin).strip()
+    else:
+        hora_termino_conductor = hora_llegada_ruta  # ✅ Jala del viaje
+    
+    # ✅ 4. PREPARAR CONTEXTO PARA EL TEMPLATE
+    contexto = {
+        'hoja': hoja,
+        'logo_base64': logo_base64,
+        'carro_base64': carro_base64,
+        'numero_hoja_ruta': numero_hoja_ruta,
+        'hora_salida_ruta': hora_salida_ruta,
+        'hora_llegada_ruta': hora_llegada_ruta,
+        'hora_inicio_conductor': hora_inicio_conductor,
+        'hora_termino_conductor': hora_termino_conductor,
+    }
+    
+    # ✅ 5. GENERAR PDF
+    html_string = render_to_string('documentos/hoja_ruta_pdf.html', contexto)
+    result = BytesIO()
+    
+    pisa_status = pisa.CreatePDF(BytesIO(html_string.encode('UTF-8')), dest=result, encoding='UTF-8')
     
     if pisa_status.err:
-        return HttpResponse('Error al generar el PDF', status=500)
+        return HttpResponse('Error al generar el PDF de la Hoja de Ruta', status=500)
+    
+    response = HttpResponse(result.getvalue(), content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="Hoja_Ruta_{numero_hoja_ruta.replace(" - ", "_")}.pdf"'
     
     return response
+
+
 
 @login_required
 def hoja_ruta_limpiar_sesion(request):

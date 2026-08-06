@@ -1,9 +1,8 @@
 <!DOCTYPE html>
-{% load static %}
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Hoja de Ruta - {{ hoja.numero_documento }}</title>
+<title>Hoja de Ruta - {{ numero_hoja_ruta }}</title>
 <style>
     @page {
         size: A4 portrait;
@@ -43,7 +42,12 @@
     }
 
     .logo-img {
-        width: 130px;
+        width: 200px;
+        height: auto;
+    }
+    
+    .carro-img {
+        width: 150px;
         height: auto;
     }
 
@@ -163,7 +167,7 @@
         font-size: 6pt;
     }
 
-    /* BLOQUE DE INCIDENTES (FORMATO EXACTO A LA IMAGEN) */
+    /* BLOQUE DE INCIDENTES */
     .incidente-container {
         border: 1px solid #0b2e83;
         border-top: none;
@@ -203,27 +207,36 @@
 
 <div class="hoja-a4">
 
-    <!-- 1. ENCABEZADO -->
+    <!-- 1. ENCABEZADO CON LOGO, TÍTULO Y CARRO -->
     <table class="header-table">
         <tr>
-            <td style="width: 25%; vertical-align: middle;">
-                <img src="{% static 'otiza.png' %}" class="logo-img" alt="Otiza Tours">
+            <!-- ✅ IZQUIERDA: LOGO EN BASE64 -->
+            <td style="width: 20%; vertical-align: middle; text-align: left;">
+                {% if logo_base64 %}
+                <img src="{{ logo_base64 }}" class="logo-img" alt="Otiza Tours">
+                {% endif %}
             </td>
 
-            <td style="width: 50%; text-align: center; vertical-align: top;">
+            <!-- CENTRO: TÍTULO Y NÚMERO -->
+            <td style="width: 60%; text-align: center; vertical-align: top;">
                 <div class="header-title">HOJA DE RUTA</div>
                 <div class="header-subtext">
                     JULCAN: Cal. La Cultura S/N &bull; 902430951<br>
                     MACHE: Cal. Maravillas N° 102 &bull; 921700432<br>
                     TRUJILLO: Prolong. Unión N° 1477 &bull; 929698732
                 </div>
+                <!-- ✅ NÚMERO CORRELATIVO FORMATEADO -->
                 <div class="num-hoja">
-                    {{ hoja.numero_documento|default:"001- Nº 0000" }}
+                    {{ numero_hoja_ruta }}
                 </div>
             </td>
 
-            <td style="width: 25%; text-align: right; vertical-align: top;">
-                <div class="resolucion" style="margin-top: 10px;">
+            <!-- ✅ DERECHA: CARRO EN BASE64 + RESOLUCIONES -->
+            <td style="width: 20%; text-align: right; vertical-align: top;">
+                {% if carro_base64 %}
+                <img src="{{ carro_base64 }}" class="carro-img" alt="Carro" style="margin-bottom: 5px;">
+                {% endif %}
+                <div class="resolucion">
                     R.G.R. N° 259 - 2019-GR-LL/GRTC<br>
                     R.G.R. N° 209 - 2021-GR-LL-GGR/GRTC
                 </div>
@@ -252,12 +265,12 @@
             <td style="padding: 0; width: 18%;">
                 <table class="placa-box">
                     <tr>
-                        <td>{{ hoja.placa|slice:"0:1"|upper }}</td>
-                        <td>{{ hoja.placa|slice:"1:2"|upper }}</td>
-                        <td>{{ hoja.placa|slice:"2:3"|upper }}</td>
-                        <td>{{ hoja.placa|slice:"3:4"|upper }}</td>
-                        <td>{{ hoja.placa|slice:"4:5"|upper }}</td>
-                        <td>{{ hoja.placa|slice:"5:6"|upper }}</td>
+                        <td>{{ hoja.placa|slice:"0:1"|upper|default:" " }}</td>
+                        <td>{{ hoja.placa|slice:"1:2"|upper|default:" " }}</td>
+                        <td>{{ hoja.placa|slice:"2:3"|upper|default:" " }}</td>
+                        <td>{{ hoja.placa|slice:"3:4"|upper|default:" " }}</td>
+                        <td>{{ hoja.placa|slice:"4:5"|upper|default:" " }}</td>
+                        <td>{{ hoja.placa|slice:"5:6"|upper|default:" " }}</td>
                     </tr>
                 </table>
             </td>
@@ -277,7 +290,7 @@
         Modalidad del Servicio: <span class="bold">AUTO COLECTIVO</span>
     </div>
 
-    <!-- 3. LUGAR DE EMBARQUE Y DESEMBARQUE -->
+    <!-- 3. LUGAR DE EMBARQUE Y DESEMBARQUE (CON HORAS DE LA RUTA) -->
     <table class="table-embarque">
         <tr>
             <td>
@@ -288,7 +301,8 @@
                 <div class="line-field"></div>
                 <div>
                     <span class="bold">Hora de Salida</span>
-                    <div class="line-field val-text" style="text-align: center;">{{ hoja.hora_salida|date:"H:i" }}</div>
+                    <!-- ✅ JALA DE LA RUTA -->
+                    <div class="line-field val-text" style="text-align: center;">{{ hora_salida_ruta }}</div>
                 </div>
             </td>
             <td>
@@ -299,13 +313,14 @@
                 <div class="line-field"></div>
                 <div>
                     <span class="bold">Hora de Llegada</span>
-                    <div class="line-field val-text" style="text-align: center;">{{ hoja.hora_llegada|date:"H:i" }}</div>
+                    <!-- ✅ JALA DE LA RUTA -->
+                    <div class="line-field val-text" style="text-align: center;">{{ hora_llegada_ruta }}</div>
                 </div>
             </td>
         </tr>
     </table>
 
-    <!-- 4. CONDUCTORES Y TURNOS -->
+    <!-- 4. CONDUCTORES Y TURNOS (CON HORAS DE INICIO/FIN DE LA RUTA) -->
     <div class="section-banner">Datos Generales de los Conductores y Turnos de Conducción:</div>
     <table class="table-conductores">
         <!-- Conductor 1 -->
@@ -324,8 +339,9 @@
             </td>
             <td style="width: 34%; vertical-align: top;">
                 <div style="font-size: 6pt; font-weight: bold; text-align: center; margin-bottom: 1px;">
-                    H. DE INICIO: <span class="val-text" style="text-decoration: underline; display: inline-block; width: 40px;">{{ hoja.conductor1_hora_inicio|default:"" }}</span>
-                    H. DE TERMINO: <span class="val-text" style="text-decoration: underline; display: inline-block; width: 40px;">{{ hoja.conductor1_hora_fin|default:"" }}</span>
+                    <!-- ✅ USAR hora_inicio_conductor y hora_termino_conductor -->
+                    H. DE INICIO: <span class="val-text" style="text-decoration: underline; display: inline-block; width: 40px;">{{ hora_inicio_conductor }}</span>
+                    H. DE TERMINO: <span class="val-text" style="text-decoration: underline; display: inline-block; width: 40px;">{{ hora_termino_conductor }}</span>
                 </div>
                 <div class="text-center bold" style="font-size: 6pt;">TURNOS DE CONDUCCIÓN</div>
             </td>
@@ -378,13 +394,12 @@
         </tr>
     </table>
 
-    <!-- 5. INCIDENTES DEL VIAJE (REDISEÑADO SEGÚN TU IMAGEN) -->
+    <!-- 5. INCIDENTES DEL VIAJE -->
     <div class="section-banner">Incidentes del Viaje</div>
 
     <div class="incidente-container">
         {% for i in "1234" %}
         <div class="incidente-block">
-            <!-- Fila 1: Línea NOMBRES Y APELLIDOS ------- EN ------- Línea NOMBRES Y APELLIDOS -->
             <table style="width: 100%; border-collapse: collapse;">
                 <tr>
                     <td style="width: 44%; vertical-align: top; padding: 0;">
@@ -405,7 +420,6 @@
                 </tr>
             </table>
 
-            <!-- Fila 2: DEJO CONSTANCIA QUE ____________________________________________ -->
             <table style="width: 100%; border-collapse: collapse; margin-top: 2px;">
                 <tr>
                     <td style="width: 18%; font-weight: bold; font-size: 6.5pt; color: #0b2e83; vertical-align: bottom; padding: 0;">
@@ -419,10 +433,8 @@
                 </tr>
             </table>
 
-            <!-- Fila 3: Línea de escritura adicional en blanco -->
             <div class="field-line" style="width: 100%; margin-top: 5px;"></div>
 
-            <!-- Fila 4: Línea larga ------- FIRMA ------- N° DNI -->
             <table style="width: 100%; border-collapse: collapse; margin-top: 4px;">
                 <tr>
                     <td style="width: 48%; vertical-align: bottom; padding: 0;">

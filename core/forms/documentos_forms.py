@@ -5,33 +5,69 @@ from core.models import HojaRuta, Manifiesto, PasajeroManifiesto, Viaje
 class HojaRutaForm(forms.ModelForm):
     class Meta:
         model = HojaRuta
-        fields = ['conductor1_nombre', 'conductor1_licencia', 'conductor1_hora_inicio', 
-                  'conductor1_hora_fin', 'conductor2_nombre', 'conductor2_licencia',
-                  'conductor2_hora_inicio', 'conductor2_hora_fin', 'conductor3_nombre',
-                  'conductor3_licencia', 'incidente1_nombres', 'incidente1_constancia',
-                  'incidente1_firma', 'incidente1_dni']
+        fields = [
+            'conductor1_nombre', 'conductor1_licencia', 
+            'conductor1_hora_inicio', 'conductor1_hora_fin',
+            'conductor2_nombre', 'conductor2_licencia',
+            'conductor2_hora_inicio', 'conductor2_hora_fin',
+            'conductor3_nombre', 'conductor3_licencia',
+            'incidente1_nombres', 'incidente1_constancia',
+            'incidente1_firma', 'incidente1_dni',
+            'incidente2_nombres', 'incidente2_constancia',
+            'incidente2_firma', 'incidente2_dni',
+            'incidente3_nombres', 'incidente3_constancia',
+            'incidente3_firma', 'incidente3_dni',
+            'incidente4_nombres', 'incidente4_constancia',
+            'incidente4_firma', 'incidente4_dni',
+        ]
         widgets = {
             'conductor1_nombre': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-lg'}),
             'conductor1_licencia': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-lg'}),
-            'conductor1_hora_inicio': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-lg', 'placeholder': '08:00'}),
-            'conductor1_hora_fin': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-lg', 'placeholder': '12:00'}),
+            'conductor1_hora_inicio': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-lg'}),
+            'conductor1_hora_fin': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-lg'}),
+            
             'conductor2_nombre': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-lg'}),
             'conductor2_licencia': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-lg'}),
-            'conductor2_hora_inicio': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-lg', 'placeholder': '08:00'}),
-            'conductor2_hora_fin': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-lg', 'placeholder': '12:00'}),
+            'conductor2_hora_inicio': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-lg'}),
+            'conductor2_hora_fin': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-lg'}),
+            
             'conductor3_nombre': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-lg'}),
             'conductor3_licencia': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-lg'}),
+            
             'incidente1_nombres': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-lg'}),
             'incidente1_constancia': forms.Textarea(attrs={'rows': 2, 'class': 'w-full px-3 py-2 border border-slate-300 rounded-lg'}),
             'incidente1_firma': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-lg'}),
             'incidente1_dni': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-lg'}),
+            'incidente2_nombres': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-lg'}),
+            'incidente2_constancia': forms.Textarea(attrs={'rows': 2, 'class': 'w-full px-3 py-2 border border-slate-300 rounded-lg'}),
+            'incidente2_firma': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-lg'}),
+            'incidente2_dni': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-lg'}),
+            'incidente3_nombres': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-lg'}),
+            'incidente3_constancia': forms.Textarea(attrs={'rows': 2, 'class': 'w-full px-3 py-2 border border-slate-300 rounded-lg'}),
+            'incidente3_firma': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-lg'}),
+            'incidente3_dni': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-lg'}),
+            'incidente4_nombres': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-lg'}),
+            'incidente4_constancia': forms.Textarea(attrs={'rows': 2, 'class': 'w-full px-3 py-2 border border-slate-300 rounded-lg'}),
+            'incidente4_firma': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-lg'}),
+            'incidente4_dni': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-slate-300 rounded-lg'}),
         }
 
     def __init__(self, *args, **kwargs):
         self.sede = kwargs.pop('sede', None)
-        super().__init__(*args, **kwargs)
-
+        self.hora_salida = kwargs.pop('hora_salida', None)
+        self.hora_llegada = kwargs.pop('hora_llegada', None)
         
+        super().__init__(*args, **kwargs)
+        
+        # ✅ FORZAR VALORES INICIALES DIRECTAMENTE EN LOS WIDGETS
+        if self.hora_salida:
+            self.fields['conductor1_hora_inicio'].widget.attrs['value'] = self.hora_salida
+            self.fields['conductor2_hora_inicio'].widget.attrs['value'] = self.hora_salida
+        
+        if self.hora_llegada:
+            self.fields['conductor1_hora_fin'].widget.attrs['value'] = self.hora_llegada
+            self.fields['conductor2_hora_fin'].widget.attrs['value'] = self.hora_llegada
+
 
 # ✅ FORMULARIO CORREGIDO: Usa los campos reales del modelo
 class ManifiestoForm(forms.ModelForm):
